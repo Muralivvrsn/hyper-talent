@@ -1,0 +1,9 @@
+.App {
+  text-align: center;
+}
+
+.box{
+  width: 300px;
+  height: 200px;
+  background: linear-gradient(to right, #D28A4F 0%, #FFDD9D 100%);
+}
