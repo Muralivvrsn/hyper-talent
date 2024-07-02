@@ -1,117 +1,86 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { useState, useEffect, useContext } from 'react';
+import { CssBaseline, Box, Typography, CircularProgress } from '@mui/material';
+import { PageContext, PageProvider } from './services/context/PageContext';
+import Navbar from './components/navbar';
+import Login from './components/Login';
+import axios from 'axios';
 
-function App() {
-  const [authCode, setAuthCode] = useState('');
-  const [token, setToken] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const chrome = window.chrome
-  useEffect(() => {
-    // Check if the access token is stored in local storage on component mount
-    chrome.storage.local.get(['accessToken', 'expirationTime'], (result) => {
-      const { accessToken, expirationTime } = result;
-      if (accessToken && expirationTime && Date.now() < expirationTime) {
-        setToken(accessToken);
-        setLoggedIn(true);
-        fetchProfile(accessToken);
-      } else {
-        // Token is expired or not available, clear stored data
-        chrome.storage.local.remove(['accessToken', 'expirationTime']);
-      }
-    });
-  }, []);
-
-  const handleLogin = () => {
-    const redirectUri = chrome.identity.getRedirectURL('oauth2');
-    const clientId = '17747105090-t6mavvu1bcaldmkc5nurr65f5l0d5r27.apps.googleusercontent.com'; // Replace with your actual client ID
-
-    chrome.identity.launchWebAuthFlow(
-      {
-        url: 'https://accounts.google.com/o/oauth2/auth' +
-             '?client_id=' + clientId +
-             '&redirect_uri=' + encodeURIComponent(redirectUri) +
-             '&response_type=code' +
-             '&scope=profile email',
-        interactive: true
-      },
-      (redirectUrl) => {
-        if (chrome.runtime.lastError || !redirectUrl) {
-          console.error(chrome.runtime.lastError);
-          return;
-        }
-
-        const params = new URLSearchParams(new URL(redirectUrl).search);
-        const code = params.get('code');
-        setAuthCode(code);
-        fetchToken(code);
-      }
-    );
-  };
-
-  const fetchToken = (code) => {
-    chrome.runtime.sendMessage(
-      { action: 'fetchToken', code: code },
-      (response) => {
-        if (response.success) {
-          chrome.storage.local.get(['accessToken'], (result) => {
-            const accessToken = result.accessToken;
-            setToken(accessToken);
-            setLoggedIn(true);
-            fetchProfile(accessToken);
-          });
-        } else {
-          console.error('Failed to fetch token');
-        }
-      }
-    );
-  };
-
-  const fetchProfile = (accessToken) => {
-    fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    })
-    .then(response => response.json())
-    .then(profile => {
-      console.log(profile)
-      setProfile(profile);
-    })
-    .catch(error => {
-      console.error('Error fetching profile', error);
-    });
-  };
-
-  const handleLogout = () => {
-    chrome.storage.local.remove(['accessToken', 'expirationTime'], () => {
-      setToken(null);
-      setLoggedIn(false);
-      setProfile(null);
-    });
-  };
+const AppContent = ({ token }) => {
+  const { currentPage, pageConfig } = useContext(PageContext);
+  const { component: PageComponent, text, header } = pageConfig[currentPage];
 
   return (
-    <div className="App">
-      <header className="App-header">
-        {!loggedIn ? (
-          <button onClick={handleLogin}>Login</button>
-        ) : (
-          <div>
-            {profile && (
-              <div>
-                <img src={profile.picture} alt="Profile" />
-                <p>Welcome, {profile.name}!</p>
-                <p>Email: {profile.email}</p>
-              </div>
-            )}
-            <button onClick={handleLogout}>Logout</button>
-          </div>
-        )}
-      </header>
-      <div className='box'></div>
-    </div>
+    <Box sx={{ marginLeft: '50px', padding: '16px' }}>
+      <PageComponent token={token} />
+    </Box>
   );
-}
+};
+
+const App = () => {
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const chrome = window.chrome
+
+  useEffect(() => {
+    checkAuthorization();
+  }, []);
+
+  const checkAuthorization = async () => {
+    try {
+      chrome.storage.local.get(['accessToken', 'expirationTime'], async (result) => {
+        const { accessToken, expirationTime } = result;
+        console.log(accessToken);
+        console.log(expirationTime)
+        if (accessToken && expirationTime && Date.now() < expirationTime) {
+          const response = await axios.get(`https://hypertalent-server.onrender.com/auth/check-authorization?token=${accessToken}`);
+          console.log(response.data.accessToken)
+          if (response.data.success) {
+            chrome.storage.local.set({ accessToken: response.data.accessToken, expirationTime: response.data.expirationTime }, () => {
+              setToken(response.data.accessToken);
+              setLoading(false);
+            });
+          } else {
+            setLoading(false);
+          }
+        } else {
+          setLoading(false);
+        }
+      });
+
+    } catch (error) {
+      console.error('Error checking authorization:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = (accessToken) => {
+    setToken(accessToken);
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!token) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Login onLogin={handleLogin} />
+      </Box>
+    );
+  }
+
+  return (
+    <PageProvider>
+      <CssBaseline />
+      <Navbar />
+      <AppContent token={token} />
+    </PageProvider>
+  );
+};
 
 export default App;

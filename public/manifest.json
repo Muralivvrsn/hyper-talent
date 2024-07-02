@@ -33,7 +33,7 @@
     }
   ],
  
-  "permissions": ["storage", "activeTab", "scripting","sidePanel","identity"],
+  "permissions": ["storage", "activeTab", "scripting","sidePanel","identity","cookies"],
   "web_accessible_resources": [
     {
       "resources": ["package-lock.png", "package-lock.png", "package-lock.png"],
@@ -46,9 +46,11 @@
   "oauth2": {
     "client_id": "17747105090-t6mavvu1bcaldmkc5nurr65f5l0d5r27.apps.googleusercontent.com",
     "scopes": [
-      "https://www.googleapis.com/auth/spreadsheets.readonly",
+      "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/userinfo.profile",
-      "https://www.googleapis.com/auth/userinfo.email"
-    ]
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/drive"
+    ],
+    "redirect_uri": "https://acaahabiopgjkcdolnfhldmcaomphmpm.chromiumapp.org/oauth2"
   }
 }
