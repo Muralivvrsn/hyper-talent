@@ -4,36 +4,37 @@ chrome.sidePanel
 
   
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'login') {
-      const redirectUri = chrome.identity.getRedirectURL('oauth2');
-      const clientId = '17747105090-t6mavvu1bcaldmkc5nurr65f5l0d5r27.apps.googleusercontent.com';
-      const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile%20https://www.googleapis.com/auth/drive%20https://www.googleapis.com/auth/spreadsheets&access_type=offline&prompt=consent`;
-  
-      chrome.identity.launchWebAuthFlow(
-        { url: authUrl, interactive: true },
-        (redirectUrl) => {
-          if (chrome.runtime.lastError || !redirectUrl) {
-            sendResponse({ success: false, error: chrome.runtime.lastError.message });
-            return;
-          }
-  
-          const params = new URLSearchParams(new URL(redirectUrl).search);
-          const code = params.get('code');
-  
-          if (code) {
-            sendResponse({ success: true, code });
-          } else {
-            sendResponse({ success: false, error: 'No code returned' });
-          }
-        }
-      );
-      return true; // Indicates that the response is asynchronous
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    // Check if URL is available and contains linkedin.com/messaging
+    if (changeInfo.url && changeInfo.url.includes("linkedin.com/messaging")) {
+      console.log('linkedin messaging page')
+      chrome.tabs.sendMessage(tabId, {
+        type: "URL_UPDATED",
+        url: changeInfo.url
+      });
+    }
+    // Also check when page load completes
+    else if (changeInfo.status === 'complete' && tab.url?.includes("linkedin.com/messaging")) {
+      console.log('sending message')
+      chrome.tabs.sendMessage(tabId, {
+        type: "URL_UPDATED",
+        url: tab.url
+      });
     }
   });
-
-  chrome.runtime.onInstalled.addListener(() => {
-    const redirectUri = chrome.identity.getRedirectURL('oauth2');
-    console.log('Redirect URI:', redirectUri);
-  });
   
+  // Also handle when a tab is activated (switched to)
+  chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    try {
+      const tab = await chrome.tabs.get(activeInfo.tabId);
+      if (tab.url?.includes("linkedin.com/messaging")) {
+        console.log('sending msage')
+        chrome.tabs.sendMessage(tab.id, {
+          type: "URL_UPDATED",
+          url: tab.url
+        });
+      }
+    } catch (error) {
+      console.error('Error handling tab activation:', error);
+    }
+  });

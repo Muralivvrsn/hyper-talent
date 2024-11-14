@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HyperTalent",
   "short_name": "Hyper",
-  "version": "1.0",
+  "version": "1.0.3",
   "description": "An ATS Chrome Extension",
   "icons": {
     "16": "package-lock.png",
@@ -28,16 +28,32 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.linkedin.com/*"],
-      "js": ["content.js"]
+      "matches": ["https://*.linkedin.com/*"],
+      "js": [
+        "firebase-app.js",
+        "firebase-database.js",
+        "content.js"
+      ],
+      "run_at": "document_end"
     }
   ],
- 
-  "permissions": ["storage", "activeTab", "scripting","sidePanel","identity","cookies"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "identity",
+    "cookies"
+  ],
   "web_accessible_resources": [
     {
-      "resources": ["package-lock.png", "package-lock.png", "package-lock.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "firebase-app.js",
+        "firebase-database.js"
+      ],
+      "matches": [
+        "https://*.linkedin.com/*"
+      ]
     }
   ],
   "content_security_policy": {
