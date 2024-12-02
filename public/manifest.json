@@ -2,8 +2,9 @@
   "manifest_version": 3,
   "name": "HyperTalent",
   "short_name": "Hyper",
-  "version": "1.0.3",
+  "version": "1.1.7",
   "description": "An ATS Chrome Extension",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6Yn0Jgl1gLe4x5lfoj6/9Hmh7p3RxVMTLQNtTrzbwJ/aQ5B8RcjGv0twV2jhrhdpCJkWeBGo6Dov+lUMg0APQ301HsvGLLrgU9wL5Cc5uEUpLaJqhEyLeGg3IsCyNOn9a4bzYpUcPHXiHBlczSPa11CS1EVGCVGVyQ5J6Eao5BNmzK1Hv6lgjAy/O5hPWABkQmPOvWCFr9xkURDm1f7HNJwuRkVXlCzBKbirdwpdy9v0qFCVTTuQR2ZDWGwfavdlWQnb5RPckspf/4a1EAQ0EwIkHj5oI0s5/yj2XMkPXJtVRYfcnKuaSBkTK6MG0Jby/BR+4Fi7t/7jna07Px9yQIDAQAB",
   "icons": {
     "16": "package-lock.png",
     "48": "package-lock.png",
@@ -20,18 +21,26 @@
       "128": "package-lock.png"
     }
   },
-  "host_permissions": [
-    "https://www.linkedin.com/*"
-  ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://*.linkedin.com/*"],
+      "matches": [
+        "https://*.linkedin.com/*"
+      ],
       "js": [
         "firebase-app.js",
+        "firebase-auth.js",
+        "firebase-firestore.js",
         "firebase-database.js",
+        "services/firebase.js",
+        "services/shortcut.services.js",
+        "services/label.manager.service.js",
+        "services/labels.observer.service.js",
+        "services/label.filter.service.js",
+        "services/notes.service.js",
+        "services/notes.observer.service.js",
         "content.js"
       ],
       "run_at": "document_end"
@@ -49,7 +58,9 @@
     {
       "resources": [
         "firebase-app.js",
-        "firebase-database.js"
+        "firebase-database.js",
+        "firebase-auth.js",
+        "firebase-firestore.js"
       ],
       "matches": [
         "https://*.linkedin.com/*"
@@ -60,13 +71,15 @@
     "extension_pages": "script-src 'self'; object-src 'self';"
   },
   "oauth2": {
-    "client_id": "17747105090-t6mavvu1bcaldmkc5nurr65f5l0d5r27.apps.googleusercontent.com",
+    "client_id": "940298574245-cm1h4f9vl20rq9rsbaqu3029ectdo81c.apps.googleusercontent.com",
     "scopes": [
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/userinfo.profile",
       "https://www.googleapis.com/auth/userinfo.email",
-      "https://www.googleapis.com/auth/drive"
-    ],
-    "redirect_uri": "https://acaahabiopgjkcdolnfhldmcaomphmpm.chromiumapp.org/oauth2"
-  }
+      "https://www.googleapis.com/auth/userinfo.profile",
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive.readonly"
+    ]
+  },
+  "host_permissions": [
+    "https://www.linkedin.com/*"
+  ]
 }
