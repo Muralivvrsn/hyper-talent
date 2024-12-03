@@ -159,9 +159,7 @@ window.labelsObserver = {
                 display: none;
                 align-items: center;
                 justify-content: center;
-                width: 12px;
-                height: 12px;
-                padding: 0;
+                padding: 0 2px;
                 margin-left: 4px;
                 background: rgba(255, 255, 255, 0.2);
                 border: none;

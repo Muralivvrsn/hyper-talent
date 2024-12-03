@@ -128,6 +128,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           window.labelsObserver.observer.initialize();
           window.shortcutsObserver.observer.initialize();
           window.labelsFilter.observer.initialize();
+          window.keyboard.shortcuts.observer();
 
           console.log('All observers initialized successfully');
           sendResponse({ success: true });

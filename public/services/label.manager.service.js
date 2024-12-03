@@ -134,394 +134,308 @@ class LabelManager {
     setupStyles() {
         const styleSheet = document.createElement('style');
         styleSheet.textContent = `
-          .label-manager {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.95);
-            background: var(--color-background, #ffffff);
-            color: var(--color-text, #000000);
-            border-radius: 16px;
-            padding: 28px;
-            min-width: 480px;
-            max-width: 90vw;
-            max-height: 90vh;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-            z-index: 1000;
-            display: none;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-          }
-      
-          .label-manager.visible {
-            display: block;
-            transform: translate(-50%, -50%) scale(1);
-          }
-    
-      
-          .label-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
-          }
-      
-          .label-header h2 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-          }
-      
-          .label-close {
-            background: var(--color-close-bg, rgba(0, 0, 0, 0.05));
-            border: none;
-            padding: 8px;
-            cursor: pointer;
-            border-radius: 8px;
-            color: var(--color-text, #000000);
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-      
-          .label-close:hover {
-            background: var(--color-close-hover, rgba(0, 0, 0, 0.1));
-          }
-          .label-search:hover{
-            border:none;
-            box-shadow: 0 0 0 2px var(--color-border-focus-shadow, rgba(0, 0, 0, 0.05));
-          }
-          .label-search {
-            width: 100%;
-            padding: 14px 16px;
-            border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
-            border-radius: 12px;
-            margin-bottom: 20px;
-            font-size: 15px;
-            font-weight: 400;
-            background: var(--color-background, #ffffff);
-            color: var(--color-text, #000000);
-            transition: all 0.2s ease;
-          }
-      
-          .label-search::placeholder {
-            color: var(--color-placeholder, rgba(0, 0, 0, 0.5));
-          }
-      
-          .label-search:focus {
-            outline: none;
-            border-color: var(--color-border-focus, rgba(0, 0, 0, 0.2));
-            box-shadow: 0 0 0 2px var(--color-border-focus-shadow, rgba(0, 0, 0, 0.05));
-          }
-      
-          .label-list {
-            max-height: 360px;
-            overflow-y: auto;
-            margin: 0;
-            padding: 4px;
-            list-style: none;
-          }
-      
-          .label-list::-webkit-scrollbar {
-            width: 8px;
-          }
-      
-          .label-list::-webkit-scrollbar-track {
-            background: var(--color-scrollbar-track, rgba(0, 0, 0, 0.05));
-            border-radius: 4px;
-          }
-      
-          .label-list::-webkit-scrollbar-thumb {
-            background: var(--color-scrollbar-thumb, rgba(0, 0, 0, 0.2));
-            border-radius: 4px;
-          }
-      
-          .label-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            cursor: pointer;
-            border-radius: 10px;
-            transition: all 0.2s ease;
-            margin-bottom: 6px;
-            background: var(--color-item-bg, rgba(0, 0, 0, 0.02));
-            border: 1px solid transparent;
-          }
-      
-          .label-item:hover {
-            background: var(--color-item-hover, rgba(0, 0, 0, 0.05));
-          }
-      
-          .label-item.selected {
-            background: var(--color-item-selected, rgba(0, 0, 0, 0.08));
-            border: 1px solid var(--color-border-selected, rgba(0, 0, 0, 0.15));
-            outline: none;
-          }
-      
-          .label-item.empty {
-            cursor: default;
-            background: none;
-            justify-content: center;
-            padding: 24px 16px;
-            border: none;
-          }
-      
-          .label-item.loading {
-            cursor: default;
-            background: none;
-            justify-content: center;
-            padding: 32px 16px;
-            border: none;
-          }
-      
-          .label-empty {
-            text-align: center;
-            color: var(--color-text-secondary, rgba(0, 0, 0, 0.5));
-            font-size: 14px;
-            font-weight: 500;
-            line-height: 1.5;
-          }
-      
-          .label-color {
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
-            margin-right: 16px;
-            flex-shrink: 0;
-          }
-      
-          .label-name {
-            flex-grow: 1;
-            font-size: 15px;
-            font-weight: 500;
-          }
-      
-          .label-delete,
-          .label-edit {
-            opacity: 0;
-            padding: 8px;
-            background: var(--color-button-bg, rgba(0, 0, 0, 0.05));
-            border: none;
-            cursor: pointer;
-            border-radius: 6px;
-            color: var(--color-text, #000000);
-            margin-left: 8px;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-      
-          .label-item:hover .label-delete,
-          .label-item:hover .label-edit,
-          .label-item.selected .label-delete,
-          .label-item.selected .label-edit {
-            opacity: 1;
-          }
-      
-          .label-delete:hover,
-          .label-edit:hover {
-            background: var(--color-button-hover, rgba(0, 0, 0, 0.1));
-          }
-      
-.label-spinner {
-  width: 50px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: 
-    radial-gradient(farthest-side,#ffffff 94%,#0000) top/8px 8px no-repeat,
-    conic-gradient(#0000 30%,#ffffff);
-  -webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 8px),#000 0);
-  animation: spinAnimation 1s infinite linear;
-}
-
-@keyframes spinAnimation { 
-  100% { transform: rotate(1turn) }
-}
-      
-          @media (prefers-color-scheme: dark) {
             .label-manager {
-              --color-background: #1f2937;
-              --color-text: #ffffff;
-              --color-border: rgba(255, 255, 255, 0.1);
-              --color-close-bg: rgba(255, 255, 255, 0.1);
-              --color-close-hover: rgba(255, 255, 255, 0.2);
-              --color-placeholder: rgba(255, 255, 255, 0.5);
-              --color-border-focus: rgba(255, 255, 255, 0.2);
-              --color-border-focus-shadow: rgba(255, 255, 255, 0.05);
-              --color-scrollbar-track: rgba(255, 255, 255, 0.05);
-              --color-scrollbar-thumb: rgba(255, 255, 255, 0.2);
-              --color-item-bg: rgba(255, 255, 255, 0.05);
-              --color-item-hover: rgba(255, 255, 255, 0.1);
-              --color-button-bg: rgba(255, 255, 255, 0.1);
-              --color-button-hover: rgba(255, 255, 255, 0.2);
-              --color-spinner-bg: rgba(0, 0, 0, 0.8);
-              --color-text-secondary: rgba(255, 255, 255, 0.5);
-              --color-item-selected: rgba(255, 255, 255, 0.15);
-              --color-border-selected: rgba(255, 255, 255, 0.25);
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 450px;
+                max-width: 90vw;
+                background: white;
+                border-radius: 0.75rem;
+                display: none;
+                z-index: 9999;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             }
-      
+    
+            .label-manager.visible {
+                display: block;
+            }
+    
+            .label-header {
+                background: #2563eb;
+                padding: 1.5rem 1.8rem;  /* Increased spacing */
+                border-top-left-radius: 0.75rem;
+                border-top-right-radius: 0.75rem;
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+    
+            .label-header h2 {
+                color: white;
+                margin: 0;
+                font-size: 1.35rem;  /* Increased from 1.125rem */
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;  /* Increased from 0.625rem */
+                letter-spacing: -0.01em;
+            }
+    
+            .label-close {
+                position: absolute;
+                right: 1.25rem;
+                top: 50%;
+                transform: translateY(-50%);
+                background: transparent;
+                border: none;
+                color: white;
+                padding: 0.75rem;  /* Increased from 0.625rem */
+                cursor: pointer;
+                border-radius: 0.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+    
+            .label-close:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+    
+            .label-content {
+                padding: 1.5rem 1.8rem;  /* Increased spacing */
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;  /* Increased from 1.25rem */
+            }
+    
+            .label-search-container {
+                position: relative;
+            }
+    
+            .label-search {
+                width: 100%;
+                padding: 1.05rem 1.35rem;  /* Increased padding */
+                border: 2px solid rgb(229, 231, 235);
+                border-radius: 0.5rem;
+                background: white;
+                color: rgb(17, 24, 39);
+                font-size: 1.125rem;  /* Increased from 0.9375rem */
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+    
+            .label-search::placeholder {
+                color: rgb(156, 163, 175);
+                font-weight: 400;
+                font-size: 1.125rem;  /* Added to match input font size */
+            }
+    
+            .label-search:focus {
+                outline: none;
+                border-color: rgb(59, 130, 246);
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+    
+            .label-add-button {
+                position: absolute;
+                right: 0.625rem;
+                top: 50%;
+                transform: translateY(-50%);
+                background: #0077b5;
+                color: white;
+                border: none;
+                padding: 0.6rem 1.2rem;  /* Increased from 0.5rem 1rem */
+                border-radius: 0.375rem;
+                font-size: 1.05rem;  /* Increased from 0.875rem */
+                font-weight: 500;
+                cursor: pointer;
+                display: none;
+                transition: background 0.2s ease;
+            }
+    
+            .label-add-button:hover {
+                background: #006699;
+            }
+    
+            .label-search:valid + .label-add-button {
+                display: block;
+            }
+    
+            .label-list {
+                max-height: 400px;
+                overflow-y: auto;
+                margin: 0;
+                padding: 0;
+                list-style: none;
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;  /* Increased from 0.625rem */
+            }
+    
+            .label-list::-webkit-scrollbar {
+                width: 8px;
+            }
+    
+            .label-list::-webkit-scrollbar-track {
+                background: rgb(243, 244, 246);
+                border-radius: 4px;
+            }
+    
+            .label-list::-webkit-scrollbar-thumb {
+                background: rgb(209, 213, 219);
+                border-radius: 4px;
+            }
+    
+            .label-item {
+                display: flex;
+                align-items: center;
+                padding: 0.9rem 1.2rem;  /* Increased from 0.75rem 1rem */
+                background: rgb(249, 250, 251);
+                border-radius: 0.5rem;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                border: 1px solid transparent;
+            }
+    
+            .label-item:hover {
+                background: rgb(243, 244, 246);
+                border-color: rgb(229, 231, 235);
+            }
+    
+            .label-color {
+                width: 2rem;
+                height: 2rem;
+                border-radius: 0.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 1.05rem;  /* Increased from 0.875rem */
+                position: relative;
+            }
+    
+            .label-color::after {
+                content: '';
+                position: absolute;
+                width: 1rem;
+                height: 1rem;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.9)' stroke-width='2'%3E%3Cpath d='M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z'/%3E%3Cline x1='7' y1='7' x2='7.01' y2='7'/%3E%3C/svg%3E");
+                background-size: contain;
+                background-repeat: no-repeat;
+            }
+    
+            .label-name {
+                flex-grow: 1;
+                color: rgb(17, 24, 39);
+                font-size: 1.2rem;  /* Increased from 1rem */
+                font-weight: 500;
+                letter-spacing: -0.01em;
+            }
+    
+            .label-actions {
+                display: flex;
+                gap: 0.6rem;  /* Increased from 0.5rem */
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+    
+            .label-item:hover .label-actions {
+                opacity: 1;
+            }
+    
+            .label-edit,
+            .label-delete {
+                padding: 0.6rem;  /* Increased from 0.5rem */
+                background: transparent;
+                border: none;
+                color: rgb(107, 114, 128);
+                cursor: pointer;
+                border-radius: 0.375rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+            }
+    
+            .label-edit:hover,
+            .label-delete:hover {
+                background: rgb(229, 231, 235);
+                color: rgb(17, 24, 39);
+            }
+    
+            .label-spinner {
+                width: 40px;
+                aspect-ratio: 1;
+                margin: 2.4rem auto;  /* Increased from 2rem */
+                border-radius: 50%;
+                border: 3px solid rgb(229, 231, 235);
+                border-top-color: #2563eb;
+                animation: spinner 1s infinite linear;
+            }
+    
+            @keyframes spinner {
+                to { transform: rotate(360deg); }
+            }
+    
+            .label-empty {
+                text-align: center;
+                color: rgb(107, 114, 128);
+                padding: 3rem 1.2rem;  /* Increased from 2.5rem 1rem */
+                font-size: 1.125rem;  /* Increased from 0.9375rem */
+                font-weight: 500;
+            }
+    
             .label-item.selected {
-              background: var(--color-item-selected);
+                background: rgb(243, 244, 246);
+                border-color: rgb(209, 213, 219);
+                outline: 2px solid rgb(59, 130, 246);
+                outline-offset: -2px;
             }
-          }
         `;
         document.head.appendChild(styleSheet);
     }
 
     createElements() {
-        // this.overlay = document.createElement('div');
-        // this.overlay.className = 'label-overlay';
-
         this.container = document.createElement('div');
         this.container.className = 'label-manager';
-
         const header = document.createElement('div');
         header.className = 'label-header';
         header.innerHTML = `
-        <h2 style="margin: 0; font-size: 18px;">Manage Labels</h2>
-        <button class="label-close">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-      `;
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                Manage Labels
+            </h2>
+            <button class="label-close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        `;
+
+        const content = document.createElement('div');
+        content.className = 'label-content';
+
+        const searchContainer = document.createElement('div');
+        searchContainer.className = 'label-search-container';
 
         this.searchInput = document.createElement('input');
         this.searchInput.className = 'label-search';
         this.searchInput.placeholder = 'Search or create new label...';
+        this.searchInput.required = true;
+
+        const addButton = document.createElement('button');
+        addButton.className = 'label-add-button';
+        addButton.textContent = 'Add Label';
+        addButton.style.display = 'none';
 
         this.labelList = document.createElement('ul');
         this.labelList.className = 'label-list';
 
+        searchContainer.appendChild(this.searchInput);
+        searchContainer.appendChild(addButton);
+        content.appendChild(searchContainer);
+        content.appendChild(this.labelList);
+        
         this.container.appendChild(header);
-        this.container.appendChild(this.searchInput);
-        this.container.appendChild(this.labelList);
-
-        // document.body.appendChild(this.overlay);
+        this.container.appendChild(content);
         document.body.appendChild(this.container);
     }
-
-    setupEventListeners() {
-        let selectedIndex = -1;
-
-        // Global keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e?.key?.toLowerCase() === 'l' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-                const activeElement = document.activeElement;
-                const isMessageInput = activeElement?.classList.contains('msg-form__contenteditable');
-                const isInputField = activeElement?.tagName?.toLowerCase() === 'input';
-                const isNotesTextarea = activeElement?.classList.contains('notes-textarea');
-    
-                if (!isMessageInput && !isInputField && !isNotesTextarea) {
-                    e.preventDefault();
-                    this.show();
-                }
-            } else if (e.key === 'Escape' && this.isVisible()) {
-                this.hide();
-            }
-        });
-
-        // Keyboard navigation
-        this.container.addEventListener('keydown', (e) => {
-            const items = Array.from(this.labelList.querySelectorAll('.label-item:not(.empty):not(.loading)'));
-            const currentIndex = selectedIndex;
-
-            switch (e.key) {
-                case 'ArrowDown':
-                    e.preventDefault();
-                    if (document.activeElement === this.searchInput) {
-                        selectedIndex = 0;
-                    } else {
-                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                    }
-                    break;
-
-                case 'ArrowUp':
-                    e.preventDefault();
-                    if (selectedIndex === 0) {
-                        selectedIndex = -1;
-                        this.searchInput.focus();
-                        return;
-                    }
-                    selectedIndex = Math.max(selectedIndex - 1, 0);
-                    break;
-
-                case 'Enter':
-                    if (selectedIndex >= 0 && items[selectedIndex]) {
-                        e.preventDefault();
-                        items[selectedIndex].click();
-                    }
-                    break;
-            }
-
-            // Remove previous selection
-            if (currentIndex >= 0 && items[currentIndex]) {
-                items[currentIndex].classList.remove('selected');
-            }
-
-            // Apply new selection
-            if (selectedIndex >= 0 && items[selectedIndex]) {
-                items[selectedIndex].classList.add('selected');
-                items[selectedIndex].focus();
-            }
-        });
-
-        // Search and create functionality
-        this.searchInput.addEventListener('keydown', async (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const value = this.searchInput.value.trim();
-                if (!value) return;
-
-                const matchingLabel = this.labelList.querySelector('.label-item:not(.empty):not(.loading)');
-                if (matchingLabel) {
-                    const labelName = matchingLabel.querySelector('.label-name').textContent;
-                    this.hide();
-                    this.setLoading(true);
-                    try {
-                        const success = await handleLabelSelect(labelName);
-                        if (!success) {
-                            showToast('Failed to add label', 'error');
-                        }
-                    } catch (error) {
-                        // console.error('Error in handleLabelSelect:', error);
-                        showToast('Failed to add label', 'error');
-                    } finally {
-                        this.setLoading(false);
-                    }
-                } else {
-                    this.setLoading(true);
-                    try {
-                        const success = await addNewLabel(value);
-                        if (success) {
-                            this.searchInput.value = '';
-                            //   this.loadLabels();
-                        }
-                    } catch (error) {
-                        // console.error('Error in addNewLabel:', error);
-                        showToast('Failed to create label', 'error');
-                    } finally {
-                        this.setLoading(false);
-                    }
-                }
-            }
-        });
-
-        this.searchInput.addEventListener('input', () => {
-            selectedIndex = -1;
-            this.filterLabels(this.searchInput.value);
-        });
-
-        // Close button and overlay
-        this.container.querySelector('.label-close').addEventListener('click', () => this.hide());
-        // this.overlay.addEventListener('click', () => this.hide());
-    }
-
 
     setLoading(loading) {
         this.loading = loading;
@@ -540,107 +454,246 @@ class LabelManager {
         }
     }
 
-    renderLabels(labels = []) {
-        this.labelList.innerHTML = '';
-
-        if (this.loading) {
-            const loadingItem = document.createElement('li');
-            loadingItem.className = 'label-spinner';
-            this.labelList.appendChild(loadingItem);
-            return;
-        }
-
-        if (labels.length === 0) {
-            const emptyItem = document.createElement('li');
-            emptyItem.className = 'label-item empty';
-            emptyItem.innerHTML = `
-            <span class="label-empty">No labels found. Press Enter to create a new label.</span>
-          `;
-            this.labelList.appendChild(emptyItem);
-            return;
-        }
-
-        labels.forEach(([name, data], index) => {
-            const item = document.createElement('li');
-            item.className = 'label-item';
-            item.setAttribute('data-index', index);
-            item.setAttribute('tabindex', '-1');
-            item.innerHTML = `
-            <div class="label-color" style="background-color: ${data.color}"></div>
-            <span class="label-name">${name}</span>
-            <button class="label-delete" title="Delete label" tabindex="-1">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </button>
-            <button class="label-edit" title="Edit label" tabindex="-1">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M11.5 2.5l2 2-9 9H2.5v-2l9-9z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-              </svg>
-            </button>
-          `;
-
-            // Add click handlers
-            item.addEventListener('click', async (e) => {
-                if (!e.target.closest('.label-delete') && !e.target.closest('.label-edit')) {
-                    // this.hide();
+    setupEventListeners() {
+        let selectedIndex = -1;
+    
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e?.key?.toLowerCase() === 'l' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                const activeElement = document.activeElement;
+                const isMessageInput = activeElement?.classList.contains('msg-form__contenteditable');
+                const isInputField = activeElement?.tagName?.toLowerCase() === 'input';
+                const isNotesTextarea = activeElement?.classList.contains('notes-textarea');
+    
+                if (!isMessageInput && !isInputField && !isNotesTextarea) {
+                    e.preventDefault();
+                    this.show();
+                }
+            } else if (e.key === 'Escape' && this.isVisible()) {
+                this.hide();
+            }
+        });
+    
+        // Keyboard navigation
+        this.container.addEventListener('keydown', (e) => {
+            const items = Array.from(this.labelList.querySelectorAll('.label-item:not(.empty):not(.loading)'));
+            if (!items.length) return;
+    
+            const currentIndex = selectedIndex;
+    
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    if (document.activeElement === this.searchInput) {
+                        selectedIndex = 0;
+                    } else {
+                        selectedIndex = (selectedIndex + 1) % items.length;
+                    }
+                    break;
+    
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (selectedIndex <= 0) {
+                        selectedIndex = -1;
+                        this.searchInput.focus();
+                    } else {
+                        selectedIndex = selectedIndex - 1;
+                    }
+                    break;
+    
+                case 'Enter':
+                    if (selectedIndex >= 0 && items[selectedIndex]) {
+                        e.preventDefault();
+                        items[selectedIndex].click();
+                    }
+                    break;
+    
+                default:
+                    return;
+            }
+    
+            // Update selection visuals
+            items.forEach(item => item.classList.remove('selected'));
+            if (selectedIndex >= 0 && items[selectedIndex]) {
+                items[selectedIndex].classList.add('selected');
+                items[selectedIndex].focus();
+            }
+        });
+    
+        // Search and create functionality
+        this.searchInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const value = this.searchInput.value.trim();
+                if (!value) return;
+    
+                const matchingLabel = this.labelList.querySelector('.label-item:not(.empty):not(.loading)');
+                if (matchingLabel) {
+                    const labelName = matchingLabel.querySelector('.label-name').textContent;
+                    this.hide();
                     this.setLoading(true);
                     try {
-                        const success = await handleLabelSelect(name);
+                        const success = await handleLabelSelect(labelName);
                         if (!success) {
                             showToast('Failed to add label', 'error');
                         }
                     } catch (error) {
-                        // console.error('Error in handleLabelSelect:', error);
                         showToast('Failed to add label', 'error');
                     } finally {
                         this.setLoading(false);
-                        this.hide()
                     }
-                }
-            });
-
-            // Delete handler
-            item.querySelector('.label-delete').addEventListener('click', async (e) => {
-                e.stopPropagation();
-                if (confirm(`Are you sure you want to delete "${name}"?`)) {
+                } else {
                     this.setLoading(true);
                     try {
-                        const success = await deleteLabel(name);
-                        if (!success) {
-                            showToast('Failed to delete label', 'error');
-                        }
-                    } catch (error) {
-                        // console.error('Error in deleteLabel:', error);
-                        showToast('Failed to delete label', 'error');
-                    } finally {
-                        this.setLoading(false);
-                    }
-                }
-            });
-
-            // Edit handler
-            item.querySelector('.label-edit').addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const newName = prompt(`Rename label "${name}" to:`, name);
-                if (newName && newName !== name) {
-                    this.setLoading(true);
-                    try {
-                        const success = await editLabel(name, newName);
+                        const success = await addNewLabel(value);
                         if (success) {
-                            showToast('Label editing is done!');
+                            this.searchInput.value = '';
                         }
                     } catch (error) {
-                        // console.error('Error in editLabel:', error);
-                        showToast('Failed to rename label', 'error');
+                        showToast('Failed to create label', 'error');
                     } finally {
                         this.setLoading(false);
                     }
                 }
-            });
-
+            }
+        });
+    
+        this.searchInput.addEventListener('input', () => {
+            selectedIndex = -1;
+            this.filterLabels(this.searchInput.value);
+        });
+    
+        // Close button
+        this.container.querySelector('.label-close').addEventListener('click', () => this.hide());
+    }
+    
+    renderLabels(labels = []) {
+        this.labelList.innerHTML = '';
+    
+        if (this.loading) {
+            const loadingItem = document.createElement('div');
+            loadingItem.className = 'label-spinner';
+            this.labelList.appendChild(loadingItem);
+            return;
+        }
+    
+        if (labels.length === 0) {
+            const emptyItem = document.createElement('div');
+            emptyItem.className = 'label-empty';
+            emptyItem.textContent = 'No labels found. Press Enter to create a new label.';
+            this.labelList.appendChild(emptyItem);
+            return;
+        }
+    
+        labels.forEach(([name, data], index) => {
+            const item = document.createElement('li');
+            item.className = 'label-item';
+            item.setAttribute('data-index', index);
+            item.setAttribute('tabindex', '0');
+            
+            const color = document.createElement('div');
+            color.className = 'label-color';
+            color.style.backgroundColor = data.color;
+    
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'label-name';
+            nameSpan.textContent = name;
+    
+            const actions = document.createElement('div');
+            actions.className = 'label-actions';
+    
+            const editButton = this.createActionButton('edit', 'Edit label');
+            const deleteButton = this.createActionButton('delete', 'Delete label');
+    
+            actions.appendChild(editButton);
+            actions.appendChild(deleteButton);
+    
+            item.appendChild(color);
+            item.appendChild(nameSpan);
+            item.appendChild(actions);
+    
+            this.attachLabelEventHandlers(item, name);
+    
             this.labelList.appendChild(item);
         });
+    }
+
+    createActionButton(type, title) {
+        const button = document.createElement('button');
+        button.className = `label-${type}`;
+        button.title = title;
+        button.innerHTML = type === 'edit' ? this.getEditIcon() : this.getDeleteIcon();
+        return button;
+    }
+
+    attachLabelEventHandlers(item, name) {
+        // Click handler for the item
+        item.addEventListener('click', async (e) => {
+            if (!e.target.closest('.label-delete') && !e.target.closest('.label-edit')) {
+                this.hide();
+                this.setLoading(true);
+                try {
+                    const success = await handleLabelSelect(name);
+                    if (!success) {
+                        showToast('Failed to add label', 'error');
+                    }
+                } catch (error) {
+                    showToast('Failed to add label', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+        });
+    
+        // Delete handler
+        item.querySelector('.label-delete').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm(`Are you sure you want to delete "${name}"?`)) {
+                this.setLoading(true);
+                try {
+                    const success = await deleteLabel(name);
+                    if (!success) {
+                        showToast('Failed to delete label', 'error');
+                    }
+                } catch (error) {
+                    showToast('Failed to delete label', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+        });
+    
+        // Edit handler
+        item.querySelector('.label-edit').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newName = prompt(`Rename label "${name}" to:`, name);
+            if (newName && newName !== name) {
+                this.setLoading(true);
+                try {
+                    const success = await editLabel(name, newName);
+                    if (success) {
+                        showToast('Label editing is done!');
+                    }
+                } catch (error) {
+                    showToast('Failed to rename label', 'error');
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+        });
+    }
+    getEditIcon() {
+        return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>`;
+    }
+
+    getDeleteIcon() {
+        return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>`;
     }
 
     async show() {

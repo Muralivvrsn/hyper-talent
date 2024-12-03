@@ -67,7 +67,7 @@ window.setupFloatingPanel = () => {
     });
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && floatingPanel.style.display === 'block') {
+        if (event.key === 'Escape' && floatingPanel?.style?.display === 'block') {
             window.hideFloatingPanel();
         }
     });
