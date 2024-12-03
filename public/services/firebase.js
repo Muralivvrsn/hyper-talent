@@ -3,6 +3,7 @@ let db = null;
 let auth = null;
 let currentUser = null;
 let tokenExpiryTime = null;
+let not = "AIzaSyBFggUUWmz6H53hxr-jL00tGDYr9x4DQg4"
 
 // Token refresh interval (1 hour before expiry)
 const REFRESH_INTERVAL = 55 * 60 * 1000; // 55 minutes
@@ -57,7 +58,7 @@ async function initializeFirebase() {
     // If Firebase isn't initialized yet, initialize it
     if (!firebase.apps?.length) {
       firebase.initializeApp({
-        apiKey: "AIzaSyBFggUUWmz6H53hxr-jL00tGDYr9x4DQg4",
+        apiKey: not,
         authDomain: "hyper-75b53.firebaseapp.com",
         projectId: "hyper-75b53"
       });
