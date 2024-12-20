@@ -31,11 +31,11 @@ const LoginPage = () => {
           </div>
 
           {/* Error Message */}
-          {error && (
+          {/* {error && (
             <div className="w-full p-3 rounded-lg border">
               <p className="text-sm text-destructive">{error}</p>
             </div>
-          )}
+          )} */}
 
           {/* Sign In Button */}
           <Button

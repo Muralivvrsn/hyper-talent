@@ -74,6 +74,7 @@ class LabelManager {
         this.setupStyles();
         this.createElements();
         this.setupEventListeners();
+        this.setupMessageListButtons();
         this.loading = false;
         this.labels = [];
 
@@ -135,10 +136,10 @@ class LabelManager {
         const styleSheet = document.createElement('style');
         styleSheet.textContent = `
             .label-manager {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
+                position: absolute;  
+                top: 100%;         
+                left: 0;            
+                transform: none;   
                 width: 450px;
                 max-width: 90vw;
                 background: white;
@@ -146,6 +147,7 @@ class LabelManager {
                 display: none;
                 z-index: 9999;
                 box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+                margin-top: 4px;    
             }
     
             .label-manager.visible {
@@ -387,6 +389,118 @@ class LabelManager {
         document.head.appendChild(styleSheet);
     }
 
+    setupMessageListButtons() {
+        const titleRow = document.querySelector('.msg-conversations-container__title-row');
+        if (!titleRow || document.querySelector('#linkedin-quick-label-btn')) return;
+    
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.position = 'relative';
+        buttonContainer.style.marginLeft = '8px';
+    
+        const quickLabelButton = document.createElement('button');
+        quickLabelButton.id = 'linkedin-quick-label-btn';
+        quickLabelButton.className = 'artdeco-pill artdeco-pill--slate artdeco-pill--3 artdeco-pill--choice ember-view';
+        quickLabelButton.innerHTML = '<span class="artdeco-pill__text">Labels</span>';
+    
+        quickLabelButton.addEventListener('click', () => {
+            if (this.isVisible()) {
+                this.hide();
+            } else {
+                this.show();
+            }
+        });
+    
+        buttonContainer.appendChild(quickLabelButton);
+        buttonContainer.appendChild(this.container);
+        titleRow.appendChild(buttonContainer);
+    }
+    
+    createLabelManagerDropdown(anchorButton) {
+        const buttonRect = anchorButton.getBoundingClientRect();
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'label-manager scaffold-layout__list-detail';
+        dropdown.style.cssText = `
+            position: fixed;
+            top: ${buttonRect.bottom + window.scrollY + 5}px;
+            left: ${buttonRect.left + window.scrollX}px;
+            border-radius: 8px;
+            padding: 0;
+            z-index: 1000;
+            min-width: 450px;
+            max-width: 90vw;
+            height: fit-content;
+            background-color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: block;
+        `;
+    
+        // Create header
+        const header = document.createElement('div');
+        header.className = 'label-header';
+        header.innerHTML = `
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                </svg>
+                Manage Labels
+            </h2>
+            <button class="label-close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        `;
+    
+        const content = document.createElement('div');
+        content.className = 'label-content';
+    
+        const searchContainer = document.createElement('div');
+        searchContainer.className = 'label-search-container';
+    
+        const searchInput = document.createElement('input');
+        searchInput.className = 'label-search';
+        searchInput.placeholder = 'Search or create new label...';
+        searchInput.required = true;
+    
+        const addButton = document.createElement('button');
+        addButton.className = 'label-add-button';
+        addButton.textContent = 'Add Label';
+        addButton.style.display = 'none';
+    
+        const labelList = document.createElement('ul');
+        labelList.className = 'label-list';
+    
+        searchContainer.appendChild(searchInput);
+        searchContainer.appendChild(addButton);
+        content.appendChild(searchContainer);
+        content.appendChild(labelList);
+    
+        dropdown.appendChild(header);
+        dropdown.appendChild(content);
+    
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const newRect = anchorButton.getBoundingClientRect();
+            dropdown.style.top = `${newRect.bottom + window.scrollY + 5}px`;
+            dropdown.style.left = `${newRect.left + window.scrollX}px`;
+        });
+    
+        // Close button handler
+        header.querySelector('.label-close').addEventListener('click', () => {
+            dropdown.remove();
+        });
+    
+        // Reuse existing label rendering logic
+        this.container = dropdown;
+        this.labelList = labelList;
+        this.searchInput = searchInput;
+        this.renderLabels(this.labels);
+    
+        return dropdown;
+    }
     createElements() {
         this.container = document.createElement('div');
         this.container.className = 'label-manager';
@@ -432,7 +546,7 @@ class LabelManager {
         content.appendChild(searchContainer);
         content.appendChild(this.labelList);
         
-        this.container.appendChild(header);
+        // this.container.appendChild(header);
         this.container.appendChild(content);
         document.body.appendChild(this.container);
     }
@@ -478,6 +592,7 @@ class LabelManager {
         this.container.addEventListener('keydown', (e) => {
             const items = Array.from(this.labelList.querySelectorAll('.label-item:not(.empty):not(.loading)'));
             if (!items.length) return;
+            if(e.metaKey || e.ctrlKey) return;
     
             const currentIndex = selectedIndex;
     
@@ -564,7 +679,7 @@ class LabelManager {
         });
     
         // Close button
-        this.container.querySelector('.label-close').addEventListener('click', () => this.hide());
+        // this.container.querySelector('.label-close').addEventListener('click', () => this.hide());
     }
     
     renderLabels(labels = []) {

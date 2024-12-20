@@ -29,47 +29,48 @@ window.keyboard.shortcuts = {
     dialog.style.cssText = `
       position: fixed;
       top: 50%;
-      left: 80%;
+      left: 80%; 
       transform: translate(-50%, -50%);
       z-index: 50;
       display: none;
-      width: 600px;  /* Increased from 400px */
+      width: 400px;  
       background: white;
-      border-radius: 12px; /* Increased from 8px */
-      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      border-radius: 16px; 
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 10px 10px -5px rgb(0 0 0 / 0.10); 
       overflow: hidden;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
   
     const content = `
       <div class="header" style="
         background: rgb(37 99 235);
-        padding: 2.25rem;  /* Increased from 1.5rem */
+        padding: 2rem 2.5rem;  
         position: relative;
       ">
         <h2 style="
-          font-size: 1.6875rem;  /* Increased from 1.125rem */
-          line-height: 2.625rem;  /* Increased from 1.75rem */
-          font-weight: 600;
+          line-height: 1.3;
+          font-weight: 700; 
           color: white;
           margin: 0;
-          padding-right: 3rem;  /* Increased from 2rem */
+          letter-spacing: -0.02em; 
         ">Keyboard Shortcuts</h2>
         
         <button class="close-button" style="
           position: absolute;
-          right: 1.5rem;  /* Increased from 1rem */
-          top: 1.5rem;  /* Increased from 1rem */
+          right: 10px;
+          top: 10px;
           background: transparent;
           border: none;
-          padding: 0.75rem;  /* Increased from 0.5rem */
-          border-radius: 9999px;
+          padding: 0.75rem;
+          border-radius: 12px; 
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
+          transition: all 0.2s ease; 
         ">
-          <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
@@ -77,40 +78,38 @@ window.keyboard.shortcuts = {
   
         <div style="
           position: relative;
-          margin-top: 0.75rem;  /* Increased from 0.5rem */
+          margin-top: 1.25rem; 
         ">
+          <input type="text" placeholder="Search shortcuts..." style="
+            width: 100%;
+            padding: 1rem 1.5rem 1rem 3.5rem;  
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2); 
+            color: white;
+            border-radius: 12px;  
+            font-weight: 500;
+            outline: none;
+            transition: all 0.2s ease;
+          ">
           <svg style="
             position: absolute;
-            left: 1.125rem;  /* Increased from 0.75rem */
+            left: 1.25rem;
             top: 50%;
             transform: translateY(-50%);
-            width: 1.5rem;  /* Increased from 1rem */
-            height: 1.5rem;  /* Increased from 1rem */
-            color: rgb(156 163 175);
-          " xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            width: 1.25rem;
+            height: 1.25rem;
+            color: rgba(255, 255, 255, 0.6); 
+          " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          
-          <input type="text" placeholder="Search shortcuts" style="
-            width: 100%;
-            padding: 0.75rem 1.5rem 0.75rem 3.75rem;  /* Increased padding */
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            border-radius: 9999px;
-            font-size: 1.3125rem;  /* Increased from 0.875rem */
-            outline: none;
-            transition: all 300ms;
-          ">
         </div>
       </div>
   
       <div id="shortcuts-list" style="
-        max-height: calc(80vh - 270px);  /* Increased from 180px */
+        max-height: 70vh;  
         overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(0,0,0,0.2) transparent;
+        padding: 0.5rem 0; 
       "></div>
     `;
   
@@ -121,14 +120,14 @@ window.keyboard.shortcuts = {
     const styleSheet = document.createElement('style');
     styleSheet.textContent = `
       #shortcuts-list::-webkit-scrollbar {
-        width: 12px;  /* Increased from 8px */
+        width: 12px;  
       }
       #shortcuts-list::-webkit-scrollbar-track {
         background: transparent;
       }
       #shortcuts-list::-webkit-scrollbar-thumb {
         background-color: rgba(0,0,0,0.2);
-        border-radius: 6px;  /* Increased from 4px */
+        border-radius: 6px; 
       }
       .close-button:hover {
         background-color: rgba(255, 255, 255, 0.1);
@@ -180,30 +179,33 @@ window.keyboard.shortcuts = {
       <div style="
         display: flex;
         justify-content: space-between;
-        padding: 1.5rem;  /* Increased from 1rem */
+        align-items: center; 
+        padding: 1rem 2.5rem;  
         border-bottom: 1px solid rgb(243 244 246);
-        transition: background-color 200ms;
+        transition: all 0.2s ease;
         cursor: pointer;
       " class="shortcut-item">
-        <div style="display: flex; flex-direction: column; gap: 0.375rem;">  /* Increased from 0.25rem */
+        <div style="flex: 1;">  
           <div style="
-            font-size: 1.3125rem;  /* Increased from 0.875rem */
-            font-weight: 500;
+            font-weight: 600; 
             color: rgb(17 24 39);
+            margin-bottom: 0.25rem; 
           ">${shortcut.title}</div>
           <div style="
-            font-size: 1.125rem;  /* Increased from 0.75rem */
             color: rgb(107 114 128);
+            font-weight: 400; 
+            font-size: 1.25rem;
           ">${shortcut.description}</div>
         </div>
         <code style="
-          font-size: 1.125rem;  /* Increased from 0.75rem */
           background: rgb(243 244 246);
-          padding: 0.375rem 0.75rem;  /* Increased padding */
-          border-radius: 0.5625rem;  /* Increased from 0.375rem */
-          font-family: ui-monospace, monospace;
+          padding: 0.5rem 0.75rem;
+          border-radius: 8px;
+          font-family: ui-monospace, 'SF Mono', Menlo, monospace;
           color: rgb(31 41 55);
-          align-self: flex-start;
+          font-weight: 500;
+          margin-left: 2rem; 
+          white-space: nowrap;  
         ">${shortcut.keys}</code>
       </div>
     `).join('');
@@ -236,7 +238,7 @@ window.keyboard.shortcuts = {
   handleConversationNavigation(e) {
     // Only handle Cmd/Ctrl + up/down arrows
     if (!((e.metaKey || e.ctrlKey) && !e.shiftKey) || (e.code !== 'ArrowDown' && e.code !== 'ArrowUp')) {
-      return;
+        return;
     }
 
     e.preventDefault(); // Prevent page scrolling
@@ -244,48 +246,73 @@ window.keyboard.shortcuts = {
     // Get the conversations list
     const conversationsList = document.querySelector('.msg-conversations-container__conversations-list');
     if (!conversationsList) {
-      return;
+        return;
     }
 
-    // Get all conversation items
-    const conversations = Array.from(conversationsList.getElementsByTagName('li'));
+    // Get all visible conversation items
+    const conversations = Array.from(conversationsList.getElementsByTagName('li')).filter(li => {
+        const computedStyle = window.getComputedStyle(li);
+        return computedStyle.display !== 'none';
+    });
+
     if (!conversations.length) {
-      return;
+        return;
     }
 
     // Find current active conversation if we don't have it
     if (this.currentActiveIndex === -1) {
-      this.currentActiveIndex = conversations.findIndex(li =>
-        li.querySelector('.msg-conversation-listitem__active-text.visually-hidden')
-      );
+        this.currentActiveIndex = conversations.findIndex(li =>
+            li.querySelector('.msg-conversation-listitem__active-text.visually-hidden')
+        );
 
-      // If still no active conversation found, start from the beginning
-      if (this.currentActiveIndex === -1) {
-        this.currentActiveIndex = 0;
-      }
+        // If still no active conversation found, start from the beginning
+        if (this.currentActiveIndex === -1) {
+            this.currentActiveIndex = 0;
+        }
     }
 
     // Calculate new index based on arrow key
     let newIndex;
     if (e.code === 'ArrowDown') {
-      newIndex = this.currentActiveIndex + 1;
-      if (newIndex >= conversations.length) {
-        newIndex = 0; // Wrap to start
-      }
+        newIndex = this.currentActiveIndex + 1;
+        if (newIndex >= conversations.length) {
+            newIndex = 0; // Wrap to start
+        }
     } else { // ArrowUp
-      newIndex = this.currentActiveIndex - 1;
-      if (newIndex < 0) {
-        newIndex = conversations.length - 1; // Wrap to end
-      }
+        newIndex = this.currentActiveIndex - 1;
+        if (newIndex < 0) {
+            newIndex = conversations.length - 1; // Wrap to end
+        }
     }
 
     // Find and click the selectable content element
     const selectableContent = conversations[newIndex].querySelector('.msg-conversation-card__content--selectable');
     if (selectableContent) {
-      selectableContent.click();
-      this.currentActiveIndex = newIndex;
+        selectableContent.click();
+        this.currentActiveIndex = newIndex;
+
+        // Get the height of the selected conversation element
+        const conversationHeight = conversations[newIndex].offsetHeight;
+        
+        // Calculate scroll position
+        const containerTop = conversationsList.scrollTop;
+        const elementTop = conversations[newIndex].offsetTop;
+        const containerHeight = conversationsList.clientHeight;
+        
+        // Scroll based on direction
+        if (e.code === 'ArrowDown') {
+            // If element is below viewport
+            if (elementTop + conversationHeight > containerTop + containerHeight) {
+                conversationsList.scrollTop = elementTop - containerHeight + conversationHeight;
+            }
+        } else {
+            // If element is above viewport
+            if (elementTop < containerTop) {
+                conversationsList.scrollTop = elementTop;
+            }
+        }
     }
-  },
+},
 
   handleManualClick(e) {
     const conversationsList = document.querySelector('.msg-conversations-container__conversations-list');
@@ -404,14 +431,6 @@ window.keyboard.shortcuts = {
         optionToFind = 'Mute';
         if (event.shiftKey) {
           optionToFind = 'Unmute';
-        }
-        break;
-      case 'KeyR':
-        event.preventDefault();
-        if (event.shiftKey) {
-          optionToFind = 'Restore';
-        } else {
-          optionToFind = 'Report';
         }
         break;
       case 'KeyS':

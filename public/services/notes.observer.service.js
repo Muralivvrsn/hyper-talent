@@ -9,27 +9,27 @@ window.notesObserver = {
 
         extractMediaCode(url) {
             if (!url) {
-                console.log('No URL provided for media code extraction');
+                // console.log('No URL provided for media code extraction');
                 return null;
             }
             if (url.startsWith('data:image')) return url;
             const match = url.match(/\/v2\/([^/]+)\//);
-            console.log('Extracted media code:', match ? match[1] : 'none');
+            // console.log('Extracted media code:', match ? match[1] : 'none');
             return match ? match[1] : null;
         },
 
         validateProfile(li) {
-            console.log('Validating profile for:', li);
+            // console.log('Validating profile for:', li);
             const img = li.querySelector('img.presence-entity__image') ||
                 li.querySelector('img.msg-facepile-grid__img.msg-facepile-grid__img--person.evi-image');
             const nameSpan = li.querySelector('h3.msg-conversation-listitem__participant-names span.truncate');
 
             if (!img?.src || !nameSpan) {
-                console.log('Invalid profile elements:', { 
-                    hasImg: !!img, 
-                    hasSrc: !!img?.src, 
-                    hasNameSpan: !!nameSpan
-                });
+                // // console.log('Invalid profile elements:', { 
+                //     hasImg: !!img, 
+                //     hasSrc: !!img?.src, 
+                //     hasNameSpan: !!nameSpan
+                // });
                 return null;
             }
 
@@ -40,17 +40,17 @@ window.notesObserver = {
                 element: li
             };
 
-            console.log('Validated profile info:', profileInfo);
+            // console.log('Validated profile info:', profileInfo);
             return profileInfo;
         },
 
         findNoteIndicator(li) {
             const indicator = li.querySelector('.note-indicator-container');
-            console.log('Found note indicator:', !!indicator);
+            // console.log('Found note indicator:', !!indicator);
             return indicator;
         },
         createNoteIndicator(noteData) {
-            console.log('Creating note indicator for:', noteData.name);
+            // console.log('Creating note indicator for:', noteData.name);
             const container = document.createElement('div');
             container.className = 'note-indicator-container';
             container.setAttribute('data-note-key', noteData.key);
@@ -96,14 +96,14 @@ window.notesObserver = {
         },
 
         updateNoteIndicator(li, noteData) {
-            console.log('Updating note indicator:', noteData);
+            // console.log('Updating note indicator:', noteData);
             let indicatorContainer = this.findNoteIndicator(li);
 
             if (indicatorContainer) {
                 const currentName = indicatorContainer.getAttribute('data-profile-name');
                 const currentCode = indicatorContainer.getAttribute('data-media-code');
                 if (currentName !== noteData.name || currentCode !== noteData.code) {
-                    console.log('Removing mismatched indicator');
+                    // console.log('Removing mismatched indicator');
                     indicatorContainer.remove();
                     indicatorContainer = null;
                 }
@@ -111,10 +111,10 @@ window.notesObserver = {
 
             if (noteData.hasNote) {
                 if (!indicatorContainer) {
-                    console.log('Creating new indicator');
+                    // console.log('Creating new indicator');
                     indicatorContainer = this.createNoteIndicator(noteData);
                     const card = li.querySelector('.msg-conversation-card__content--selectable');
-                    console.log(card)
+                    // console.log(card)
                     if (card) {
                         card.style.position = 'relative';
                         card.appendChild(indicatorContainer);
@@ -124,7 +124,7 @@ window.notesObserver = {
         },
 
         async processConversationItem(li, notesCache) {
-            console.log('Processing conversation item');
+            // console.log('Processing conversation item');
             const profileInfo = this.validateProfile(li);
             if (!profileInfo) {
                 // Remove any existing indicators if profile is invalid
@@ -132,14 +132,14 @@ window.notesObserver = {
                 if (existingIndicator) {
                     existingIndicator.remove();
                 }
-                console.log('Invalid profile info, removing any existing indicators');
+                // console.log('Invalid profile info, removing any existing indicators');
                 return;
             }
 
-            console.log('Processing profile:', {
-                name: profileInfo.name,
-                mediaCode: profileInfo.mediaCode
-            });
+            // console.log('Processing profile:', {
+            //     name: profileInfo.name,
+            //     mediaCode: profileInfo.mediaCode
+            // });
 
             let hasMatchingNote = false;
 
@@ -170,17 +170,17 @@ window.notesObserver = {
             if (!hasMatchingNote) {
                 const existingIndicator = this.findNoteIndicator(li);
                 if (existingIndicator) {
-                    console.log('Removing indicator for profile without matching note');
+                    // console.log('Removing indicator for profile without matching note');
                     existingIndicator.remove();
                 }
             }
         },
 
         handleUpdates(notesCache) {
-            console.log('Handling updates with cache:', notesCache);
+            // console.log('Handling updates with cache:', notesCache);
             const list = document.querySelector('.msg-conversations-container__conversations-list');
             if (!list) {
-                console.log('No conversation list found');
+                // console.log('No conversation list found');
                 return;
             }
 
@@ -192,19 +192,19 @@ window.notesObserver = {
             existingIndicators.forEach(indicator => {
                 const noteKey = indicator.getAttribute('data-note-key');
                 if (!validKeys.has(noteKey)) {
-                    console.log(`Removing indicator for deleted note: ${noteKey}`);
+                    // console.log(`Removing indicator for deleted note: ${noteKey}`);
                     indicator.remove();
                 }
             });
 
             // Process all conversation items
             const items = list.querySelectorAll('li');
-            console.log(`Processing ${items.length} conversation items`);
+            // console.log(`Processing ${items.length} conversation items`);
             items.forEach(item => this.processConversationItem(item, notesCache));
         },
 
         initialize() {
-            console.log('Initializing notes observer');
+            // console.log('Initializing notes observer');
             if (this.currentObserver) {
                 this.cleanup();
             }
@@ -215,20 +215,20 @@ window.notesObserver = {
             const observeList = async () => {
                 const container = document.querySelector('.msg-conversations-container__conversations-list');
                 if (!container) {
-                    console.log('No container found, retrying...');
+                    // console.log('No container found, retrying...');
                     setTimeout(() => observeList(), 1000);
                     return;
                 }
 
                 try {
                     const { db, currentUser } = await window.firebaseService.initializeFirebase();
-                    console.log('Firebase initialized');
+                    // console.log('Firebase initialized');
 
                     // Listen for database changes
                     this.unsubscribeFirestore = db.collection('notes')
                         .doc(currentUser.uid)
                         .onSnapshot(doc => {
-                            console.log('Received Firestore update');
+                            // console.log('Received Firestore update');
                             if (doc.exists) {
                                 clearTimeout(updateTimer);
                                 updateTimer = setTimeout(() => {
@@ -250,7 +250,7 @@ window.notesObserver = {
                         );
 
                         if (!hasRelevantChanges) return;
-                        console.log('Relevant DOM changes detected');
+                        // console.log('Relevant DOM changes detected');
 
                         db.collection('notes')
                             .doc(currentUser.uid)
@@ -268,10 +268,10 @@ window.notesObserver = {
                         attributes: true,
                         attributeFilter: ['src']
                     });
-                    console.log('Observers set up successfully');
+                    // console.log('Observers set up successfully');
 
                 } catch (error) {
-                    console.error('Error initializing notes observer:', error);
+                    // console.error('Error initializing notes observer:', error);
                 }
             };
 
@@ -279,7 +279,7 @@ window.notesObserver = {
         },
 
         cleanup() {
-            console.log('Cleaning up notes observer');
+            // console.log('Cleaning up notes observer');
             if (this.currentObserver) {
                 this.currentObserver.disconnect();
                 this.currentObserver = null;
@@ -295,7 +295,7 @@ window.notesObserver = {
             });
 
             this.profileNotesMap.clear();
-            console.log('Cleanup complete');
+            // console.log('Cleanup complete');
         }
     }
 };

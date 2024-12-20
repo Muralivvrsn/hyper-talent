@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
       } else {
         // If no Firebase user, check chrome identity
         try {
-          const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
+          const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
           if (response.token) {
             // If we have a token, sign in with Firebase
             setAuthenticating(true);

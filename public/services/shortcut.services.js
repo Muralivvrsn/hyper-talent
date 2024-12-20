@@ -146,18 +146,37 @@ window.shortcutsObserver = {
 
         // Helper function for name replacement
         replaceName(content, name = '') {
+            let firstName = '[First Name]';
+            let lastName = '[Last Name]';
+            let fullName = '[Name]';
+        
             if (!name) {
-                const messageThread = document.querySelector('.msg-thread');
+                const messageThread = document.querySelector('a.msg-thread__link-to-profile');
                 if (messageThread) {
-                    const nameElement = messageThread.querySelector('.msg-s-message-group__name');
+                    const nameElement = messageThread.querySelector('.msg-entity-lockup__entity-title');
                     if (nameElement) {
-                        name = nameElement.textContent.trim().split(' ')[0];
+                        const nameParts = nameElement.textContent.trim().split(' ');
+                        if (nameParts.length >= 1) {
+                            firstName = nameParts[0];
+                            lastName = nameParts[nameParts.length - 1];
+                            fullName = nameElement.textContent.trim();
+                        }
                     }
                 }
-                // console.log(name)
+            } else {
+                // If name is provided, split it
+                const nameParts = name.trim().split(' ');
+                if (nameParts.length >= 1) {
+                    firstName = nameParts[0];
+                    lastName = nameParts[nameParts.length - 1];
+                    fullName = name.trim();
+                }
             }
-            // console.log(content.replace(/<<name>>/g, name || '[Name]'));
-            return content.replace(/<<name>>/g, name || '[Name]');
+        
+            return content
+                .replace(/<<first_name>>/g, firstName)
+                .replace(/<<last_name>>/g, lastName)
+                .replace(/<<name>>/g, fullName);
         },
 
         debounce(func, wait) {
@@ -292,6 +311,7 @@ window.shortcutsObserver = {
                         messageBox.dispatchEvent(new Event(eventType, { bubbles: true }));
                     });
 
+                    
                     const messageInput = document.querySelector('.msg-form__contenteditable');
                     if (messageInput) {
                         messageInput.focus();

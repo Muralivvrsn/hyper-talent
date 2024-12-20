@@ -1,111 +1,25 @@
 
 class NotesManager {
     constructor() {
-        console.log('Initializing NotesManager');
+        // console.log('Initializing NotesManager');
         this.notes = {};
         this.setupStyles();
-        this.createElements();
+        // this.createElements();
         this.setupEventListeners();
         this.loadInitialNotes();
-        console.log('NotesManager initialization complete');
+        this.profileInfo = null;
+        this.container = null;  // Will be created on demand
     }
     // Add these methods to the NotesManager class:
 
-    enableDragging() {
-        const header = this.container.querySelector('.notes-header');
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
 
-        const dragStart = (e) => {
-            if (e.type === "touchstart") {
-                initialX = e.touches[0].clientX - xOffset;
-                initialY = e.touches[0].clientY - yOffset;
-            } else {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-            }
-
-            if (e.target.closest('.notes-header')) {
-                isDragging = true;
-                header.style.cursor = 'grabbing';
-            }
-        };
-
-        const drag = (e) => {
-            if (isDragging) {
-                e.preventDefault();
-
-                if (e.type === "touchmove") {
-                    currentX = e.touches[0].clientX - initialX;
-                    currentY = e.touches[0].clientY - initialY;
-                } else {
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
-                }
-
-                xOffset = currentX;
-                yOffset = currentY;
-
-                setTranslate(currentX, currentY, this.container);
-            }
-        };
-
-        const dragEnd = () => {
-            if (isDragging) {
-                initialX = currentX;
-                initialY = currentY;
-                isDragging = false;
-                header.style.cursor = 'grab';
-            }
-        };
-
-        const setTranslate = (xPos, yPos, el) => {
-            el.style.transform = `translate(${xPos}px, ${yPos}px)`;
-        };
-
-        // Add event listeners
-        header.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', dragEnd);
-
-        // Touch events
-        header.addEventListener('touchstart', dragStart);
-        document.addEventListener('touchmove', drag);
-        document.addEventListener('touchend', dragEnd);
-
-        // Set initial cursor style
-        header.style.cursor = 'grab';
-    }
     setupStyles() {
         const styleSheet = document.createElement('style');
         styleSheet.textContent = `
-            .notes-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                // backdrop-filter: blur(2px);
-                z-index: 9998;
-                opacity: 0;
-                visibility: hidden;
-                transition: all 0.2s ease;
-            }
-    
-            .notes-overlay.visible {
-                opacity: 1;
-                visibility: visible !important;
-            }
-    
             .notes-manager {
                 position: fixed;
                 top: 50%;
-                left: 50%;
+                left: 80%;
                 transform: translate(-50%, -50%);
                 width: 450px;
                 max-width: 90vw;
@@ -269,68 +183,60 @@ class NotesManager {
         `;
         document.head.appendChild(styleSheet);
     }
-
-    createElements() {
-        const parent = document.getElementById("artdeco-toasts__wormhole");
-
-        // Create overlay
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'notes-overlay';
-
-        // Create main container
+    createElements(profileName) {
         this.container = document.createElement('div');
         this.container.className = 'notes-manager';
-
+    
         const header = document.createElement('div');
         header.className = 'notes-header';
         header.innerHTML = `
-        <h2>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            Add Note
-        </h2>
-        <button class="notes-close">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-        </button>
-    `;
-
+            <h2>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Add Note for ${profileName}
+            </h2>
+            <button class="notes-close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        `;
+    
         const content = document.createElement('div');
         content.className = 'notes-content';
-
+    
         this.textarea = document.createElement('textarea');
         this.textarea.className = 'notes-textarea';
         this.textarea.placeholder = 'Enter your note here...';
-
+    
         const actions = document.createElement('div');
         actions.className = 'notes-actions';
-
+    
         this.deleteButton = document.createElement('button');
         this.deleteButton.className = 'notes-delete';
         this.deleteButton.textContent = 'Delete Note';
         this.deleteButton.style.display = 'none';
-
-
+    
         this.submitButton = document.createElement('button');
         this.submitButton.className = 'notes-submit';
         this.submitButton.textContent = 'Save Note';
-
+    
         actions.appendChild(this.deleteButton);
         actions.appendChild(this.submitButton);
-
+    
         content.appendChild(this.textarea);
         content.appendChild(actions);
-
+    
         this.container.appendChild(header);
         this.container.appendChild(content);
-
-        parent.appendChild(this.overlay);
-        parent.appendChild(this.container);
-        this.enableDragging();
+    
+        document.body.appendChild(this.container);
+        this.setupEventListeners();
+        // this.enableDragging();
+        this.setupContainerEvents();
     }
 
     async deleteNote() {
@@ -362,41 +268,57 @@ class NotesManager {
             showToast('Note deleted successfully');
             this.hide();
         } catch (error) {
-            console.error('Error deleting note:', error);
+            // console.error('Error deleting note:', error);
             showToast('Failed to delete note', 'error');
         }
     }
     setupEventListeners() {
-        console.log('Setting up event listeners');
-
-        // Global keyboard shortcut
+        // Global keyboard shortcut - only setup once in constructor
         document.addEventListener('keydown', (e) => {
             if (e?.key?.toLowerCase() === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-                // Don't do anything if notes is already open
-                if (this.isVisible()) return;
-
                 const activeElement = document.activeElement;
                 const isMessageInput = activeElement?.classList.contains('msg-form__contenteditable');
                 const isInputField = activeElement?.tagName?.toLowerCase() === 'input';
                 const isLabelManagerVisible = document.querySelector('.label-manager.visible');
-
-                if (!isMessageInput && !isInputField && !isLabelManagerVisible) {
+                const isNotesVisible = document.querySelector('.notes-manager');
+    
+                if (!isMessageInput && !isInputField && !isLabelManagerVisible && !isNotesVisible) {
                     e.preventDefault();
                     this.show();
                 }
-            } else if (e.key === 'Escape' && this.isVisible()) {
+            } else if (e.key === 'Escape') {
+                const notesManager = document.querySelector('.notes-manager');
+                if (notesManager) {
+                    this.hide();
+                }
+            } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                const notesManager = document.querySelector('.notes-manager');
+                if (e.key === 'ArrowUp' && !notesManager) {
+                    this.hide();
+                } else if (e.key === 'ArrowDown' && notesManager) {
+                    this.hide();
+                }
+            }
+        });
+    
+        // Click outside to close
+        document.addEventListener('mousedown', (e) => {
+            const notesManager = document.querySelector('.notes-manager');
+            if (notesManager && !notesManager.contains(e.target)) {
                 this.hide();
             }
         });
-
-
-
-        // Close on overlay click
-        this.overlay.addEventListener('click', () => this.hide());
-
+    
+        // Setup Firebase realtime listener - only once in constructor
+        this.setupFirebaseListener();
+    }
+    
+    // New method for container-specific events
+    setupContainerEvents() {
         // Close button
         this.container.querySelector('.notes-close').addEventListener('click', () => this.hide());
-
+    
         // Submit functionality
         this.submitButton.addEventListener('click', () => this.saveNote());
         this.deleteButton.addEventListener('click', () => this.deleteNote());
@@ -406,11 +328,6 @@ class NotesManager {
                 this.saveNote();
             }
         });
-
-        // Setup Firebase realtime listener
-        this.setupFirebaseListener();
-
-        console.log('Event listeners setup complete');
     }
 
     async loadInitialNotes() {
@@ -423,7 +340,7 @@ class NotesManager {
             this.notes = notesDoc.exists ? notesDoc.data() : {};
             this.updateNotesIndicators();
         } catch (error) {
-            console.error('Error loading initial notes:', error);
+            // console.error('Error loading initial notes:', error);
         }
     }
 
@@ -466,34 +383,38 @@ class NotesManager {
 
 
     async saveNote() {
-        console.log('Attempting to save note');
+        // console.log('Attempting to save note');
         const note = this.textarea.value.trim();
         if (!note) {
-            console.log('Note is empty');
+            // console.log('Note is empty');
             showToast('Please enter a note', 'error');
             return;
         }
 
         const profileInfo = getProfileInfo();
+
         const profileImage = getProfileImage();
 
         if (!profileInfo || !profileImage) {
-            console.log('Missing profile info or image');
+            // console.log('Missing profile info or image');
             showToast('Could not find profile information', 'error');
             return;
         }
+        this.profileInfo = profileInfo
 
         try {
-            console.log('Initializing Firebase');
+            // console.log('Initializing Firebase');
             const { db, currentUser } = await window.firebaseService.initializeFirebase();
             if (!db || !currentUser) {
-                console.log('Firebase initialization failed');
+                // console.log('Firebase initialization failed');
                 showToast('Authentication error', 'error');
                 return;
             }
 
+            console.log(profileInfo)
+
             const profileId = btoa(profileInfo.url).replace(/[^a-zA-Z0-9]/g, '');
-            console.log(`Saving note for profile: ${profileId}`);
+            // console.log(`Saving note for profile: ${profileId}`);
 
             const notesRef = db.collection('notes').doc(currentUser.uid);
             const noteData = {
@@ -507,7 +428,7 @@ class NotesManager {
             };
 
             await notesRef.set(noteData, { merge: true });
-            console.log('Note saved successfully');
+            // console.log('Note saved successfully');
             showToast('Note saved successfully');
             this.hide();
             this.textarea.value = '';
@@ -515,99 +436,66 @@ class NotesManager {
             this.notes = { ...this.notes, ...noteData };
             this.updateNotesIndicators();
         } catch (error) {
-            console.error('Error saving note:', error);
+            // console.error('Error saving note:', error);
             showToast('Failed to save note', 'error');
         }
     }
 
     isVisible() {
-        return this.container.classList.contains('visible') ||
-            this.overlay.classList.contains('visible');
+        return this.container.classList.contains('visible')
+            // this.overlay.classList.contains('visible');
     }
 
     async show() {
-        console.log('Showing notes manager');
-
         try {
             const profileInfo = getProfileInfo();
             if (!profileInfo) {
-                console.log('No profile info found');
                 showToast('Could not find profile information', 'error');
                 return;
             }
-
+    
+            // Create initial container with loading state
+            this.createElements(profileInfo.name);
+            this.container.classList.add('visible');
+            
             const { db, currentUser } = await window.firebaseService.initializeFirebase();
             if (!db || !currentUser) {
-                console.log('Firebase not initialized');
+                this.hide();
                 return;
             }
-
-            // First make the UI visible
-            requestAnimationFrame(() => {
-                this.overlay.classList.add('visible');
-                this.container.classList.add('visible');
-                this.textarea.value = '';
-                this.textarea.focus();
-            });
-
-
+    
             const profileId = btoa(profileInfo.url).replace(/[^a-zA-Z0-9]/g, '');
             const notesRef = db.collection('notes').doc(currentUser.uid);
             const notesDoc = await notesRef.get();
-
-            if (this.isVisible()) {
-                if (notesDoc.exists) {
-                    const notes = notesDoc.data();
-                    if (notes[profileId]) {
-                        console.log('Found existing note, populating textarea');
-                        this.currentNoteKey = profileId; // Store the key when we load a note
-                        requestAnimationFrame(() => {
-                            const headerTitle = this.container.querySelector('.notes-header h2');
-                            if (headerTitle) {
-                                headerTitle.textContent = 'Edit Note';
-                            }
-                            this.textarea.value = notes[profileId].note;
-                            this.deleteButton.style.display = 'block';
-                            this.textarea.focus();
-                        });
-                    } else {
-                        console.log('No existing note found');
-                        requestAnimationFrame(() => {
-                            const headerTitle = this.container.querySelector('.notes-header h2');
-                            if (headerTitle) {
-                                headerTitle.textContent = 'Add New Note';
-                            }
-                            this.deleteButton.style.display = 'none'; // Hide delete button
-                            this.textarea.focus();
-                        });
-                    }
+    
+            if (notesDoc.exists) {
+                const notes = notesDoc.data();
+                if (notes[profileId]) {
+                    this.currentNoteKey = profileId;
+                    this.textarea.value = notes[profileId].note;
+                    this.deleteButton.style.display = 'block';
+                } else {
+                    this.deleteButton.style.display = 'none';
                 }
             }
+    
+            this.textarea.focus();
+    
         } catch (error) {
-            console.error('Error loading note:', error);
             showToast('Error loading note', 'error');
             this.hide();
         }
     }
-
+    
     hide() {
-        console.log('Hiding notes manager - Current visibility:', this.isVisible());
-
-        // Remove classes first
-        this.container.classList.remove('visible');
-        this.overlay.classList.remove('visible');
-
-        // Reset the visibility style after transition
-        setTimeout(() => {
-            if (!this.isVisible()) {
-                this.container.style.visibility = 'hidden';
-                this.overlay.style.visibility = 'hidden';
-            }
-        }, 200); // Match this with your transition duration
+        if (this.container) {
+            this.container.remove(); // Remove from DOM completely
+            this.container = null;
+        }
     }
 
     cleanup() {
-        console.log('Cleaning up NotesManager');
+        // console.log('Cleaning up NotesManager');
         if (this.observer) {
             this.observer.disconnect();
         }
@@ -622,19 +510,19 @@ window.notes = {
 
 // Define the setup function
 window.notes.service.setupNotesManager = () => {
-    console.log('Setting up NotesManager service');
+    // console.log('Setting up NotesManager service');
     window.notes.observer = new NotesManager();
     return window.notes.observer;
 };
 
 // Define the getter function directly on window
 window.getNotesManager = function () {
-    console.log('getNotesManager called');
+    // console.log('getNotesManager called');
     if (!window.notes.observer) {
-        console.log('Creating new NotesManager instance');
+        // console.log('Creating new NotesManager instance');
         window.notes.observer = window.notes.service.setupNotesManager();
     }
     return window.notes.observer;
 };
 
-console.log('Notes service script loaded. window.getNotesManager:', !!window.getNotesManager);
+// console.log('Notes service script loaded. window.getNotesManager:', !!window.getNotesManager);

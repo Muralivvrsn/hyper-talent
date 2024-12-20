@@ -84,63 +84,119 @@ function waitForNotesManager(maxAttempts = 20) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Received message:', message.type);
 
-  if (message.type === "URL_UPDATED" || message.type === "google-sheet-has-been-clicked") {
+  if (message.type === "URL_UPDATED") {
     console.log('Starting initialization process');
 
     waitForElement('.msg-conversations-container__title-row')
       .then(async () => {
         console.log('Container found, initializing managers');
-        observeThemeChanges();
+        
+        // Track initialization results
+        const initResults = {
+          success: true,
+          errors: []
+        };
 
-        // Initialize label manager
-        window.getLabelManager();
-
-        // Cleanup existing observers
-        console.log('Cleaning up existing observers');
-        if (window.labelsObserver?.observer) {
-          window.labelsObserver.observer.cleanup();
-        }
-        if (window.shortcutsObserver?.observer) {
-          window.shortcutsObserver.observer.cleanup();
-        }
-        if (window.labelsFilter?.observer) {
-          window.labelsFilter.observer.cleanup();
-        }
-        if (window.notes?.observer) {
-          window.notes.observer.cleanup();
-        }
-        if (window.notesObserver?.observer) {
-          window.notesObserver.observer.cleanup();
+        try {
+          observeThemeChanges();
+        } catch (error) {
+          console.error('Theme observer error:', error);
+          initResults.errors.push('Theme observer failed');
         }
 
         try {
-          // Wait for message box to be available
-          // await waitForElement('.msg-form__contenteditable');
+          window.getLabelManager();
+        } catch (error) {
+          console.error('Label manager error:', error);
+          initResults.errors.push('Label manager failed');
+        }
 
-          // Wait for NotesManager to be available
+        // Cleanup existing observers
+        console.log('Cleaning up existing observers');
+        const observers = [
+          { name: 'labels', obj: window.labelsObserver?.observer },
+          { name: 'shortcuts', obj: window.shortcutsObserver?.observer },
+          { name: 'labelsFilter', obj: window.labelsFilter?.observer },
+          { name: 'notes', obj: window.notes?.observer },
+          { name: 'notesObserver', obj: window.notesObserver?.observer }
+        ];
+
+        observers.forEach(({ name, obj }) => {
+          try {
+            if (obj) obj.cleanup();
+          } catch (error) {
+            console.error(`${name} cleanup error:`, error);
+            initResults.errors.push(`${name} cleanup failed`);
+          }
+        });
+
+        // Initialize NotesManager independently
+        try {
           await waitForNotesManager();
           console.log('Initializing NotesManager');
           const notesManager = window.getNotesManager();
           console.log('NotesManager initialized:', !!notesManager);
-
-          console.log('Initializing observers');
-          window.notesObserver.observer.initialize();
-          window.labelsObserver.observer.initialize();
-          window.shortcutsObserver.observer.initialize();
-          window.labelsFilter.observer.initialize();
-          window.keyboard.shortcuts.observer();
-
-          console.log('All observers initialized successfully');
-          sendResponse({ success: true });
         } catch (error) {
-          console.error('Error in initialization:', error);
-          sendResponse({ success: false, error: error.message });
+          console.error('NotesManager initialization error:', error);
+          initResults.errors.push('NotesManager initialization failed');
         }
+
+        // Initialize each observer independently
+        const observersToInit = [
+          { name: 'notesObserver', obj: window.notesObserver?.observer },
+          { name: 'labelsObserver', obj: window.labelsObserver?.observer },
+          { name: 'shortcutsObserver', obj: window.shortcutsObserver?.observer },
+          { name: 'labelsFilter', obj: window.labelsFilter?.observer }
+        ];
+
+        observersToInit.forEach(({ name, obj }) => {
+          try {
+            if (obj) {
+              obj.initialize();
+              console.log(`${name} initialized successfully`);
+            }
+          } catch (error) {
+            console.error(`${name} initialization error:`, error);
+            initResults.errors.push(`${name} initialization failed`);
+          }
+        });
+
+        // Initialize keyboard shortcuts independently
+        try {
+          window.keyboard.shortcuts.observer();
+          console.log('Keyboard shortcuts initialized');
+        } catch (error) {
+          console.error('Keyboard shortcuts initialization error:', error);
+          initResults.errors.push('Keyboard shortcuts initialization failed');
+        }
+
+        console.log('Initialization complete with results:', initResults);
+        sendResponse({ 
+          success: true, 
+          partialFailures: initResults.errors.length > 0,
+          errors: initResults.errors 
+        });
       })
       .catch(error => {
-        console.error('Error in initialization process:', error);
+        console.error('Critical error in initialization process:', error);
         sendResponse({ success: false, error: error.message });
       });
     return true;
   }
+  else if(message.type === "URL_PROFILE") {
+    waitForElement('.text-body-small a.ember-view')
+      .then(() => {
+        try {
+          // window.profileNotesManager.init();
+          window.profileNotes.init();
+        } catch (error) {
+          console.error('Profile notes manager initialization error:', error);
+        }
+      })
+      .catch((err) => {
+        console.error('Profile element wait error:', err);
+      });
+  }
 });
+
+

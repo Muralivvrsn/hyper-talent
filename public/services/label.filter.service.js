@@ -106,10 +106,46 @@ window.labelsFilter = {
         },
         
         async filterConversations() {
-            // console.log('Filtering conversations with labels:', this.allowedLabels);
             const conversations = document.querySelectorAll('.msg-conversations-container__conversations-list > li');
+            const conversationsList = conversations[0]?.parentNode;
+            
+            // Check if loading message already exists
+            let loadingEl = document.querySelector('.prism-loading-message');
+            
+            if (!loadingEl) {
+                loadingEl = document.createElement('div');
+                loadingEl.className = 'prism-loading-message';
+                loadingEl.style.cssText = `
+                    padding: 20px;
+                    text-align: center;
+                    color: #666;
+                    font-size: 13px;
+                    background: rgba(255, 255, 255, 0.95);
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    top: 0;
+                    bottom: 0;
+                    z-index: 100;
+                    border-top: 1px solid #eee;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+                loadingEl.innerHTML = 'Filtering conversations...';
+                conversationsList.style.position = 'relative';  // Ensure absolute positioning works
+                conversationsList.appendChild(loadingEl);
+            }
         
-            for (const conversation of conversations) {
+            // Hide all conversations initially
+            conversations.forEach(conv => {
+                conv.style.display = 'none';
+                conv.style.opacity = '0';
+            });
+        
+            let foundFirstMatch = false;
+            
+            for (const [index, conversation] of Array.from(conversations).entries()) {
                 const imgEl = conversation.querySelector('.msg-selectable-entity__entity img') || 
                              conversation.querySelector('.msg-facepile-grid--no-facepile img');
                 const nameEl = conversation.querySelector('.msg-conversation-listitem__participant-names .truncate');
@@ -120,11 +156,27 @@ window.labelsFilter = {
                 const name = nameEl.textContent.trim();
         
                 const isMatch = await this.checkLabelMatch(imgSrc, name);
-                conversation.style.display = isMatch ? 'block' : 'none';
-                // console.log(`${name}: ${isMatch ? 'showing' : 'hiding'}`);
+                
+                if (isMatch) {
+                    if (!foundFirstMatch) {
+                        foundFirstMatch = true;
+                        // Modify loading message position to be below matches
+                        loadingEl.style.top = 'auto';
+                        loadingEl.style.bottom = '0';
+                        loadingEl.style.background = 'linear-gradient(rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.98) 100%)';
+                    }
+                    
+                    conversation.style.transition = 'opacity 0.3s ease';
+                    conversation.style.display = 'block';
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    conversation.style.opacity = '1';
+                }
+        
+                loadingEl.textContent = `Filtering conversations... (${index + 1}/${conversations.length})`;
             }
+            
+            loadingEl.remove();
         },
-
         createFilterDropdown() {
             const labelButton = document.querySelector('#linkedin-label-filter-btn');
             const buttonRect = labelButton.getBoundingClientRect();
@@ -289,7 +341,7 @@ window.labelsFilter = {
             
             filterButton.innerHTML = `
                 <span class="artdeco-pill__text">
-                    Labels
+                    Filters
                 </span>
             `;
 
@@ -343,23 +395,66 @@ window.labelsFilter = {
             this.initializeFirestoreListener();
             this.setupFilterButton();
             
-            // Add conversation list observer
+            // Add conversation list observer with optimization
             const listElement = document.querySelector('.msg-conversations-container__conversations-list');
             if (listElement) {
-                const observer = new MutationObserver(this.debounce(() => {
-                    if (this.allowedLabels.length > 0) {
-                        this.filterConversations();
+                let previousLength = listElement.children.length;
+                let previousFirstChild = listElement.firstElementChild;
+        
+                const observer = new MutationObserver(this.debounce((mutations) => {
+                    // Check if mutations actually affect the conversation list
+                    const hasRelevantChanges = mutations.some(mutation => {
+                        // Check for added or removed nodes
+                        if (mutation.type === 'childList') {
+                            return true;
+                        }
+                        
+                        // For attribute changes, only care about display/visibility related ones
+                        if (mutation.type === 'attributes') {
+                            const relevantAttributes = ['style', 'class', 'hidden'];
+                            return relevantAttributes.includes(mutation.attributeName);
+                        }
+                        
+                        return false;
+                    });
+        
+                    // Check if the list structure has actually changed
+                    const currentLength = listElement.children.length;
+                    const currentFirstChild = listElement.firstElementChild;
+                    const hasStructuralChanges = 
+                        previousLength !== currentLength || 
+                        previousFirstChild !== currentFirstChild;
+        
+                    // Update previous values
+                    previousLength = currentLength;
+                    previousFirstChild = currentFirstChild;
+        
+                    // Only proceed if there are relevant changes and we have active filters
+                    if (hasRelevantChanges && hasStructuralChanges && this.allowedLabels.length > 0) {
+                        // Check if the list is actually loaded
+                        const hasLoadedConversations = Array.from(listElement.children).some(child => 
+                            child.querySelector('.msg-conversation-listitem__participant-names')
+                        );
+        
+                        if (hasLoadedConversations) {
+                            this.filterConversations();
+                        }
                     }
                 }, 300));
         
                 observer.observe(listElement, {
                     childList: true,
-                    subtree: true,
-                    attributes: true
+                    subtree: false, // Only watch direct children
+                    attributes: true,
+                    attributeFilter: ['style', 'class', 'hidden'] // Only watch relevant attributes
                 });
+        
+                // Store observer reference for cleanup
+                this.currentObserver = observer;
             }
         },
-
+        
+        // Add this to cleanup method
         cleanup() {
             // console.log('Cleaning up labels filter');
             if (this.unsubscribeFirestore) {
@@ -367,13 +462,18 @@ window.labelsFilter = {
                 this.unsubscribeFirestore = null;
                 this.isFirestoreInitialized = false;
             }
-
+        
+            if (this.currentObserver) {
+                this.currentObserver.disconnect();
+                this.currentObserver = null;
+            }
+        
             const button = document.querySelector('#linkedin-label-filter-btn');
             if (button) button.remove();
-
+        
             const dropdown = document.querySelector('#linkedin-label-filter-dropdown');
             if (dropdown) dropdown.remove();
-
+        
             this.labelsCache.clear();
             this.allowedLabels = [];
             // console.log('Labels filter cleanup complete');
