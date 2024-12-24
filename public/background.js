@@ -101,13 +101,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'CLEAR_TOKEN') {
-    chrome.identity.getAuthToken({ interactive: false }, (token) => {
+    chrome.identity.getAuthToken({ interactive: false }, function(token) {
       if (token) {
-        chrome.identity.removeCachedAuthToken({ token }, () => {
-          sendResponse({ success: true });
-        });
+        fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`)
+          .then(() => {
+            chrome.identity.removeCachedAuthToken({ token }, () => {
+              chrome.identity.clearAllCachedAuthTokens(() => {
+                sendResponse({ success: true });
+              });
+            });
+          })
+          .catch(error => {
+            console.error('Error revoking token:', error);
+            sendResponse({ success: false, error: error.message });
+          });
       } else {
-        sendResponse({ success: false });
+        sendResponse({ success: false, error: 'No token found' });
       }
     });
     return true;
@@ -115,16 +124,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === 'keyPressed' && message.key === 'n') {
     // Get the current tab to verify URL or perform actions
-    console.log('create prssed')
+    console.log('create pressed')
     console.log(message.data)
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       chrome.storage.local.set({ 'profileData': message.data }, function () {
+        // Send message after storage is complete
+        chrome.runtime.sendMessage({ action: 'ProfileNotesTriggered' });
       });
       chrome.sidePanel.open({
         windowId: windowId,
       });
-
     });
-  }
+}
 
 });

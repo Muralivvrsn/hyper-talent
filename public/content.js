@@ -189,6 +189,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         try {
           // window.profileNotesManager.init();
           window.profileNotes.init();
+          window.labelProfiles.init();
         } catch (error) {
           console.error('Profile notes manager initialization error:', error);
         }

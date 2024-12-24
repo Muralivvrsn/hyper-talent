@@ -1,42 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import { useTheme } from './context/ThemeContext';
+import { useData } from './context/DataContext';
 import { ThemeProvider } from './context/ThemeContext';
 import LoginPage from './pages/LoginPage';
-import Navbar from './components/Navbar';
 import Navigation from './components/Navigation';
 import CandidateMessages from './pages/CandidateMessages';
 import Shortcuts from './pages/Shortcuts';
 import Sheet from './pages/Sheet';
 import Feedback from './pages/Feedback';
 import ProfilePage from './pages/ProfilePage';
-
+import { useProfileNote } from './context/ProfileNoteContext';
 const MainLayout = ({ children }) => {
   const { user, logout } = useAuth();
-  const [currentPage, setCurrentPage] = useState('messages');
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [profileData, setProfileData] = useState(null);
-  const chrome = window.chrome
-  useEffect(() => {
-    // Check chrome.storage.local when component mounts
-    const checkStoredData = async () => {
-      try {
-        chrome.storage.local.get(['profileData'], function(result) {
-          if (result.profileData) {
-            setProfileData(result.profileData);
-            setCurrentPage('profile');
-            // Clear the stored data after retrieving it
-            chrome.storage.local.remove(['profileData']);
-          }
-        });
-      } catch (error) {
-        console.error('Error checking stored data:', error);
-      }
-    };
-
-    checkStoredData();
-  
-  }, []);
+  // const [currentPage, setCurrentPage] = useState('messages');
+  const {currentPage, setCurrentPage} = useProfileNote()
 
   const renderPage = () => {
     switch (currentPage) {
@@ -49,7 +28,7 @@ const MainLayout = ({ children }) => {
       case 'feedback':
         return <Feedback />;
       case 'profile':
-        return <ProfilePage profileData={profileData} />;
+        return <ProfilePage />;
       default:
         return <CandidateMessages />;
     }
@@ -57,24 +36,19 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="flex">
-        <aside className={`border-r min-h-[calc(100vh-4rem)] transition-all duration-300 ${
-          isExpanded ? "w-64" : "w-16"
-        }`}>
+      <header className="border-b">
+        <div className="h-16 flex items-center justify-between">
           <Navigation 
             setCurrentPage={setCurrentPage} 
-            isExpanded={isExpanded} 
-            setIsExpanded={setIsExpanded}
             onLogout={logout}
             user={user}
             currentPage={currentPage}
           />
-        </aside>
-        <main className="flex-1">
-          {renderPage()}
-        </main>
-      </div>
+        </div>
+      </header>
+      <main className="mx-auto py-2 px-6">
+        {renderPage()}
+      </main>
     </div>
   );
 };
@@ -88,16 +62,29 @@ const LoadingScreen = () => (
   </div>
 );
 
-function App() {
-  const { user, loading } = useAuth();
+function AppContent() {
+  const { user, loading: authLoading } = useAuth();
+  const { loading: themeLoading } = useTheme();
+  const { loading: dataLoading } = useData();
+  const [initialLoad, setInitialLoad] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    if (!authLoading && !themeLoading && !dataLoading) {
+      const timer = setTimeout(() => {
+        setInitialLoad(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading, themeLoading, dataLoading]);
+  if (initialLoad || authLoading || themeLoading || dataLoading) {
     return <LoadingScreen />;
   }
-
+  return user ? <MainLayout /> : <LoginPage />;
+}
+function App() {
   return (
     <ThemeProvider>
-      {user ? <MainLayout /> : <LoginPage />}
+      <AppContent />
     </ThemeProvider>
   );
 }

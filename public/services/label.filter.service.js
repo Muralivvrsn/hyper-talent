@@ -8,39 +8,81 @@ window.labelsFilter = {
         isFirestoreInitialized: false,
         allowedLabels: [],
         db: null,
+        themeCache: 'light',
 
         async initializeFirestoreListener() {
             if (this.isFirestoreInitialized) {
-                // console.log('Firestore already initialized for labels filter');
                 return;
             }
-
+        
             try {
                 const { db, currentUser } = await window.firebaseService.initializeFirebase();
                 this.db = db;
-                // console.log('Initializing Firestore listener for labels filter with user:', currentUser.uid);
-
+        
+                // Labels listener
                 this.unsubscribeFirestore = db.collection('labels')
                     .doc(currentUser.uid)
                     .onSnapshot(doc => {
-                        // console.log('Labels document update received');
-                        if (!doc.exists) {
-                            // console.log('No labels document found for user');
-                            return;
-                        }
+                        if (!doc.exists) return;
                         const labels = doc.data().labels || {};
-                        // console.log('Fetched labels:', labels);
                         this.updateLabelsCache(labels);
                         this.updateFilterButton();
                     });
-
+        
+                // Theme listener with UI update
+                this.unsubscribeTheme = db.collection('settings')
+                    .doc(currentUser.uid)
+                    .onSnapshot(doc => {
+                        if (doc.exists) {
+                            console.log(doc.data())
+                            const newTheme = doc.data().theme || 'light';
+                            console.log(newTheme)
+                            if (this.themeCache !== newTheme) {
+                                this.themeCache = newTheme;
+                                console.log(this.themeCache)
+                                this.updateThemeUI();
+                            }
+                        }
+                    });
+        
                 this.isFirestoreInitialized = true;
-                // console.log('Firestore listener initialized successfully');
             } catch (error) {
-                // console.error('Error initializing Firestore listener:', error);
                 this.isFirestoreInitialized = false;
             }
         },
+        
+        // Add new method to update UI when theme changes
+        updateThemeUI() {
+            const isDarkTheme = this.themeCache === 'dark';
+            
+            // Update dropdown if it exists
+            const dropdown = document.querySelector('#linkedin-label-dropdown');
+            if (dropdown) {
+                dropdown.style.backgroundColor = isDarkTheme ? '#1D2226' : '#ffffff';
+                dropdown.style.boxShadow = isDarkTheme ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)';
+                dropdown.style.border = `1px solid ${isDarkTheme ? '#38434F' : '#e0e0e0'}`;
+        
+                // Update all list items in the dropdown
+                const items = dropdown.querySelectorAll('li');
+                items.forEach(item => {
+                    item.style.backgroundColor = isDarkTheme ? '#1D2226' : '#ffffff';
+                    
+                    // Update checkbox in each item
+                    const checkbox = item.querySelector('input[type="checkbox"]');
+                    if (checkbox) {
+                        checkbox.style.backgroundColor = isDarkTheme ? '#1D2226' : '#ffffff';
+                        checkbox.style.borderColor = checkbox.checked ? '#0a66c2' : (isDarkTheme ? '#666666' : '#00000099');
+                    }
+        
+                    // Update text in each item
+                    const textSpan = item.querySelector('span');
+                    if (textSpan) {
+                        textSpan.style.color = isDarkTheme ? '#ffffff' : 'rgba(0, 0, 0, 0.9)';
+                    }
+                });
+            }
+        },
+        
 
         updateLabelsCache(labels) {
             const previousSize = this.labelsCache.size;
@@ -177,137 +219,84 @@ window.labelsFilter = {
             
             loadingEl.remove();
         },
+
+        
         createFilterDropdown() {
-            const labelButton = document.querySelector('#linkedin-label-filter-btn');
+            const labelButton = document.querySelector('#hypertalent-filter-btn');
             const buttonRect = labelButton.getBoundingClientRect();
         
             const dropdown = document.createElement('div');
-            dropdown.className = 'scaffold-layout__list-detail';
-            dropdown.id = 'linkedin-label-dropdown';
-            dropdown.style.cssText = `
-                position: fixed;
-                top: ${buttonRect.bottom + window.scrollY + 5}px;
-                left: ${buttonRect.left + window.scrollX}px;
-                border-radius: 4px;
-                padding: 8px;
-                z-index: 1000;
-                min-width: 200px;
-                width: 200px;
-                padding-top: 0;
-                height: fit-content;
-                background-color: white;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            `;
+            dropdown.id = 'hypertalent-dropdown';
+            dropdown.className = 'hypertalent-dropdown';
+            
+            // Function to update position
+            const updatePosition = () => {
+                const newRect = labelButton.getBoundingClientRect();
+                dropdown.style.position = 'fixed';
+                dropdown.style.top = `${newRect.bottom + window.scrollY + 5}px`;
+                dropdown.style.left = `${newRect.left + window.scrollX}px`;
+                dropdown.style.zIndex = '1000';
+            };
+        
+            // Initial position
+            updatePosition();
         
             const labelList = document.createElement('ul');
-            labelList.className = 'list-style-none relative search-reusables__collection-values-container search-reusables__collection-values-container--50vh';
-            labelList.style.maxHeight = '300px';
-            labelList.style.overflowY = 'auto';
+            labelList.className = 'hypertalent-list';
+            labelList.setAttribute('data-hypertalent', 'true'); // Add this attribute
         
-            // Add your labels here
             this.labelsCache.forEach((labelData, labelName) => {
-                const labelItem = this.createLabelItem(labelName, labelData);
+                const labelItem = this.createLabelItem(labelName);
                 labelList.appendChild(labelItem);
             });
         
             dropdown.appendChild(labelList);
         
-            // Handle window resize
-            window.addEventListener('resize', () => {
-                const newRect = labelButton.getBoundingClientRect();
-                dropdown.style.top = `${newRect.bottom + window.scrollY + 5}px`;
-                dropdown.style.left = `${newRect.left + window.scrollX}px`;
+            // Better resize and scroll handlers
+            const handleResize = () => {
+                requestAnimationFrame(updatePosition);
+            };
+        
+            window.addEventListener('resize', handleResize);
+            window.addEventListener('scroll', handleResize);
+        
+            // Cleanup listeners when dropdown is removed
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.removedNodes.forEach((node) => {
+                        if (node === dropdown) {
+                            window.removeEventListener('resize', handleResize);
+                            window.removeEventListener('scroll', handleResize);
+                            observer.disconnect();
+                        }
+                    });
+                });
             });
+        
+            observer.observe(document.body, { childList: true });
         
             return dropdown;
         },
-
-        createSelectAllItem() {
-            const item = document.createElement('li');
-            item.style.cssText = `
-                padding: 8px;
-                display: flex;
-                align-items: center;
-                cursor: pointer;
-                transition: background-color 0.15s ease;
-                font-weight: bold;
-            `;
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.style.marginRight = '8px';
-            checkbox.checked = this.allowedLabels.length === this.labelsCache.size;
-
-            const label = document.createElement('span');
-            label.textContent = 'Select All';
-            label.style.fontSize = '14px';
-
-            item.appendChild(checkbox);
-            item.appendChild(label);
-
-            item.addEventListener('mouseenter', () => {
-                item.style.backgroundColor = '#f3f6f8';
-            });
-
-            item.addEventListener('mouseleave', () => {
-                item.style.backgroundColor = 'transparent';
-            });
-
-            checkbox.addEventListener('change', () => {
-                if (checkbox.checked) {
-                    this.allowedLabels = Array.from(this.labelsCache.keys());
-                } else {
-                    this.allowedLabels = [];
-                }
-                
-                // Update all other checkboxes
-                const dropdown = document.querySelector('#linkedin-label-filter-dropdown');
-                if (dropdown) {
-                    const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
-                    checkboxes.forEach(cb => {
-                        if (cb !== checkbox) {
-                            cb.checked = checkbox.checked;
-                        }
-                    });
-                }
-                
-                // console.log('Select all toggled:', checkbox.checked);
-                this.filterConversations();
-            });
-
-            return item;
-        },
-
-        createLabelItem(labelName, labelData) {
+        
+        createLabelItem(labelName) {
             const labelContainer = document.createElement('li');
-            labelContainer.className = 'search-reusables__collection-values-item';
+            labelContainer.className = 'hypertalent-list-item';
+            labelContainer.setAttribute('data-hypertalent', 'true');
         
             const checkbox = document.createElement('input');
-            checkbox.className = 'search-reusables__select-input';
             checkbox.type = 'checkbox';
-            checkbox.id = `label-${labelName}`;
+            checkbox.className = 'hypertalent-checkbox';
+            checkbox.id = `hypertalent-checkbox-${labelName}`; // More specific ID
             checkbox.name = 'label-filter-value';
             checkbox.checked = this.allowedLabels.includes(labelName);
+            checkbox.setAttribute('data-hypertalent', 'true');
         
             const label = document.createElement('label');
-            label.className = 'search-reusables__value-label';
-            label.htmlFor = `label-${labelName}`;
+            label.className = 'hypertalent-checkbox-label';
+            label.htmlFor = `hypertalent-checkbox-${labelName}`;
+            label.textContent = labelName;
+            label.setAttribute('data-hypertalent', 'true');
         
-            const paragraph = document.createElement('p');
-            paragraph.className = 'display-flex';
-        
-            const textSpan = document.createElement('span');
-            textSpan.className = 't-14 t-black--light t-normal';
-            textSpan.setAttribute('aria-hidden', 'true');
-            textSpan.textContent = labelName;
-        
-            const visibleSpan = document.createElement('span');
-            visibleSpan.className = 'visually-hidden';
-            visibleSpan.textContent = `Filter by ${labelName}`;
-        
-            paragraph.appendChild(textSpan);
-            paragraph.appendChild(visibleSpan);
-            label.appendChild(paragraph);
             labelContainer.appendChild(checkbox);
             labelContainer.appendChild(label);
         
@@ -327,15 +316,14 @@ window.labelsFilter = {
         },
 
         setupFilterButton() {
-            // console.log('Setting up filter button');
             const titleRow = document.querySelector('.msg-conversations-container__title-row');
-            if (!titleRow || document.querySelector('#linkedin-label-filter-btn')) {
+            if (!titleRow || document.querySelector('#hypertalent-filter-btn')) {
                 // console.log('Title row not found or button already exists');
                 return;
             }
 
             const filterButton = document.createElement('button');
-            filterButton.id = 'linkedin-label-filter-btn';
+            filterButton.id = 'hypertalent-filter-btn';
             filterButton.className = 'artdeco-pill artdeco-pill--slate artdeco-pill--3 artdeco-pill--choice ember-view';
             filterButton.style.marginLeft = '8px';
             
@@ -348,28 +336,25 @@ window.labelsFilter = {
             let dropdown = null;
 
             filterButton.addEventListener('click', () => {
-                // console.log('Filter button clicked');
-                if (dropdown?.parentNode) {
-                    // console.log('Removing existing dropdown');
-                    dropdown.remove();
-                    dropdown = null;
+                const existingDropdown = document.querySelector('#hypertalent-dropdown');
+                if (existingDropdown) {
+                    existingDropdown.remove();
                     return;
                 }
-
-                dropdown = this.createFilterDropdown();
+            
+                const dropdown = this.createFilterDropdown();
                 document.body.appendChild(dropdown);
-
-                const closeDropdown = (event) => {
-                    if (!dropdown?.contains(event.target) && !filterButton.contains(event.target)) {
-                        // console.log('Closing dropdown due to outside click');
-                        dropdown?.remove();
-                        dropdown = null;
-                        document.removeEventListener('click', closeDropdown);
+            
+                // Close dropdown when clicking outside
+                const handleClickOutside = (event) => {
+                    if (!dropdown.contains(event.target) && !filterButton.contains(event.target)) {
+                        dropdown.remove();
+                        document.removeEventListener('click', handleClickOutside);
                     }
                 };
-
+            
                 setTimeout(() => {
-                    document.addEventListener('click', closeDropdown);
+                    document.addEventListener('click', handleClickOutside);
                 }, 0);
             });
 
@@ -456,11 +441,14 @@ window.labelsFilter = {
         
         // Add this to cleanup method
         cleanup() {
-            // console.log('Cleaning up labels filter');
             if (this.unsubscribeFirestore) {
                 this.unsubscribeFirestore();
                 this.unsubscribeFirestore = null;
-                this.isFirestoreInitialized = false;
+            }
+        
+            if (this.unsubscribeTheme) {
+                this.unsubscribeTheme();
+                this.unsubscribeTheme = null;
             }
         
             if (this.currentObserver) {
@@ -468,7 +456,7 @@ window.labelsFilter = {
                 this.currentObserver = null;
             }
         
-            const button = document.querySelector('#linkedin-label-filter-btn');
+            const button = document.querySelector('#hypertalent-filter-btn');
             if (button) button.remove();
         
             const dropdown = document.querySelector('#linkedin-label-filter-dropdown');
@@ -476,7 +464,7 @@ window.labelsFilter = {
         
             this.labelsCache.clear();
             this.allowedLabels = [];
-            // console.log('Labels filter cleanup complete');
+            this.isFirestoreInitialized = false;
         }
     }
 };

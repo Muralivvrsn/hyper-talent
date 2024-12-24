@@ -21,127 +21,131 @@ export const ThemeProvider = ({ children }) => {
   const { user } = useAuth();
   const db = getFirestore();
 
-  // Function to get system theme preference
   const getSystemTheme = () => {
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    return 'light';
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   };
 
-  // Function to save theme to local storage
-  const saveThemeToLocalStorage = (newTheme) => {
-    try {
-      localStorage.setItem('theme', newTheme);
-    } catch (err) {
-      console.error('Error saving theme to localStorage:', err);
+  const handleLocalStorage = {
+    save: (newTheme) => {
+      try {
+        localStorage.setItem('theme', newTheme);
+        localStorage.setItem('themeLastUpdated', new Date().toISOString());
+      } catch (err) {
+        console.error('Error saving theme to localStorage:', err);
+      }
+    },
+    get: () => {
+      try {
+        return {
+          theme: localStorage.getItem('theme'),
+          lastUpdated: localStorage.getItem('themeLastUpdated')
+        };
+      } catch (err) {
+        console.error('Error reading theme from localStorage:', err);
+        return { theme: null, lastUpdated: null };
+      }
     }
   };
 
-  // Function to get theme from local storage
-  const getThemeFromLocalStorage = () => {
-    try {
-      return localStorage.getItem('theme');
-    } catch (err) {
-      console.error('Error reading theme from localStorage:', err);
-      return null;
-    }
-  };
-
-  // Function to save settings to Firestore
   const saveSettings = async (newSettings) => {
     if (!user) return;
     
     try {
+      const updatedSettings = {
+        ...newSettings,
+        lastUpdated: new Date().toISOString()
+      };
+      
       const userSettingsRef = doc(db, 'settings', user.uid);
-      await setDoc(userSettingsRef, newSettings);
-      setSettings(newSettings);
+      await setDoc(userSettingsRef, updatedSettings);
+      setSettings(updatedSettings);
+      return updatedSettings;
     } catch (err) {
       console.error('Error saving settings:', err);
       setError(err.message);
+      throw err;
     }
   };
 
-  // Function to set theme
   const setTheme = async (newTheme) => {
     setThemeState(newTheme);
-    saveThemeToLocalStorage(newTheme);
-    
-    if (settings) {
-      const newSettings = {
-        ...settings,
-        theme: newTheme
-      };
-      await saveSettings(newSettings);
+    handleLocalStorage.save(newTheme);
+
+    if (settings && user) {
+      try {
+        const newSettings = {
+          ...settings,
+          theme: newTheme
+        };
+        await saveSettings(newSettings);
+      } catch (err) {
+        // If database update fails, at least local changes are preserved
+        console.error('Error updating theme in database:', err);
+      }
     }
   };
 
-  // Apply theme class to document
   useEffect(() => {
     if (!theme) return;
     
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
-  // Initialize theme with correct priority order
   useEffect(() => {
     const initializeTheme = async () => {
       setLoading(true);
       
-      // 1. Check localStorage first
-      const localStorageTheme = getThemeFromLocalStorage();
-      if (localStorageTheme) {
-        setThemeState(localStorageTheme);
-        setLoading(false);
-        return;
-      }
-
-      // 2. If user is logged in, check database
-      if (user) {
-        try {
+      try {
+        const { theme: localTheme, lastUpdated } = handleLocalStorage.get();
+        const systemTheme = getSystemTheme();
+        
+        // Always fetch initial settings if user is logged in
+        if (user) {
           const userSettingsRef = doc(db, 'settings', user.uid);
           const settingsSnap = await getDoc(userSettingsRef);
           
           if (settingsSnap.exists()) {
-            const existingSettings = settingsSnap.data();
-            setSettings(existingSettings);
+            const dbSettings = settingsSnap.data();
+            setSettings(dbSettings);
             
-            if (existingSettings.theme) {
-              setThemeState(existingSettings.theme);
-              saveThemeToLocalStorage(existingSettings.theme);
-              setLoading(false);
-              return;
+            // If local storage is more recent, prefer it
+            if (localTheme && lastUpdated && new Date(lastUpdated) > new Date(dbSettings.lastUpdated)) {
+              setThemeState(localTheme);
+              // Sync the local theme back to database
+              await saveSettings({ ...dbSettings, theme: localTheme });
+            } else {
+              setThemeState(dbSettings.theme);
+              handleLocalStorage.save(dbSettings.theme);
             }
+          } else {
+            // Create initial settings for new user
+            const initialSettings = {
+              theme: localTheme || systemTheme,
+              name: user.displayName || '',
+              email: user.email || '',
+              createdAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              notifications: true,
+              language: 'en'
+            };
+            await saveSettings(initialSettings);
+            setThemeState(initialSettings.theme);
+            handleLocalStorage.save(initialSettings.theme);
           }
-        } catch (err) {
-          console.error('Error reading database theme:', err);
+        } else {
+          // For non-logged in users, use local storage or system theme
+          setThemeState(localTheme || systemTheme);
+          handleLocalStorage.save(localTheme || systemTheme);
         }
+      } catch (err) {
+        console.error('Error during theme initialization:', err);
+        // Fallback to system theme if everything fails
+        const fallbackTheme = getSystemTheme();
+        setThemeState(fallbackTheme);
+        handleLocalStorage.save(fallbackTheme);
+      } finally {
+        setLoading(false);
       }
-
-      // 3. Try system theme
-      const systemTheme = getSystemTheme();
-      setThemeState(systemTheme);
-      saveThemeToLocalStorage(systemTheme);
-      
-      // If user exists but no settings, create them
-      if (user) {
-        const initialSettings = {
-          theme: systemTheme,
-          name: user.displayName || '',
-          email: user.email || '',
-          createdAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString(),
-          notifications: true,
-          language: 'en'
-        };
-        await saveSettings(initialSettings);
-      }
-
-      setLoading(false);
     };
 
     initializeTheme();
@@ -156,13 +160,6 @@ export const ThemeProvider = ({ children }) => {
     saveSettings
   };
 
-  if (loading || !theme) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
 
   return (
     <ThemeContext.Provider value={value}>

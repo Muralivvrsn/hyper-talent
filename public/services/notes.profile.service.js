@@ -1,15 +1,4 @@
 class ProfileNotes {
-    constructor() {
-        console.log('ProfileNotes: Initializing...');
-        // Check if already initialized
-        if (window.profileNotes) {
-            console.log('ProfileNotes: Already initialized, skipping...');
-            return;
-        }
-        this.initialized = false;
-        window.profileNotes = this;
-        this.init();
-    }
 
     async init() {
         console.log('ProfileNotes: Starting initialization');
@@ -24,7 +13,7 @@ class ProfileNotes {
         console.log('ProfileNotes: Initialization complete');
     }
 
-    waitForElement(selector, timeout = 10000) {
+    async waitForElement(selector, timeout = 10000) {
         return new Promise((resolve) => {
             if (document.querySelector(selector)) {
                 return resolve(document.querySelectorAll(selector));
@@ -59,12 +48,29 @@ class ProfileNotes {
 
     async getProfileInfo() {
         try {
-            const connectionLinks = await this.waitForElement('.text-body-small a.ember-view');
-            let connectionCode = null;
             const url = window.location.href;
-
+            
+            // Wait for profile to load by checking for verification element
+            await this.waitForElement('a[aria-label]');
+                
+            // Get name from the verification link
+            let name = null;
+            const nameElement = document.querySelector('a[aria-label] h1');
+            if (nameElement) {
+                name = nameElement.textContent.trim();
+            }
+    
+            // Get image URL
+            let imageUrl = null;
+            const profileImage = document.querySelector('img.pv-top-card-profile-picture__image--show');
+            if (profileImage) {
+                imageUrl = profileImage.getAttribute('src');
+            }
+    
+            // Get connection code
+            let connectionCode = null;
+            const connectionLinks = document.querySelectorAll('a');
             if (connectionLinks) {
-                console.log('Connection links found:', connectionLinks);
                 for (const link of connectionLinks) {
                     const href = link?.getAttribute('href');
                     if (href?.includes('connectionOf')) {
@@ -73,17 +79,19 @@ class ProfileNotes {
                     }
                 }
             }
-
+    
             return {
-                url: url,
-                connectionCode: connectionCode
+                url,
+                connectionCode,
+                name,
+                imageUrl
             };
         } catch (error) {
             console.error('Error getting profile info:', error);
             return null;
         }
     }
-
+    
     setupKeyListener() {
         document.addEventListener('keydown', async (event) => {
             if (event.key === 'n') {
@@ -95,16 +103,18 @@ class ProfileNotes {
                     
                     try {
                         const profileInfo = await this.getProfileInfo();
-                        
+                        console.log(profileInfo)
                         chrome.runtime.sendMessage({
                             action: 'keyPressed',
                             key: 'n',
                             data: {
                                 url: profileInfo?.url || window.location.href,
-                                connectionCode: profileInfo?.connectionCode || null
+                                connectionCode: profileInfo?.connectionCode || null,
+                                name: profileInfo?.name || null,
+                                imageUrl: profileInfo?.imageUrl || null
                             }
                         });
-
+    
                     } catch (error) {
                         console.error('Error in key press handler:', error);
                         chrome.runtime.sendMessage({
@@ -112,7 +122,9 @@ class ProfileNotes {
                             key: 'n',
                             data: {
                                 url: window.location.href,
-                                connectionCode: null
+                                connectionCode: null,
+                                name: null,
+                                imageUrl: null
                             }
                         });
                     }
@@ -122,8 +134,5 @@ class ProfileNotes {
     }
 }
 
-// Initialize only if not already initialized
-if (!window.profileNotes) {
-    console.log('Creating new ProfileNotes instance');
-    new ProfileNotes();
-}
+
+window.profileNotes = new ProfileNotes();

@@ -115,12 +115,20 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' });
+      setAuthenticating(true); // Show loading state
+      const response = await chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' });
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to clear token');
+      }
       await signOut(auth);
       setUser(null);
+      // chrome.runtime.reload();
+      chrome.storage.local.clear();
     } catch (error) {
       console.error('Logout error:', error);
       setError(error.message);
+    } finally {
+      setAuthenticating(false); // Hide loading state
     }
   };
 
