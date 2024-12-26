@@ -241,7 +241,7 @@ class NotesManager {
 
     async deleteNote() {
         try {
-            const { db, currentUser } = await window.firebaseService.initializeFirebase();
+            const { db, currentUser } = await window.firebaseServices.initializeFirebase();
             if (!db || !currentUser) {
                 showToast('Authentication error', 'error');
                 return;
@@ -332,7 +332,7 @@ class NotesManager {
 
     async loadInitialNotes() {
         try {
-            const { db, currentUser } = await window.firebaseService.initializeFirebase();
+            const { db, currentUser } = await window.firebaseServices.initializeFirebase();
             if (!db || !currentUser) return;
 
             const notesRef = db.collection('notes').doc(currentUser.uid);
@@ -345,7 +345,7 @@ class NotesManager {
     }
 
     setupFirebaseListener() {
-        window.firebaseService.initializeFirebase().then(({ db, currentUser }) => {
+        window.firebaseServices.initializeFirebase().then(({ db, currentUser }) => {
             if (!db || !currentUser) return;
 
             const notesRef = db.collection('notes').doc(currentUser.uid);
@@ -404,7 +404,7 @@ class NotesManager {
 
         try {
             // console.log('Initializing Firebase');
-            const { db, currentUser } = await window.firebaseService.initializeFirebase();
+            const { db, currentUser } = await window.firebaseServices.initializeFirebase();
             if (!db || !currentUser) {
                 // console.log('Firebase initialization failed');
                 showToast('Authentication error', 'error');
@@ -457,7 +457,7 @@ class NotesManager {
             this.createElements(profileInfo.name);
             this.container.classList.add('visible');
             
-            const { db, currentUser } = await window.firebaseService.initializeFirebase();
+            const { db, currentUser } = await window.firebaseServices.initializeFirebase();
             if (!db || !currentUser) {
                 this.hide();
                 return;

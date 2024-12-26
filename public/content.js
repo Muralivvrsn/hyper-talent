@@ -105,7 +105,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
 
         try {
-          window.getLabelManager();
+          window.labelManager.initialize();
         } catch (error) {
           console.error('Label manager error:', error);
           initResults.errors.push('Label manager failed');
@@ -116,7 +116,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const observers = [
           { name: 'labels', obj: window.labelsObserver?.observer },
           { name: 'shortcuts', obj: window.shortcutsObserver?.observer },
-          { name: 'labelsFilter', obj: window.labelsFilter?.observer },
+          // { name: 'labelsFilter', obj: window.labelsFilter?.observer },
           { name: 'notes', obj: window.notes?.observer },
           { name: 'notesObserver', obj: window.notesObserver?.observer }
         ];
@@ -146,7 +146,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           { name: 'notesObserver', obj: window.notesObserver?.observer },
           { name: 'labelsObserver', obj: window.labelsObserver?.observer },
           { name: 'shortcutsObserver', obj: window.shortcutsObserver?.observer },
-          { name: 'labelsFilter', obj: window.labelsFilter?.observer }
+          // { name: 'labelsFilter', obj: window.labelFilterCore?.observer }
         ];
 
         observersToInit.forEach(({ name, obj }) => {
@@ -170,6 +170,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           initResults.errors.push('Keyboard shortcuts initialization failed');
         }
 
+        window.labelFilterCore.initialize()
         console.log('Initialization complete with results:', initResults);
         sendResponse({ 
           success: true, 

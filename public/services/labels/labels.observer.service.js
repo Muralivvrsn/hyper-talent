@@ -202,7 +202,7 @@ window.labelsObserver = {
 
         async removeLabelFromPerson(labelName, codeId, labelElement) {
             try {
-                const { db, currentUser } = await window.firebaseService.initializeFirebase();
+                const { db, currentUser } = await window.firebaseServices.initializeFirebase();
                 const userLabelsRef = db.collection('labels').doc(currentUser.uid);
                 const userLabelsDoc = await userLabelsRef.get();
 
@@ -342,7 +342,7 @@ window.labelsObserver = {
                     return;
                 }
 
-                const { db, currentUser } = await window.firebaseService.initializeFirebase();
+                const { db, currentUser } = await window.firebaseServices.initializeFirebase();
 
                 // Firestore listener with rate limiting
                 this.unsubscribeFirestore = db.collection('labels')

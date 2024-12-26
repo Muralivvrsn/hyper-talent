@@ -15,9 +15,15 @@ function isLinkedInUrl(url) {
   return url?.includes('linkedin.com');
 }
 
-// Helper function to send messages based on URL type
-function sendMessageForUrl(tabId, url) {
+function sendMessageForUrl(tabId, url, isOnFocusEvent = false) {
   if (!url) return;
+
+  if (isOnFocusEvent && isLinkedInUrl(url)) {
+    chrome.tabs.sendMessage(tabId, {
+      type: "PROFILE_TAB",
+      url: url
+    });
+  }
 
   if (url.includes('linkedin.com/messaging')) {
     chrome.tabs.sendMessage(tabId, {
@@ -32,59 +38,53 @@ function sendMessageForUrl(tabId, url) {
   }
 }
 
-// Listen for any changes to the tabs
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Only proceed if it's a LinkedIn URL
   if (!isLinkedInUrl(tab.url)) return;
 
-  // Check for all possible status changes that might need a refresh
-  if (changeInfo.status === 'complete' ||
-    changeInfo.url || // URL changes without page reload
-    changeInfo.status === 'loading') { // Catch early load states too
-
-    sendMessageForUrl(tabId, tab.url);
+  if (changeInfo.status === 'complete' || changeInfo.url) {
+    sendMessageForUrl(tabId, tab.url, false);
   }
 });
 
-// Listen for tab activation (when user switches tabs)
+chrome.tabs.onCreated.addListener(async (tab) => {
+  if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
+    sendMessageForUrl(tab.id, tab.url, false);
+  }
+});
+
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   try {
     const tab = await chrome.tabs.get(activeInfo.tabId);
-
-    // Only proceed if it's a LinkedIn URL and tab is fully loaded
     if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
-      sendMessageForUrl(tab.id, tab.url);
+      sendMessageForUrl(tab.id, tab.url, true);
     }
   } catch (error) {
     console.error('Error handling tab activation:', error);
   }
 });
 
-// Listen for window focus changes
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) return;
 
   try {
-    // Get the active tab in the focused window
     const [activeTab] = await chrome.tabs.query({
       active: true,
       windowId: windowId
     });
 
     if (activeTab && isLinkedInUrl(activeTab.url) && activeTab.status === 'complete') {
-      sendMessageForUrl(activeTab.id, activeTab.url);
+      sendMessageForUrl(activeTab.id, activeTab.url, true);
     }
   } catch (error) {
     console.error('Error handling window focus:', error);
   }
 });
 
-// Listen for tab replacement (when tab is restored or history state changes)
 chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
   try {
     const tab = await chrome.tabs.get(addedTabId);
     if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
-      sendMessageForUrl(tab.id, tab.url);
+      sendMessageForUrl(tab.id, tab.url, false);
     }
   } catch (error) {
     console.error('Error handling tab replacement:', error);
@@ -122,14 +122,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === 'keyPressed' && message.key === 'n') {
+  if (message.action === 'hypertalent-keyPressed') {
     // Get the current tab to verify URL or perform actions
     console.log('create pressed')
     console.log(message.data)
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       chrome.storage.local.set({ 'profileData': message.data }, function () {
         // Send message after storage is complete
-        chrome.runtime.sendMessage({ action: 'ProfileNotesTriggered' });
+        chrome.runtime.sendMessage({ action: 'ProfileNotesTriggered', page: message.key });
       });
       chrome.sidePanel.open({
         windowId: windowId,

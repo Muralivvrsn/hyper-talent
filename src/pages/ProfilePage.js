@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { User, FileText, Edit2, Loader2 } from 'lucide-react';
+import { User, Loader2 } from 'lucide-react';
 import { Card, CardContent } from "../components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { useAuth } from '../context/AuthContext';
-import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useProfileNote } from '../context/ProfileNoteContext';
-
+import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 const ProfilePage = () => {
     const { user } = useAuth();
     const [profileInfo, setProfileInfo] = useState(null);
-    const { profileData, loading, setLoading } = useProfileNote();
+    const { profileData, loading, setLoading, getNotes, getLabels } = useProfileNote();
     const [labels, setLabels] = useState([]);
-    // const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(true);
     const [editedNote, setEditedNote] = useState('');
     const [originalNote, setOriginalNote] = useState('');
@@ -66,8 +64,7 @@ const ProfilePage = () => {
                 return;
             }
 
-
-            console.log('runnning proifle note')
+            console.log('Running profile note fetch from IndexedDB');
             try {
                 // Reset states
                 setProfileInfo(null);
@@ -75,17 +72,14 @@ const ProfilePage = () => {
                 setEditedNote('');
                 setOriginalNote('');
                 setError(null);
-                // setLoading(true);
 
-                const db = getFirestore();
                 const profileId = createProfileId(profileData.connectionCode);
 
                 if (!profileId) {
                     throw new Error('Invalid profile ID');
                 }
 
-                const notesRef = doc(db, 'notes', user.uid);
-                const notesDoc = await getDoc(notesRef);
+                const notesData = await getNotes();
                 const url = `https://www.linkedin.com/in/${profileData.connectionCode}`;
 
                 // Initialize profile info with provided data
@@ -97,43 +91,27 @@ const ProfilePage = () => {
                     url: url
                 };
 
-                if (notesDoc.exists()) {
-                    const notesData = notesDoc.data();
-                    if (notesData[profileId]) {
-                        currentProfileInfo = {
-                            name: profileData.name || notesData[profileId].name || 'Unknown',
-                            note: notesData[profileId].note || '',
-                            imageCode: profileData.imageUrl || notesData[profileId].code || null,
-                            updatedAt: notesData[profileId].updatedAt || null,
-                            url: url
-                        };
-                        if (!notesData[profileId].username) {
-                            const username = extractUsername(profileData.url);
-                            if (username) {
-                                await updateDoc(notesRef, {
-                                    [`${profileId}.username`]: username
-                                });
-                            }
-                        }
-                    }
-                    
-
+                if (notesData && notesData[profileId]) {
+                    currentProfileInfo = {
+                        name: profileData.name || notesData[profileId].name || 'Unknown',
+                        note: notesData[profileId].note || '',
+                        imageCode: profileData.imageUrl || notesData[profileId].code || null,
+                        updatedAt: notesData[profileId].updatedAt || null,
+                        url: url
+                    };
                 }
 
                 setProfileInfo(currentProfileInfo);
                 setEditedNote(currentProfileInfo.note);
                 setOriginalNote(currentProfileInfo.note);
 
-                // Fetch labels
+                // Fetch labels from IndexedDB
                 try {
-                    const labelsRef = doc(db, 'labels', user.uid);
-                    const labelsDoc = await getDoc(labelsRef);
+                    const labelsData = await getLabels();
+                    const matchingLabels = [];
 
-                    if (labelsDoc.exists()) {
-                        const labelsData = labelsDoc.data().labels || {};
-                        const matchingLabels = [];
-
-                        for (const [labelName, labelData] of Object.entries(labelsData)) {
+                    if (labelsData && labelsData.labels) {
+                        for (const [labelName, labelData] of Object.entries(labelsData.labels)) {
                             if (labelData.codes && Object.keys(labelData.codes).includes(profileId)) {
                                 matchingLabels.push({
                                     name: labelName,
@@ -141,16 +119,16 @@ const ProfilePage = () => {
                                 });
                             }
                         }
-
-                        setLabels(matchingLabels);
                     }
+
+                    setLabels(matchingLabels);
                 } catch (labelError) {
-                    console.error('Error fetching labels:', labelError);
+                    console.error('Error fetching labels from IndexedDB:', labelError);
                     setLabels([]);
                 }
 
             } catch (error) {
-                console.error('Error fetching data:', error);
+                console.error('Error fetching data from IndexedDB:', error);
                 setError('Failed to load profile data');
             } finally {
                 setLoading(false);
@@ -158,7 +136,7 @@ const ProfilePage = () => {
         };
 
         fetchData();
-    }, [user, profileData]);
+    }, [user, profileData, getNotes, getLabels]);
 
     const handleSaveNote = async () => {
         if (!user || !profileData?.connectionCode) return;
@@ -213,6 +191,7 @@ const ProfilePage = () => {
         }
     };
 
+
     const handleClearNote = () => {
         setEditedNote('');
     };
@@ -241,8 +220,8 @@ const ProfilePage = () => {
                             <p className="mt-2 text-xs text-muted-foreground">Loading profile data...</p>
                         </div>
                     ) : (
+                        // Rest of the JSX remains exactly the same as your original component
                         <>
-                            {/* Profile Header */}
                             <div className="flex items-center gap-2">
                                 <Avatar className="h-10 w-10">
                                     {profileInfo?.imageCode && !profileInfo.imageCode.startsWith('data:') ? (
@@ -298,7 +277,6 @@ const ProfilePage = () => {
                                     </div>
 
                                     <div className="space-y-2">
-
                                         <div className="space-y-2">
                                             <Textarea
                                                 value={editedNote}
@@ -342,7 +320,6 @@ const ProfilePage = () => {
                                                 </Button>
                                             </div>
                                         </div>
-
                                     </div>
                                 </div>
                             </div>

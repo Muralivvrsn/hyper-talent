@@ -221,7 +221,7 @@ window.notesObserver = {
                 }
 
                 try {
-                    const { db, currentUser } = await window.firebaseService.initializeFirebase();
+                    const { db, currentUser } = await window.firebaseServices.initializeFirebase();
                     // console.log('Firebase initialized');
 
                     // Listen for database changes

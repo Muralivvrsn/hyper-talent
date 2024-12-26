@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HyperTalent",
   "short_name": "HyperTalent",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "An ATS Chrome Extension",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6Yn0Jgl1gLe4x5lfoj6/9Hmh7p3RxVMTLQNtTrzbwJ/aQ5B8RcjGv0twV2jhrhdpCJkWeBGo6Dov+lUMg0APQ301HsvGLLrgU9wL5Cc5uEUpLaJqhEyLeGg3IsCyNOn9a4bzYpUcPHXiHBlczSPa11CS1EVGCVGVyQ5J6Eao5BNmzK1Hv6lgjAy/O5hPWABkQmPOvWCFr9xkURDm1f7HNJwuRkVXlCzBKbirdwpdy9v0qFCVTTuQR2ZDWGwfavdlWQnb5RPckspf/4a1EAQ0EwIkHj5oI0s5/yj2XMkPXJtVRYfcnKuaSBkTK6MG0Jby/BR+4Fi7t/7jna07Px9yQIDAQAB",
   "icons": {
@@ -24,7 +24,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
+"content_scripts": [
     {
       "matches": [
         "https://*.linkedin.com/*"
@@ -34,17 +34,29 @@
         "firebase-auth.js",
         "firebase-firestore.js",
         "firebase-database.js",
-        "styles/filter.label.js",
         "services/firebase.js",
+        
+        "services/database/index.js",
+        "services/database/notes.js",
+        "services/database/labels.js",
+        
+        "styles/filter.label.js",
+
+        "services/labels/filter/ui.js",
+        "services/labels/filter/utility.js",
+        "services/labels/filter/index.js",
+
+        "services/labels/manager/ui.js",
+        "services/labels/manager/utility.js",
+        "services/labels/manager/index.js",
+        
         "services/labels/profile.labels.js",
         "services/shortcut.services.js",
-        "services/label.manager.service.js",
-        "services/labels.observer.service.js",
-        "services/label.filter.service.js",
-        "services/notes.service.js",
-        "services/notes.observer.service.js",
+        "services/labels/labels.observer.service.js",
+        "services/notes/notes.service.js",
+        "services/notes/notes.observer.service.js",
         "services/keyboard.shortcuts.js",
-        "services/notes.profile.service.js",
+        "services/notes/notes.profile.service.js",
         "content.js"
       ],
       "run_at": "document_end"

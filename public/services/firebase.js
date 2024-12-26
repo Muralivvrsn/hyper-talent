@@ -102,7 +102,7 @@ document.addEventListener('visibilitychange', async () => {
 });
 
 // Export to window object for global access
-window.firebaseService = {
+window.firebaseServices = {
   initializeFirebase,
   getGoogleToken
 };

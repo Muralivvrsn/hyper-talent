@@ -54,7 +54,7 @@ class ProfileLabels {
 
     async getFirebaseInstance() {
         try {
-            const { db, currentUser } = await window.firebaseService.initializeFirebase();
+            const { db, currentUser } = await window.firebaseServices.initializeFirebase();
             if (!db || !currentUser) {
                 throw new Error('Authentication failed');
             }
