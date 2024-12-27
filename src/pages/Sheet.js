@@ -1,44 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
+import { ExternalLink, Loader2, FileSpreadsheet, RefreshCw, Upload, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { ExternalLink, Loader2 } from 'lucide-react';
-import { fetchCollectionData, createSheet, syncSheet, syncDatabase, processUploadLabels } from '../context/sheetContext';
+import { useSheet } from '../context/SheetContext';
+import { fetchCollectionData, createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
+import { doc, setDoc, getFirestore } from 'firebase/firestore';
+import { formatDistanceToNow } from 'date-fns';
+
+const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled }) => (
+  <div className="w-full">
+    <Button 
+      className="w-full h-auto py-4 px-6 flex flex-col items-center gap-2" 
+      onClick={onClick}
+      disabled={disabled || loading}
+      variant="outline"
+    >
+      {loading ? (
+        <Loader2 className="h-6 w-6 animate-spin" />
+      ) : (
+        <Icon className="h-6 w-6" />
+      )}
+      <span className="text-sm font-semibold">{label}</span>
+      <p className="text-sm text-muted-foreground text-center text-wrap">{description}</p>
+    </Button>
+  </div>
+);
+
+const NoSheetView = ({ onCreateSheet, isLoading }) => (
+  <div className="flex flex-col items-center justify-center space-y-6 p-8">
+    <FileSpreadsheet className="h-16 w-16 text-muted-foreground" />
+    <div className="text-center space-y-2">
+      <h3 className="text-xl font-semibold">No Sheet Connected</h3>
+      <p className="text-muted-foreground">Create a Google Sheet to manage your LinkedIn connections</p>
+    </div>
+    <Button 
+      size="lg"
+      onClick={onCreateSheet}
+      disabled={isLoading}
+      className="w-full max-w-md"
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+      ) : null}
+      Create New Sheet
+    </Button>
+  </div>
+);
+
+const formatDate = (date) => {
+  return formatDistanceToNow(new Date(date), { addSuffix: true });
+};
+
+const SheetActions = ({ loadingStates, onSync, onUpload }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 ">
+    <ActionButton
+      icon={RefreshCw}
+      label="Update Sheet"
+      description="Sync latest LinkedIn data to Google Sheet"
+      onClick={() => onSync("Sheet")}
+      loading={loadingStates.syncSheet}
+    />
+    <ActionButton
+      icon={Database}
+      label="Update Database"
+      description="Sync Google Sheet changes to database"
+      onClick={() => onSync("Database")}
+      loading={loadingStates.syncDB}
+    />
+    <ActionButton
+      icon={Upload}
+      label="Update Labels"
+      description="Process and update connection labels"
+      onClick={onUpload}
+      loading={loadingStates.updateLabels}
+      className="md:col-span-2"
+    />
+  </div>
+);
 
 const SheetPage = () => {
   const { user } = useAuth();
-  const [sheetData, setSheetData] = useState(null);
+  const { sheetData, setSheetData, isLoading: contextLoading, getGoogleToken } = useSheet();
   const [loadingStates, setLoadingStates] = useState({
-    initial: true,
     create: false,
     syncSheet: false,
     syncDB: false,
     updateLabels: false
   });
-  const db = getFirestore();
-  const chrome = window.chrome;
-
-  useEffect(() => {
-    if (user?.uid) checkExistingSheet();
-  }, [user]);
-
-  const checkExistingSheet = async () => {
-    try {
-      const snap = await getDoc(doc(db, 'sheets', user.uid));
-      if (snap.exists()) setSheetData(snap.data());
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, initial: false }));
-    }
-  };
 
   const handleCreate = async () => {
     try {
       setLoadingStates(prev => ({ ...prev, create: true }));
-      const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
-      const token = response.token;
+      const token = await getGoogleToken();
       const firstName = user.displayName.split(' ')[0];
       const data = await fetchCollectionData(user.uid);
 
@@ -52,7 +106,7 @@ const SheetPage = () => {
         lastSync: new Date().toISOString()
       };
 
-      await setDoc(doc(db, 'sheets', user.uid), newSheetData);
+      await setDoc(doc(getFirestore(), 'sheets', user.uid), newSheetData);
       setSheetData(newSheetData);
       window.open(newSheetData.sheetUrl, '_blank');
     } catch (error) {
@@ -67,8 +121,7 @@ const SheetPage = () => {
     const loadingKey = syncType === "Sheet" ? "syncSheet" : "syncDB";
     try {
       setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
-      const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
-      const token = response.token;
+      const token = await getGoogleToken();
       const data = await fetchCollectionData(user.uid);
       
       if (syncType === "Sheet") {
@@ -81,7 +134,7 @@ const SheetPage = () => {
         ...sheetData,
         lastSync: new Date().toISOString()
       };
-      await setDoc(doc(db, 'sheets', user.uid), updatedSheetData);
+      await setDoc(doc(getFirestore(), 'sheets', user.uid), updatedSheetData);
       setSheetData(updatedSheetData);
     } catch (error) {
       console.error(error);
@@ -94,8 +147,7 @@ const SheetPage = () => {
     if (!sheetData?.spreadsheetId) return;
     try {
       setLoadingStates(prev => ({ ...prev, updateLabels: true }));
-      const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
-      const token = response.token;
+      const token = await getGoogleToken();
       await processUploadLabels(sheetData.spreadsheetId, token, user.uid);
 
       const data = await fetchCollectionData(user.uid);
@@ -105,7 +157,7 @@ const SheetPage = () => {
         ...sheetData,
         lastSync: new Date().toISOString()
       };
-      await setDoc(doc(db, 'sheets', user.uid), updatedSheetData);
+      await setDoc(doc(getFirestore(), 'sheets', user.uid), updatedSheetData);
       setSheetData(updatedSheetData);
     } catch (error) {
       console.error(error);
@@ -114,100 +166,54 @@ const SheetPage = () => {
     }
   };
 
-  if (loadingStates.initial) {
+  if (contextLoading) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-background">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+    <Card className="mx-auto max-w-4xl my-8">
       <CardHeader>
-        <CardTitle className="text-2xl">Sheet Manager</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-sm font-bold">Sheet Manager</CardTitle>
+        <CardDescription className="text-sm">
           Sync and manage your LinkedIn connections using Google Sheets
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col justify-between space-y-4">
-        <div className="space-y-4">
-          {!sheetData ? (
-            <div className="space-y-4">
-              <Button 
-                className="w-full" 
-                onClick={handleCreate}
-                disabled={loadingStates.create}
-              >
-                {loadingStates.create ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Create New Sheet
-              </Button>
-              <p className="text-sm text-muted-foreground px-2 text-center">
-                Create a Google Sheet to manage your notes, and labels
+      <CardContent className="p-6">
+        {!sheetData ? (
+          <NoSheetView 
+            onCreateSheet={handleCreate} 
+            isLoading={loadingStates.create} 
+          />
+        ) : (
+          <div className="space-y-6">
+            <SheetActions 
+              loadingStates={loadingStates}
+              onSync={handleSync}
+              onUpload={handleUpload}
+            />
+            
+            <div className="flex flex-col items-center gap-4 pt-4 border-t">
+              <p className="text-xs text-muted-foreground">
+                Last synced: {formatDate(sheetData.lastSync)}
               </p>
+              <Button
+                variant="outline"
+                onClick={() => window.open(sheetData.sheetUrl, '_blank')}
+                className="w-full max-w-md"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open Google Sheet
+              </Button>
             </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleSync("Sheet")}
-                  disabled={loadingStates.syncSheet}
-                >
-                  {loadingStates.syncSheet ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Update Google Sheet
-                  </Button>
-                  <p className="text-sm text-muted-foreground px-2 text-center">Update Google Sheet with latest data from your LinkedIn connections</p>
-
-                <Button 
-                  className="w-full" 
-                  onClick={() => handleSync("Database")}
-                  disabled={loadingStates.syncDB}
-                >
-                  {loadingStates.syncDB ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Update Database
-                  </Button>
-                  <p className="text-sm text-muted-foreground px-2 text-center">Update your database with changes made in Google Sheet</p>
-
-                <Button 
-                  className="w-full" 
-                  onClick={handleUpload}
-                  disabled={loadingStates.updateLabels}
-                >
-                  {loadingStates.updateLabels ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Update Labels
-                  </Button>
-                  <p className="text-sm text-muted-foreground px-2 text-center">Process and update labels from the Upload Labels sheet</p>
-              </div>
-
-              <div className="text-sm text-muted-foreground text-center">
-                Last synced: {new Date(sheetData.lastSync).toLocaleString()}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {sheetData && (
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => window.open(sheetData.sheetUrl, '_blank')}
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Open Google Sheet
-          </Button>
+          </div>
         )}
       </CardContent>
-    </div>
+    </Card>
   );
 };
 
