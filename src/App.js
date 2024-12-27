@@ -46,7 +46,7 @@ const MainLayout = ({ children }) => {
           />
         </div>
       </header>
-      <main className="mx-auto py-2 px-6">
+      <main className="mx-auto p-2">
         {renderPage()}
       </main>
     </div>
