@@ -85,7 +85,7 @@ export const ensureHeaders = async (spreadsheetId, token, sheetName) => {
 
     if (currentHeaders.length === 0) {
       await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:Z1?valueInputOption=RAW`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}!A1:${String.fromCharCode(65 + expectedHeaders.length - 1)}1?valueInputOption=RAW`,
         {
           method: 'PUT',
           headers: {
@@ -93,7 +93,7 @@ export const ensureHeaders = async (spreadsheetId, token, sheetName) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            range: `${sheetName}!A1`,
+            range: `${sheetName}!A1:${String.fromCharCode(65 + expectedHeaders.length - 1)}1`,
             values: [expectedHeaders]
           })
         }
