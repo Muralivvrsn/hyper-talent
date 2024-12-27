@@ -243,13 +243,13 @@ class NotesManager {
         try {
             const { db, currentUser } = await window.firebaseServices.initializeFirebase();
             if (!db || !currentUser) {
-                showToast('Authentication error', 'error');
+                window.labelUtils.showToast('Authentication error', 'error');
                 return;
             }
 
             const profileId = this.currentNoteKey;
             if (!profileId) {
-                showToast('Could not find note to delete', 'error');
+                window.labelUtils.showToast('Could not find note to delete', 'error');
                 return;
             }
 
@@ -257,7 +257,7 @@ class NotesManager {
             const notesDoc = await notesRef.get();
 
             if (!notesDoc.exists) {
-                showToast('Notes not found', 'error');
+                window.labelUtils.showToast('Notes not found', 'error');
                 return;
             }
 
@@ -265,11 +265,11 @@ class NotesManager {
             delete notes[profileId];
 
             await notesRef.set(notes);
-            showToast('Note deleted successfully');
+            window.labelUtils.showToast('Note deleted successfully');
             this.hide();
         } catch (error) {
             // console.error('Error deleting note:', error);
-            showToast('Failed to delete note', 'error');
+            window.labelUtils.showToast('Failed to delete note', 'error');
         }
     }
     setupEventListeners() {
@@ -387,17 +387,17 @@ class NotesManager {
         const note = this.textarea.value.trim();
         if (!note) {
             // console.log('Note is empty');
-            showToast('Please enter a note', 'error');
+            window.labelUtils.showToast('Please enter a note', 'error');
             return;
         }
 
-        const profileInfo = getProfileInfo();
+        const profileInfo = window.labelUtils.getProfileInfo();
 
-        const profileImage = getProfileImage();
+        const profileImage = window.labelUtils.getProfileImage();
 
         if (!profileInfo || !profileImage) {
             // console.log('Missing profile info or image');
-            showToast('Could not find profile information', 'error');
+            window.labelUtils.showToast('Could not find profile information', 'error');
             return;
         }
         this.profileInfo = profileInfo
@@ -407,7 +407,7 @@ class NotesManager {
             const { db, currentUser } = await window.firebaseServices.initializeFirebase();
             if (!db || !currentUser) {
                 // console.log('Firebase initialization failed');
-                showToast('Authentication error', 'error');
+                window.labelUtils.showToast('Authentication error', 'error');
                 return;
             }
 
@@ -428,7 +428,7 @@ class NotesManager {
 
             await notesRef.set(noteData, { merge: true });
             // console.log('Note saved successfully');
-            showToast('Note saved successfully');
+            window.labelUtils.showToast('Note saved successfully');
             this.hide();
             this.textarea.value = '';
             // Update the cached notes and indicators
@@ -436,7 +436,7 @@ class NotesManager {
             this.updateNotesIndicators();
         } catch (error) {
             // console.error('Error saving note:', error);
-            showToast('Failed to save note', 'error');
+            window.labelUtils.showToast('Failed to save note', 'error');
         }
     }
 
@@ -447,9 +447,9 @@ class NotesManager {
 
     async show() {
         try {
-            const profileInfo = getProfileInfo();
+            const profileInfo = window.labelUtils.getProfileInfo();
             if (!profileInfo) {
-                showToast('Could not find profile information', 'error');
+                window.labelUtils.showToast('Could not find profile information', 'error');
                 return;
             }
     
@@ -481,7 +481,7 @@ class NotesManager {
             this.textarea.focus();
     
         } catch (error) {
-            showToast('Error loading note', 'error');
+            window.labelUtils.showToast('Error loading note', 'error');
             this.hide();
         }
     }

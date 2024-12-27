@@ -18,7 +18,7 @@ function isLinkedInUrl(url) {
 function sendMessageForUrl(tabId, url, isOnFocusEvent = false) {
   if (!url) return;
 
-  if (isOnFocusEvent && isLinkedInUrl(url)) {
+  if (isOnFocusEvent && isLinkedInUrl(url) && url.includes('linkedin.com/in')) {
     chrome.tabs.sendMessage(tabId, {
       type: "PROFILE_TAB",
       url: url
@@ -35,6 +35,10 @@ function sendMessageForUrl(tabId, url, isOnFocusEvent = false) {
       type: "URL_PROFILE",
       url: url
     });
+    chrome.tabs.sendMessage(tabId, {
+      type: "PROFILE_TAB",
+      url: url
+    });
   }
 }
 
@@ -42,13 +46,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (!isLinkedInUrl(tab.url)) return;
 
   if (changeInfo.status === 'complete' || changeInfo.url) {
-    sendMessageForUrl(tabId, tab.url, false);
+    sendMessageForUrl(tabId, tab.url, true);
   }
 });
 
 chrome.tabs.onCreated.addListener(async (tab) => {
   if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
-    sendMessageForUrl(tab.id, tab.url, false);
+    sendMessageForUrl(tab.id, tab.url, true);
   }
 });
 
@@ -84,7 +88,7 @@ chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
   try {
     const tab = await chrome.tabs.get(addedTabId);
     if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
-      sendMessageForUrl(tab.id, tab.url, false);
+      sendMessageForUrl(tab.id, tab.url, true);
     }
   } catch (error) {
     console.error('Error handling tab replacement:', error);

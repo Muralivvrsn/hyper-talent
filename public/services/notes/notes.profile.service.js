@@ -129,7 +129,21 @@ class ProfileNotes {
             if (event.key === 'n') {
                 await this.handleProfileAction(true);
             }
+            if (event.key === 'f') {
+                const activeElement = document.activeElement;
+                
+                // Don't trigger if we're in an input field
+                if (activeElement && 
+                    (activeElement.tagName === 'INPUT' || 
+                     activeElement.tagName === 'TEXTAREA' || 
+                     activeElement.isContentEditable)) {
+                    return;
+                }
+
+                await this.handleForwardProfile();
+            }
         });
+
     
         // Handle messages from background script
         chrome.runtime.onMessage.addListener(async (message) => {
@@ -141,11 +155,11 @@ class ProfileNotes {
     
     async handleProfileAction(isKey) {
         const activeElement = document.activeElement;
+
+        console.log(activeElement)
         
         // Don't trigger if we're in a notes textarea
-        if (activeElement && 
-            activeElement.tagName === 'TEXTAREA' && 
-            activeElement.classList.contains('notes-textarea')) {
+        if (activeElement && (activeElement.tagName === 'TEXTAREA' || activeElement.tagName==="INPUT")) {
             return;
         }
     
@@ -176,6 +190,39 @@ class ProfileNotes {
                     imageUrl: null
                 }
             });
+        }
+    }
+    async handleForwardProfile() {
+        let dropdown=null;
+        try {
+            // Wait for the share button and click it
+            await this.waitForElement('section[data-member-id] button[aria-label*="More actions"]');
+            const shareButton = document.querySelector('section[data-member-id] button[aria-label*="More actions"]')
+            // console.log(shareButton)
+            if (shareButton) {
+                shareButton.click();
+                
+                // Wait for dropdown menu to appear and find the "Send profile" option
+                dropdown = document.querySelector('section[data-member-id] .artdeco-dropdown__content.artdeco-dropdown--is-dropdown-element');
+                dropdown.style.display='none';
+                await this.waitForElement('section[data-member-id] div[aria-label*="Send"]');
+                const sendProfileButton = document.querySelector('section[data-member-id] div[aria-label*="Send"]')
+                if (sendProfileButton) {
+                    // body.click()
+                    sendProfileButton.click();
+                } else {
+                    console.log('ForwardProfile: Send profile button not found');
+                }
+                shareButton.click();
+            } else {
+                console.log('ForwardProfile: Share button not found');
+            }
+        } catch (error) {
+            console.error('Error handling forward profile:', error);
+        } finally{
+            if(dropdown){
+                dropdown.style.display='block';
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Loader2 } from 'lucide-react';
+import { User } from 'lucide-react';
 import { Card, CardContent } from "../components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
@@ -8,6 +8,30 @@ import { Textarea } from "../components/ui/textarea";
 import { useAuth } from '../context/AuthContext';
 import { useProfileNote } from '../context/ProfileNoteContext';
 import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+
+// Skeleton component for loading state
+const ProfileSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="flex items-center gap-2">
+      <div className="h-10 w-10 rounded-full bg-muted"></div>
+      <div className="h-4 w-32 bg-muted rounded"></div>
+    </div>
+    <div className="space-y-3 mt-4">
+      <div>
+        <div className="h-4 w-16 bg-muted rounded mb-2"></div>
+        <div className="flex gap-2">
+          <div className="h-5 w-16 bg-muted rounded"></div>
+          <div className="h-5 w-20 bg-muted rounded"></div>
+        </div>
+      </div>
+      <div>
+        <div className="h-4 w-16 bg-muted rounded mb-2"></div>
+        <div className="h-24 w-full bg-muted rounded"></div>
+      </div>
+    </div>
+  </div>
+);
+
 const ProfilePage = () => {
     const { user } = useAuth();
     const [profileInfo, setProfileInfo] = useState(null);
@@ -18,6 +42,7 @@ const ProfilePage = () => {
     const [originalNote, setOriginalNote] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [isVisible, setIsVisible] = useState(true);
 
     const createProfileId = (connectionCode) => {
         if (!connectionCode) return null;
@@ -58,85 +83,95 @@ const ProfilePage = () => {
     };
 
     useEffect(() => {
-        const fetchData = async () => {
-            if (!user || !profileData?.connectionCode) {
-                setLoading(false);
-                return;
+        // Add fade out effect before data changes
+        if (profileData?.connectionCode) {
+            setIsVisible(false);
+            const timer = setTimeout(() => {
+                fetchData();
+            }, 200); // Wait for fade out animation
+            return () => clearTimeout(timer);
+        }
+    }, [profileData?.connectionCode]);
+
+    const fetchData = async () => {
+        if (!user || !profileData?.connectionCode) {
+            setLoading(false);
+            return;
+        }
+
+        console.log('Running profile note fetch from IndexedDB');
+        try {
+            // Reset states
+            setProfileInfo(null);
+            setLabels([]);
+            setEditedNote('');
+            setOriginalNote('');
+            setError(null);
+
+            const profileId = createProfileId(profileData.connectionCode);
+
+            if (!profileId) {
+                throw new Error('Invalid profile ID');
             }
 
-            console.log('Running profile note fetch from IndexedDB');
-            try {
-                // Reset states
-                setProfileInfo(null);
-                setLabels([]);
-                setEditedNote('');
-                setOriginalNote('');
-                setError(null);
+            const notesData = await getNotes();
+            const url = `https://www.linkedin.com/in/${profileData.connectionCode}`;
 
-                const profileId = createProfileId(profileData.connectionCode);
+            let currentProfileInfo = {
+                name: profileData.name || 'Unknown',
+                note: '',
+                imageCode: profileData.imageUrl || null,
+                updatedAt: null,
+                url: url
+            };
 
-                if (!profileId) {
-                    throw new Error('Invalid profile ID');
-                }
-
-                const notesData = await getNotes();
-                const url = `https://www.linkedin.com/in/${profileData.connectionCode}`;
-
-                // Initialize profile info with provided data
-                let currentProfileInfo = {
-                    name: profileData.name || 'Unknown',
-                    note: '',
-                    imageCode: profileData.imageUrl || null,
-                    updatedAt: null,
+            if (notesData && notesData[profileId]) {
+                currentProfileInfo = {
+                    name: profileData.name || notesData[profileId].name || 'Unknown',
+                    note: notesData[profileId].note || '',
+                    imageCode: profileData.imageUrl || notesData[profileId].code || null,
+                    updatedAt: notesData[profileId].updatedAt || null,
                     url: url
                 };
+            }
 
-                if (notesData && notesData[profileId]) {
-                    currentProfileInfo = {
-                        name: profileData.name || notesData[profileId].name || 'Unknown',
-                        note: notesData[profileId].note || '',
-                        imageCode: profileData.imageUrl || notesData[profileId].code || null,
-                        updatedAt: notesData[profileId].updatedAt || null,
-                        url: url
-                    };
-                }
+            setProfileInfo(currentProfileInfo);
+            setEditedNote(currentProfileInfo.note);
+            setOriginalNote(currentProfileInfo.note);
 
-                setProfileInfo(currentProfileInfo);
-                setEditedNote(currentProfileInfo.note);
-                setOriginalNote(currentProfileInfo.note);
+            try {
+                const labelsData = await getLabels();
+                const matchingLabels = [];
 
-                // Fetch labels from IndexedDB
-                try {
-                    const labelsData = await getLabels();
-                    const matchingLabels = [];
-
-                    if (labelsData && labelsData.labels) {
-                        for (const [labelName, labelData] of Object.entries(labelsData.labels)) {
-                            if (labelData.codes && Object.keys(labelData.codes).includes(profileId)) {
-                                matchingLabels.push({
-                                    name: labelName,
-                                    color: labelData.color || '#000000'
-                                });
-                            }
+                if (labelsData && labelsData.labels) {
+                    for (const [labelName, labelData] of Object.entries(labelsData.labels)) {
+                        if (labelData.codes && Object.keys(labelData.codes).includes(profileId)) {
+                            matchingLabels.push({
+                                name: labelName,
+                                color: labelData.color || '#000000'
+                            });
                         }
                     }
-
-                    setLabels(matchingLabels);
-                } catch (labelError) {
-                    console.error('Error fetching labels from IndexedDB:', labelError);
-                    setLabels([]);
                 }
 
-            } catch (error) {
-                console.error('Error fetching data from IndexedDB:', error);
-                setError('Failed to load profile data');
-            } finally {
-                setLoading(false);
+                setLabels(matchingLabels);
+            } catch (labelError) {
+                console.error('Error fetching labels from IndexedDB:', labelError);
+                setLabels([]);
             }
-        };
 
-        fetchData();
-    }, [user, profileData, getNotes, getLabels]);
+            // Add fade in effect after data is loaded
+            setTimeout(() => {
+                setIsVisible(true);
+            }, 100);
+
+        } catch (error) {
+            console.error('Error fetching data from IndexedDB:', error);
+            setError('Failed to load profile data');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSaveNote = async () => {
         if (!user || !profileData?.connectionCode) return;
@@ -182,7 +217,6 @@ const ProfilePage = () => {
                 ...noteData
             }));
             setOriginalNote(editedNote);
-            //   setIsEditing(false);
         } catch (error) {
             console.error('Error saving note:', error);
             setError('Failed to save note');
@@ -190,7 +224,6 @@ const ProfilePage = () => {
             setIsSaving(false);
         }
     };
-
 
     const handleClearNote = () => {
         setEditedNote('');
@@ -215,13 +248,9 @@ const ProfilePage = () => {
             <Card>
                 <CardContent className="p-3 space-y-4">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center py-6">
-                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                            <p className="mt-2 text-xs text-muted-foreground">Loading profile data...</p>
-                        </div>
+                        <ProfileSkeleton />
                     ) : (
-                        // Rest of the JSX remains exactly the same as your original component
-                        <>
+                        <div className={`transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
                             <div className="flex items-center gap-2">
                                 <Avatar className="h-10 w-10">
                                     {profileInfo?.imageCode && !profileInfo.imageCode.startsWith('data:') ? (
@@ -239,7 +268,6 @@ const ProfilePage = () => {
                             </div>
 
                             <div className="space-y-3">
-                                {/* Labels Section */}
                                 <div>
                                     <h3 className="text-sm font-medium mb-2">Labels</h3>
                                     <div className="flex flex-wrap gap-1.5">
@@ -265,7 +293,6 @@ const ProfilePage = () => {
                                     </div>
                                 </div>
 
-                                {/* Notes Section */}
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <h3 className="text-sm font-medium">Notes</h3>
@@ -292,10 +319,7 @@ const ProfilePage = () => {
                                                     size="sm"
                                                     className="h-7 text-xs px-2"
                                                 >
-                                                    {isSaving && (
-                                                        <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                                                    )}
-                                                    Save
+                                                    {isSaving ? 'Saving...' : 'Save'}
                                                 </Button>
                                                 <Button
                                                     variant="outline"
@@ -323,7 +347,7 @@ const ProfilePage = () => {
                                     </div>
                                 </div>
                             </div>
-                        </>
+                        </div>
                     )}
                 </CardContent>
             </Card>

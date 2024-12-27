@@ -10,6 +10,13 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { useTheme } from '../context/ThemeContext';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip"
+
 
 const Navigation = ({ setCurrentPage, onLogout, user, currentPage }) => {
   const { theme, setTheme } = useTheme();
@@ -41,7 +48,7 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage }) => {
       label: 'Profile',
       page: 'profile'
     }
-];
+  ];
 
   return (
     <nav className="w-full flex items-center justify-between px-4 h-14 bg-background">
@@ -49,22 +56,28 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage }) => {
         {navItems.map((item) => {
           const isActive = currentPage === item.page;
           return (
-            <Button
-              key={item.page}
-              variant={isActive ? "default" : "ghost"}
-              size="icon"
-              className={cn(
-                "h-9 w-9 relative group",
-                isActive && "bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-              onClick={() => setCurrentPage(item.page)}
-            >
-              {item.icon}
-              
-              <div className="absolute top-full mt-2 px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-                {item.label}
-              </div>
-            </Button>
+            <TooltipProvider delayDuration={400}>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button
+                    key={item.page}
+                    variant={isActive ? "default" : "ghost"}
+                    size="icon"
+                    className={cn(
+                      "h-9 w-9 relative group",
+                      isActive && "bg-primary text-primary-foreground hover:bg-primary/90"
+                    )}
+                    onClick={() => setCurrentPage(item.page)}
+                  >
+                    {item.icon}
+                  </Button>
+
+                </TooltipTrigger>
+                <TooltipContent>
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         })}
       </div>
@@ -106,7 +119,7 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage }) => {
             )}
             <span>Toggle theme</span>
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             onClick={onLogout}
             className="cursor-pointer text-destructive focus:text-destructive"
           >

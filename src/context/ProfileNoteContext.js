@@ -47,7 +47,7 @@ export function ProfileNoteProvider({ children }) {
               setLoading(true);
               setProfileData(result.profileData);
               setLastProfileData(result.profileData);
-              if(!key){
+              if(key){
                 setCurrentPage('profile');
               }
             }

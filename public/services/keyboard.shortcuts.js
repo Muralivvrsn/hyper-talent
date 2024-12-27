@@ -330,7 +330,8 @@ window.keyboard.shortcuts = {
     if (profileLink) {
       window.open(profileLink.href, '_blank');
     } else {
-      showToast('Profile link not found', 'error');
+
+      window.labelUtil.showToast('Profile link not found', 'error');
     }
   },
 

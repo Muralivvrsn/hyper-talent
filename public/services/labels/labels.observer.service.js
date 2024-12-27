@@ -224,7 +224,7 @@ window.labelsObserver = {
                         }
                     }
                 }
-                showToast('Label has been removed', 'info')
+                window.labelUtil.showToast('Label has been removed', 'info')
             } catch (error) {
                 // console.error('Error removing label:', error);
             }

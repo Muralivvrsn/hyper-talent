@@ -1,91 +1,229 @@
-<div class="checkbox-wrapper-28">
-    <input id="tmp-28" type="checkbox" class="promoted-input-checkbox"/>
-    <svg><use xlink:href="#checkmark-28" /></svg>
-    <label for="tmp-28">
-      Checkbox   
-    </label>
-    <svg xmlns="http://www.w3.org/2000/svg" style="display: none">
-      <symbol id="checkmark-28" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-miterlimit="10" fill="none"  d="M22.9 3.7l-15.2 16.6-6.6-7.1">
-        </path>
-      </symbol>
-    </svg>
-  </div>
-  
-  <style>
-    .checkbox-wrapper-28 {
-      --size: 25px;
-      position: relative;
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+/* Base styles */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-trigger {
+    padding: 8px 16px;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dropdown-content {
+    position: absolute;
+    min-width: 8rem;
+    padding: 4px;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-top: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.95);
+    transform-origin: top;
+    transition: opacity 150ms ease-in-out,
+                transform 150ms ease-in-out,
+                visibility 150ms ease-in-out;
+    z-index: 50;
+}
+
+/* Show dropdown when trigger is clicked */
+.dropdown-trigger:focus + .dropdown-content,
+.dropdown-content:hover {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+/* Dropdown items */
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 14px;
+    color: #374151;
+    cursor: default;
+    border-radius: 4px;
+    transition: background-color 150ms;
+}
+
+.dropdown-item:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+/* Checkbox items */
+.dropdown-checkbox-item {
+    position: relative;
+    padding-left: 32px;
+}
+
+.dropdown-checkbox-item::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    border: 2px solid #d1d5db;
+    border-radius: 3px;
+    transition: border-color 150ms, background-color 150ms;
+}
+
+.dropdown-checkbox-item.checked::before {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.dropdown-checkbox-item.checked::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+}
+
+/* Separator */
+.dropdown-separator {
+    height: 1px;
+    margin: 4px -4px;
+    background-color: #e5e7eb;
+}
+
+/* Label */
+.dropdown-label {
+    padding: 6px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+/* Animation keyframes for slide in/out */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.95);
     }
-  
-    .checkbox-wrapper-28 *,
-    .checkbox-wrapper-28 *:before,
-    .checkbox-wrapper-28 *:after {
-      box-sizing: border-box;
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
-  
-    .checkbox-wrapper-28 .promoted-input-checkbox {
-      border: 0;
-      clip: rect(0 0 0 0);
-      height: 1px;
-      margin: -1px;
-      overflow: hidden;
-      padding: 0;
-      position: absolute;
-      width: 1px;
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
-  
-    .checkbox-wrapper-28 input:checked ~ svg {
-      height: calc(var(--size) * 0.6);
-      -webkit-animation: draw-checkbox-28 ease-in-out 0.2s forwards;
-              animation: draw-checkbox-28 ease-in-out 0.2s forwards;
+    to {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.95);
     }
-    .checkbox-wrapper-28 label:active::after {
-      background-color: #e6e6e6;
-    }
-    .checkbox-wrapper-28 label {
-      color: #0080d3;
-      line-height: var(--size);
-      cursor: pointer;
-      position: relative;
-    }
-    .checkbox-wrapper-28 label:after {
-      content: "";
-      height: var(--size);
-      width: var(--size);
-      margin-right: 8px;
-      float: left;
-      border: 2px solid #0080d3;
-      border-radius: 3px;
-      transition: 0.15s all ease-out;
-    }
-    .checkbox-wrapper-28 svg {
-      stroke: #0080d3;
-      stroke-width: 3px;
-      height: 0;
-      width: calc(var(--size) * 0.6);
-      position: absolute;
-      left: calc(var(--size) * 0.21);
-      top: calc(var(--size) * 0.2);
-      stroke-dasharray: 33;
-    }
-  
-    @-webkit-keyframes draw-checkbox-28 {
-      0% {
-        stroke-dashoffset: 33;
-      }
-      100% {
-        stroke-dashoffset: 0;
-      }
-    }
-  
-    @keyframes draw-checkbox-28 {
-      0% {
-        stroke-dashoffset: 33;
-      }
-      100% {
-        stroke-dashoffset: 0;
-      }
-    }
-  </style>
-  
+}
+
+/* Sub menu styles */
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-subtrigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 14px;
+    color: #374151;
+    cursor: default;
+    border-radius: 4px;
+}
+
+.dropdown-subtrigger:hover {
+    background-color: #f3f4f6;
+}
+
+.dropdown-subcontent {
+    position: absolute;
+    left: 100%;
+    top: -4px;
+    min-width: 8rem;
+    padding: 4px;
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-4px) scale(0.95);
+    transition: opacity 150ms ease-in-out,
+                transform 150ms ease-in-out,
+                visibility 150ms ease-in-out;
+}
+
+.dropdown-submenu:hover .dropdown-subcontent {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0) scale(1);
+}
+</style>
+</head>
+<body>
+
+<!-- Example Usage -->
+<div class="dropdown">
+    <button class="dropdown-trigger" tabindex="0">
+        Dropdown Menu
+        <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
+            <path d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z" fill="currentColor"/>
+        </svg>
+    </button>
+    
+    <div class="dropdown-content">
+        <div class="dropdown-label">Actions</div>
+        
+        <div class="dropdown-item">
+            New Tab
+            <span style="margin-left: auto; font-size: 12px; opacity: 0.6">⌘+T</span>
+        </div>
+        
+        <div class="dropdown-checkbox-item checked">
+            Show Toolbar
+        </div>
+        
+        <div class="dropdown-separator"></div>
+        
+        <div class="dropdown-submenu">
+            <div class="dropdown-subtrigger">
+                More Tools
+                <svg width="12" height="12" viewBox="0 0 15 15" fill="none">
+                    <path d="M6.1584 3.13508C6.35985 2.94621 6.67627 2.95642 6.86514 3.15788L10.6151 7.15788C10.7954 7.3502 10.7954 7.64949 10.6151 7.84182L6.86514 11.8418C6.67627 12.0433 6.35985 12.0535 6.1584 11.8646C5.95694 11.6757 5.94673 11.3593 6.1356 11.1579L9.565 7.49985L6.1356 3.84182C5.94673 3.64036 5.95694 3.32394 6.1584 3.13508Z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="dropdown-subcontent">
+                <div class="dropdown-item">Developer Tools</div>
+                <div class="dropdown-item">Task Manager</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
