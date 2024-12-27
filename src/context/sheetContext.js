@@ -79,27 +79,33 @@ export const checkSheetStructure = async (spreadsheetId, token, sheetName) => {
 
 export const ensureHeaders = async (spreadsheetId, token, sheetName) => {
   try {
+    console.log(`Checking headers for ${sheetName}`);
     const currentHeaders = await checkSheetStructure(spreadsheetId, token, sheetName);
     const expectedHeaders = HEADERS[sheetName];
 
-    console.log(`Checking headers for ${sheetName}:`, {
-      current: currentHeaders,
-      expected: expectedHeaders
-    });
-
     if (currentHeaders.length === 0) {
-      console.log(`No headers found for ${sheetName}, adding all headers`);
-      await updateSheetData(spreadsheetId, token, [expectedHeaders], sheetName, 0);
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:Z1?valueInputOption=RAW`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            range: `${sheetName}!A1`,
+            values: [expectedHeaders]
+          })
+        }
+      );
       return;
     }
 
-    const missingHeaders = expectedHeaders.filter(header =>
+    const missingHeaders = expectedHeaders.filter(header => 
       !currentHeaders.find(h => h.toLowerCase() === header.toLowerCase())
     );
 
     if (missingHeaders.length > 0) {
-      console.log(`Found missing headers in ${sheetName}:`, missingHeaders);
-
       const lastCol = String.fromCharCode(65 + currentHeaders.length);
       const range = `${sheetName}!${lastCol}1:${String.fromCharCode(65 + currentHeaders.length + missingHeaders.length - 1)}1`;
 
@@ -117,10 +123,6 @@ export const ensureHeaders = async (spreadsheetId, token, sheetName) => {
           })
         }
       );
-
-      console.log(`Added missing headers: ${missingHeaders.join(', ')} to ${sheetName}`);
-    } else {
-      console.log(`All headers present in ${sheetName}`);
     }
   } catch (error) {
     console.error('Error ensuring headers:', error);
@@ -610,7 +612,7 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
   console.log('Starting processUpdateLabels with spreadsheetId:', spreadsheetId);
   try {
     console.log('Fetching sheet data...');
-    const sheetData = await getSheetData(spreadsheetId, token, '');
+    const sheetData = await getSheetData(spreadsheetId, token, 'Upload Labels');
     console.log('Fetched rows:', sheetData?.length);
 
     if (!sheetData.length) {

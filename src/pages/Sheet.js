@@ -125,7 +125,7 @@ const SheetPage = () => {
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       <CardHeader>
-        <CardTitle className="text-2xl">LinkedIn Profile Manager</CardTitle>
+        <CardTitle className="text-2xl">Sheet Manager</CardTitle>
         <CardDescription>
           Sync and manage your LinkedIn connections using Google Sheets
         </CardDescription>
@@ -146,7 +146,7 @@ const SheetPage = () => {
                 Create New Sheet
               </Button>
               <p className="text-sm text-muted-foreground px-2 text-center">
-                Create a Google Sheet to manage your LinkedIn connections, notes, and labels
+                Create a Google Sheet to manage your notes, and labels
               </p>
             </div>
           ) : (
