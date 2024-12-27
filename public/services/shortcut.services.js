@@ -190,7 +190,7 @@ window.shortcutsObserver = {
             if (this.isFirestoreInitialized) return;
 
             try {
-                const { db, currentUser } = await window.firebaseService.initializeFirebase();
+                const { db, currentUser } = await window.firebaseServices.initializeFirebase();
                 // console.log('Initializing Firestore listener for shortcuts');
 
                 this.unsubscribeFirestore = db.collection('shortcuts')
