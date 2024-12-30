@@ -237,6 +237,10 @@ window.keyboard.shortcuts = {
 
   handleConversationNavigation(e) {
     // Only handle Cmd/Ctrl + up/down arrows
+    console.log(e.shiftKey)
+    if(e.shiftKey){
+      return;
+    }
     if (!((e.metaKey || e.ctrlKey) && !e.shiftKey) || (e.code !== 'ArrowDown' && e.code !== 'ArrowUp')) {
         return;
     }
@@ -390,6 +394,8 @@ window.keyboard.shortcuts = {
   },
 
   handleKeyboardShortcuts(event) {
+    if(event.shiftKey)
+      return;
     if (!(event.metaKey || event.ctrlKey)) return;
 
     // Handle shortcuts dialog

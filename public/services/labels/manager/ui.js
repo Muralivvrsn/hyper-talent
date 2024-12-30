@@ -345,7 +345,7 @@ window.labelManagerUI = {
     setupEventListeners() {
         // Global keyboard shortcuts
         document.addEventListener('keydown', (e) => {
-            if (e?.key?.toLowerCase() === 'l' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            if (e?.key?.toLowerCase() === 'l' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey ) {
                 const activeElement = document.activeElement;
                 const isMessageInput = activeElement?.classList.contains('msg-form__contenteditable');
                 const isInputField = activeElement?.tagName?.toLowerCase() === 'input';
@@ -364,7 +364,7 @@ window.labelManagerUI = {
         this.state.container.addEventListener('keydown', (e) => {
             const items = Array.from(this.state.labelList.querySelectorAll('.label-item:not(.empty):not(.loading)'));
             if (!items.length) return;
-            if(e.metaKey || e.ctrlKey) return;
+            if(e.metaKey || e.ctrlKey || e.shiftKey) return;
     
             switch (e.key) {
                 case 'ArrowDown':

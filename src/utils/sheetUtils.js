@@ -691,7 +691,7 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
         labels[labelName].codes[profileId] = {
           name: profileName,
           url: profileUrl,
-          code: profileUrl,
+          code: "",
           addedAt: new Date().toISOString()
         };
 

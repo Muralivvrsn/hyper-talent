@@ -275,7 +275,7 @@ class NotesManager {
     setupEventListeners() {
         // Global keyboard shortcut - only setup once in constructor
         document.addEventListener('keydown', (e) => {
-            if (e?.key?.toLowerCase() === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            if (e?.key?.toLowerCase() === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
                 const activeElement = document.activeElement;
                 const isMessageInput = activeElement?.classList.contains('msg-form__contenteditable');
                 const isInputField = activeElement?.tagName?.toLowerCase() === 'input';
@@ -291,7 +291,7 @@ class NotesManager {
                 if (notesManager) {
                     this.hide();
                 }
-            } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && (e.metaKey || e.ctrlKey)) {
+            } else if (!e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 const notesManager = document.querySelector('.notes-manager');
                 if (e.key === 'ArrowUp' && !notesManager) {
