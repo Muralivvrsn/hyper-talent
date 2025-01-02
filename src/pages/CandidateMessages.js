@@ -108,7 +108,7 @@ const CandidateMessages = () => {
         {/* Add Message Dialog */}
         <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
           <DialogContent className="w-[90%] max-w-full rounded-lg">
-            <DialogHeader>
+            <DialogHeader className="text-sm">
               <DialogTitle>Add New Message</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">

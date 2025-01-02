@@ -1,4 +1,5 @@
 window.labelFilterUI = {
+    
     createFilterDropdown() {
         const labelButton = document.querySelector('#hypertalent-filter-btn');
         const buttonRect = labelButton.getBoundingClientRect();
@@ -60,6 +61,34 @@ window.labelFilterUI = {
         observer.observe(document.body, { childList: true });
 
         return dropdown;
+    },
+
+    setupConversationObserver() {
+        // Clean up existing observer if any
+        this.cleanupObserver();
+
+        const conversationsList = document.querySelector('.msg-conversations-container__conversations-list');
+        if (!conversationsList) return;
+
+        this.conversationsObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    const hasNewConversations = Array.from(mutation.addedNodes).some(
+                        node => node.nodeName === 'LI'
+                    );
+
+                    if (hasNewConversations) {
+                        this.filterConversations(false);
+                        break;
+                    }
+                }
+            }
+        });
+
+        this.conversationsObserver.observe(conversationsList, {
+            childList: true,
+            subtree: false
+        });
     },
 
     createLabelItem(labelName) {
@@ -192,10 +221,28 @@ window.labelFilterUI = {
                     window.labelFilterCore.state.allowedLabels.splice(index, 1);
                 }
             }
-            this.filterConversations();
+            // Run filter and manage observer based on checked state
+            this.handleFilterChange(true);
         };
 
+
         return labelContainer;
+    },
+
+    async handleFilterChange(value) {
+        // First, run the filter
+        await this.filterConversations(value);
+
+        // Check if any checkboxes are checked
+        const hasCheckedBoxes = window.labelFilterCore.state.allowedLabels.length > 0;
+
+        if (hasCheckedBoxes) {
+            // Set up observer if we have checked boxes and observer isn't already active
+            this.setupConversationObserver();
+        } else {
+            // Remove observer if no boxes are checked
+            this.cleanupObserver();
+        }
     },
 
     setupFilterButton() {
@@ -263,50 +310,105 @@ window.labelFilterUI = {
         }
     },
 
-    async filterConversations() {
-        const conversations = document.querySelectorAll('.msg-conversations-container__conversations-list > li');
-        const conversationsList = conversations[0]?.parentNode;
+    async filterConversations(value) {
+        // Helper function to get fresh DOM references
+        const getFreshReferences = () => {
+            const conversations = document.querySelectorAll('.msg-conversations-container__conversations-list > li.msg-conversation-listitem');
+            const conversationsList = conversations[0]?.parentNode;
+            return { conversations, conversationsList };
+        };
+
+        // Initial references
+        let { conversations, conversationsList } = getFreshReferences();
         if (!conversationsList) return;
 
-        let loadingEl = document.querySelector('.prism-loading-message');
+        // Find the last filtered conversation first
+        let lastFilteredConvo = null;
+        console.log(value)
+        if(value){
+             lastFilteredConvo = conversationsList.querySelector('.hypertalent-filter-checked');
+        }
+        else{
+             lastFilteredConvo = Array.from(conversationsList.querySelectorAll('.hypertalent-filter-checked')).pop();
+        }
+
+        // Create loading indicator
+        let loadingEl = document.querySelector('.filter-loading-indicator');
         if (!loadingEl) {
             loadingEl = document.createElement('div');
-            loadingEl.className = 'prism-loading-message';
+            loadingEl.className = 'filter-loading-indicator';
             loadingEl.style.cssText = `
-                padding: 20px;
-                text-align: center;
-                color: #666;
-                font-size: 13px;
-                background: rgba(255, 255, 255, 0.95);
                 position: absolute;
                 left: 0;
                 right: 0;
-                top: 0;
-                bottom: 0;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.98);
                 z-index: 100;
-                border-top: 1px solid #eee;
                 display: flex;
+                flex-direction: column;
                 align-items: center;
                 justify-content: center;
+                color: #666;
+                font-size: 14px;
+                line-height: 1.6;
+                padding: 20px;
+                text-align: center;
+                gap: 8px;
+                border-top: 1px solid #eee;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             `;
-            loadingEl.innerHTML = 'Filtering conversations...';
+    
+            // Create main text
+            const mainText = document.createElement('div');
+            mainText.style.cssText = `
+                font-weight: 500;
+                color: #333;
+                margin-bottom: 4px;
+            `;
+            mainText.textContent = 'Checking profiles...';
+    
+            // Create description text
+            const descText = document.createElement('div');
+            descText.style.cssText = `
+                font-size: 13px;
+                color: #666;
+                max-width: 280px;
+            `;
+            descText.textContent = 'This might take a moment as we review each profile to find your matches. Please wait...';
+    
+            loadingEl.appendChild(mainText);
+            loadingEl.appendChild(descText);
+            
             conversationsList.style.position = 'relative';
             conversationsList.appendChild(loadingEl);
         }
 
-        conversations.forEach(conv => {
-            conv.style.display = 'none';
-            conv.style.opacity = '0';
-        });
+        // Position loading initially based on last filtered conversation
+        if (lastFilteredConvo) {
+            const rect = lastFilteredConvo.getBoundingClientRect();
+            loadingEl.style.top = `${110 * Array.from(conversationsList.querySelectorAll('.hypertalent-filter-checked')).length}px`;
+        } else {
+            loadingEl.style.top = '0';
+            loadingEl.style.bottom = '0';
+            loadingEl.style.display = 'flex';
+            loadingEl.style.alignItems = 'center';
+            loadingEl.style.justifyContent = 'center';
+        }
 
-        let foundFirstMatch = false;
-
-        for (const [index, conversation] of Array.from(conversations).entries()) {
+        const hasActiveFilters = window.labelFilterCore.state.allowedLabels.length > 0;
+        for (const conversation of conversations) {
             const imgEl = conversation.querySelector('.msg-selectable-entity__entity img') ||
                 conversation.querySelector('.msg-facepile-grid--no-facepile img');
             const nameEl = conversation.querySelector('.msg-conversation-listitem__participant-names .truncate');
 
-            if (!imgEl || !nameEl) continue;
+            if (!imgEl || !nameEl){
+                conversation.style.transition = 'opacity 0.5s ease';
+                conversation.style.opacity = '0';
+                if(hasActiveFilters)
+                    await window.labelFilterUtils.sleep(50);
+                conversation.style.display = 'none';
+                continue;
+            }
 
             const imgSrc = imgEl.getAttribute('src');
             const name = nameEl.textContent.trim();
@@ -314,30 +416,50 @@ window.labelFilterUI = {
             const isMatch = await window.labelFilterCore.checkLabelMatch(imgSrc, name);
 
             if (isMatch) {
-                if (!foundFirstMatch) {
-                    foundFirstMatch = true;
-                    loadingEl.style.top = 'auto';
-                    loadingEl.style.bottom = '0';
-                    loadingEl.style.background = 'linear-gradient(rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.98) 100%)';
+                if (conversation.classList.contains('hypertalent-filter-checked')) {
+                    continue;
+                } else {
+                    conversation.classList.add('hypertalent-filter-checked');
+                    conversation.style.transition = 'opacity 0.5s ease';
+                    conversation.style.display = 'block';
+                    conversation.style.opacity = '1';
+                    ({ conversations, conversationsList } = getFreshReferences());
+                    const rect = conversation.getBoundingClientRect();
+                    loadingEl.style.top = `${110 * Array.from(conversationsList.querySelectorAll('.hypertalent-filter-checked')).length}px`;
+                    loadingEl.style.bottom = 'auto';
+                    loadingEl.style.height = '100%';
+                    loadingEl.style.display = 'block';
                 }
-
-                conversation.style.transition = 'opacity 0.3s ease';
-                conversation.style.display = 'block';
-                await window.labelFilterUtils.sleep(50);
-                conversation.style.opacity = '1';
+            } else {
+                conversation.classList.remove('hypertalent-filter-checked');
+                conversation.style.transition = 'opacity 0.5s ease';
+                conversation.style.opacity = '0';
+                if(hasActiveFilters)
+                    await window.labelFilterUtils.sleep(50);
+                conversation.style.display = 'none';
+                ({ conversations, conversationsList } = getFreshReferences());
             }
-
-            loadingEl.textContent = `Filtering conversations... (${index + 1}/${conversations.length})`;
         }
-
-        loadingEl.remove();
+        ({ conversations, conversationsList } = getFreshReferences());
+        if (!hasActiveFilters) {
+            loadingEl.remove();
+        }
     },
 
+
+    cleanupObserver() {
+        if (this.conversationsObserver) {
+            this.conversationsObserver.disconnect();
+            this.conversationsObserver = null;
+        }
+    },
     cleanup() {
+        this.cleanupObserver();
         const button = document.querySelector('#hypertalent-filter-btn');
         if (button) button.remove();
 
         const dropdown = document.querySelector('#hypertalent-dropdown');
         if (dropdown) dropdown.remove();
     }
+
 };

@@ -59,7 +59,10 @@ class LabelsDatabase {
     }
 
     notifyListeners() {
+        console.log('notifying Listneers');
+        console.log(this.listeners)
         this.listeners.forEach(callback => {
+            console.log(callback)
             try {
                 callback(this.labels);
             } catch (error) {

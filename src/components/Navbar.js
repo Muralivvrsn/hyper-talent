@@ -6,10 +6,8 @@ import { useAuth } from '../context/AuthContext';
 const Navbar = () => {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
-
-console.log(theme)
   return (
-    <nav className="w-full bg-background border-b">
+    <nav className="w-full bg-background border-b sticky">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
         <div className="p-4">

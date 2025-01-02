@@ -5,13 +5,13 @@ function waitForElement(selector, maxAttempts = 20) {
     let attempts = 0;
 
     function checkElement() {
-      console.log(`Checking for element '${selector}', attempt ${attempts + 1}/${maxAttempts}`);
+      // console.log(`Checking for element '${selector}', attempt ${attempts + 1}/${maxAttempts}`);
       const element = document.querySelector(selector);
       if (element) {
-        console.log(`Element '${selector}' found successfully`);
+        // console.log(`Element '${selector}' found successfully`);
         resolve(element);
       } else if (attempts >= maxAttempts) {
-        console.error(`Failed to find element '${selector}' after ${maxAttempts} attempts`);
+        // console.error(`Failed to find element '${selector}' after ${maxAttempts} attempts`);
         reject(new Error(`Element not found after ${maxAttempts} attempts: ${selector}`));
       } else {
         attempts++;
@@ -34,7 +34,7 @@ function updateDarkThemeStatus(mutationsList) {
     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
       const htmlElement = mutation.target;
       isDarkTheme = htmlElement.classList.contains('theme--dark');
-      console.log(`Dark theme active: ${isDarkTheme}`);
+      // console.log(`Dark theme active: ${isDarkTheme}`);
     }
   }
 }
@@ -48,7 +48,7 @@ const observeThemeChanges = () => {
 
   // Initialize the status immediately
   isDarkTheme = htmlElement.classList.contains('theme--dark');
-  console.log(`Initial dark theme status: ${isDarkTheme}`);
+  // console.log(`Initial dark theme status: ${isDarkTheme}`);
 };
 
 // Start observing
@@ -58,17 +58,17 @@ const observeThemeChanges = () => {
 
 // Add this function near your other waitForElement function
 function waitForNotesManager(maxAttempts = 20) {
-  console.log('Waiting for NotesManager to be available...');
+  // console.log('Waiting for NotesManager to be available...');
   return new Promise((resolve, reject) => {
     let attempts = 0;
 
     function checkNotesManager() {
-      console.log(`Checking for NotesManager, attempt ${attempts + 1}/${maxAttempts}`);
+      // console.log(`Checking for NotesManager, attempt ${attempts + 1}/${maxAttempts}`);
       if (window.getNotesManager && typeof window.getNotesManager === 'function') {
-        console.log('NotesManager found successfully');
+        // console.log('NotesManager found successfully');
         resolve();
       } else if (attempts >= maxAttempts) {
-        console.error(`Failed to find NotesManager after ${maxAttempts} attempts`);
+        // console.error(`Failed to find NotesManager after ${maxAttempts} attempts`);
         reject(new Error('NotesManager not available'));
       } else {
         attempts++;
@@ -82,15 +82,15 @@ function waitForNotesManager(maxAttempts = 20) {
 
 // Modify your message listener
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Received message:', message.type);
+  // console.log('Received message:', message.type);
 
   if (message.type === "URL_UPDATED") {
-    console.log('Starting initialization process');
+    // console.log('Starting initialization process');
 
     waitForElement('.msg-conversations-container__title-row')
       .then(async () => {
-        console.log('Container found, initializing managers');
-        
+        // console.log('Container found, initializing managers');
+
         // Track initialization results
         const initResults = {
           success: true,
@@ -100,19 +100,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         try {
           observeThemeChanges();
         } catch (error) {
-          console.error('Theme observer error:', error);
+          // console.error('Theme observer error:', error);
           initResults.errors.push('Theme observer failed');
         }
 
         try {
           window.labelManager.initialize();
         } catch (error) {
-          console.error('Label manager error:', error);
+          // console.error('Label manager error:', error);
           initResults.errors.push('Label manager failed');
         }
 
         // Cleanup existing observers
-        console.log('Cleaning up existing observers');
+        // console.log('Cleaning up existing observers');
         const observers = [
           { name: 'labels', obj: window.labelsObserver?.observer },
           { name: 'shortcuts', obj: window.shortcutsObserver?.observer },
@@ -125,7 +125,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           try {
             if (obj) obj.cleanup();
           } catch (error) {
-            console.error(`${name} cleanup error:`, error);
+            // console.error(`${name} cleanup error:`, error);
             initResults.errors.push(`${name} cleanup failed`);
           }
         });
@@ -133,11 +133,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Initialize NotesManager independently
         try {
           await waitForNotesManager();
-          console.log('Initializing NotesManager');
+          // console.log('Initializing NotesManager');
           const notesManager = window.getNotesManager();
-          console.log('NotesManager initialized:', !!notesManager);
+          // console.log('NotesManager initialized:', !!notesManager);
         } catch (error) {
-          console.error('NotesManager initialization error:', error);
+          // console.error('NotesManager initialization error:', error);
           initResults.errors.push('NotesManager initialization failed');
         }
 
@@ -153,38 +153,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           try {
             if (obj) {
               obj.initialize();
-              console.log(`${name} initialized successfully`);
+              // console.log(`${name} initialized successfully`);
             }
           } catch (error) {
-            console.error(`${name} initialization error:`, error);
+            // console.error(`${name} initialization error:`, error);
             initResults.errors.push(`${name} initialization failed`);
           }
         });
 
+        // Usage example:
+        // Usage example:
+        // window.labelObserver = new window.LabelObserverCore();
+
         // Initialize keyboard shortcuts independently
         try {
           window.keyboard.shortcuts.observer();
-          console.log('Keyboard shortcuts initialized');
+          // console.log('Keyboard shortcuts initialized');
         } catch (error) {
-          console.error('Keyboard shortcuts initialization error:', error);
+          // console.error('Keyboard shortcuts initialization error:', error);
           initResults.errors.push('Keyboard shortcuts initialization failed');
         }
 
         window.labelFilterCore.initialize()
-        console.log('Initialization complete with results:', initResults);
-        sendResponse({ 
-          success: true, 
+        // console.log('Initialization complete with results:', initResults);
+        sendResponse({
+          success: true,
           partialFailures: initResults.errors.length > 0,
-          errors: initResults.errors 
+          errors: initResults.errors
         });
       })
       .catch(error => {
-        console.error('Critical error in initialization process:', error);
+        // console.error('Critical error in initialization process:', error);
         sendResponse({ success: false, error: error.message });
       });
     return true;
   }
-  else if(message.type === "URL_PROFILE") {
+  else if (message.type === "URL_PROFILE") {
     waitForElement('.text-body-small a.ember-view')
       .then(() => {
         try {
@@ -192,11 +196,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           window.profileNotes.init();
           window.labelProfiles.init();
         } catch (error) {
-          console.error('Profile notes manager initialization error:', error);
+          // console.error('Profile notes manager initialization error:', error);
         }
       })
       .catch((err) => {
-        console.error('Profile element wait error:', err);
+        // console.error('Profile element wait error:', err);
       });
   }
 });

@@ -147,7 +147,7 @@ const Shortcuts = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="py-6 space-y-4">
+      <div className="py-6 space-y-4 sticky top-0 z-10">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-primary/10 rounded-lg">
             <Keyboard className="w-6 h-6 text-primary" />

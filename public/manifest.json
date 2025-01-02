@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HyperTalent",
   "short_name": "HyperTalent",
-  "version": "1.3.3",
+  "version": "1.3.5",
   "description": "An ATS Chrome Extension",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6Yn0Jgl1gLe4x5lfoj6/9Hmh7p3RxVMTLQNtTrzbwJ/aQ5B8RcjGv0twV2jhrhdpCJkWeBGo6Dov+lUMg0APQ301HsvGLLrgU9wL5Cc5uEUpLaJqhEyLeGg3IsCyNOn9a4bzYpUcPHXiHBlczSPa11CS1EVGCVGVyQ5J6Eao5BNmzK1Hv6lgjAy/O5hPWABkQmPOvWCFr9xkURDm1f7HNJwuRkVXlCzBKbirdwpdy9v0qFCVTTuQR2ZDWGwfavdlWQnb5RPckspf/4a1EAQ0EwIkHj5oI0s5/yj2XMkPXJtVRYfcnKuaSBkTK6MG0Jby/BR+4Fi7t/7jna07Px9yQIDAQAB",
   "icons": {
@@ -41,6 +41,7 @@
         "services/database/labels.js",
         
         "styles/filter.label.js",
+        "services/labels/observer/index.js",
 
         "services/labels/filter/ui.js",
         "services/labels/filter/utility.js",
@@ -96,6 +97,7 @@
     ]
   },
   "host_permissions": [
-    "https://www.linkedin.com/*"
+    "https://www.linkedin.com/*",
+    "*://*.firebasestorage.googleapis.com/*"
   ]
 }

@@ -142,3 +142,72 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 }
 
 });
+
+
+
+function compareVersions(v1, v2) {
+  const parts1 = v1.split('.').map(Number);
+  const parts2 = v2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const part1 = parts1[i] || 0;
+    const part2 = parts2[i] || 0;
+    
+    if (part1 > part2) return 1;
+    if (part1 < part2) return -1;
+  }
+  return 0;
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'update') {
+    const currentVersion = chrome.runtime.getManifest().version;
+    console.log(details)
+    const previousVersion = details.previousVersion;
+    
+    // Only show update if current version is higher than previous version
+    if (compareVersions(currentVersion, previousVersion) > 0) {
+      // Store the versions and set update flag
+      chrome.storage.local.set({
+        currentVersion,
+        previousVersion,
+        hasUnseenUpdate: true
+      });
+
+      // Show update badge
+      chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+      chrome.action.setBadgeText({ text: 'New' });
+    }
+    else{
+      chrome.storage.local.set({
+        currentVersion,
+        previousVersion,
+        hasUnseenUpdate: false
+      });
+    }
+  }
+});
+
+// Listen for when the extension popup is opened
+chrome.action.onClicked.addListener(() => {
+  // Clear the badge when they open the extension
+  chrome.action.setBadgeText({ text: '' });
+  
+  // Mark update as seen
+  chrome.storage.local.set({
+    hasUnseenUpdate: false
+  });
+});
+
+// Optional: Restore badge if browser is restarted and update hasn't been seen
+chrome.runtime.onStartup.addListener(() => {
+  chrome.storage.local.get(['hasUnseenUpdate', 'currentVersion', 'previousVersion'], (result) => {
+    if (result.hasUnseenUpdate && 
+        result.currentVersion && 
+        result.previousVersion && 
+        compareVersions(result.currentVersion, result.previousVersion) > 0) {
+      chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+      chrome.action.setBadgeText({ text: 'New' });
+    }
+  });
+});

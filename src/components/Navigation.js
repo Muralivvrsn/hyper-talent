@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { MessageSquare, Command, FileSpreadsheet, MessageCircle, LogOut, User, Sun, Moon } from 'lucide-react';
+import { 
+  MessageSquare, 
+  Command, 
+  FileSpreadsheet, 
+  MessageCircle, 
+  LogOut, 
+  User, 
+  Sun, 
+  Moon,
+  Shield // Add Shield icon for admin
+} from 'lucide-react';
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import {
@@ -17,11 +27,11 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip"
 
-
-const Navigation = ({ setCurrentPage, onLogout, user, currentPage }) => {
+const Navigation = ({ setCurrentPage, onLogout, user, currentPage, isAdmin }) => {
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
+  // Base navigation items
   const navItems = [
     {
       icon: <MessageSquare className="h-4 w-4" />,
@@ -50,28 +60,39 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage }) => {
     }
   ];
 
+  // Add admin item if user is authorized
+  const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
+  const isAuthorizedAdmin = ADMIN_EMAILS.includes(user?.email);
+
+  if (isAuthorizedAdmin) {
+    navItems.push({
+      icon: <Shield className="h-4 w-4" />,
+      label: 'Admin Panel',
+      page: 'admin'
+    });
+  }
+
   return (
     <nav className="w-full flex items-center justify-between px-4 h-14 bg-background">
       <div className="flex items-center space-x-2">
         {navItems.map((item) => {
           const isActive = currentPage === item.page;
           return (
-            <TooltipProvider delayDuration={400}>
+            <TooltipProvider key={item.page} delayDuration={400}>
               <Tooltip>
                 <TooltipTrigger>
                   <Button
-                    key={item.page}
                     variant={isActive ? "default" : "ghost"}
                     size="icon"
                     className={cn(
                       "h-9 w-9 relative group",
-                      isActive && "bg-primary text-primary-foreground hover:bg-primary/90"
+                      isActive && "bg-primary text-primary-foreground hover:bg-primary/90",
+                      item.page === 'admin' && "text-amber-500" // Special styling for admin button
                     )}
                     onClick={() => setCurrentPage(item.page)}
                   >
                     {item.icon}
                   </Button>
-
                 </TooltipTrigger>
                 <TooltipContent>
                   {item.label}

@@ -132,23 +132,24 @@ window.labelsObserver = {
             container.style.cssText = `
                 display: inline-flex;
                 align-items: center;
-                padding: 2px 6px;
+                padding: 2px 8px;
                 margin: 1px;
                 border-radius: 3px;
                 background-color: ${labelData.color}E6;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
                 position: relative;
                 transition: padding-right 0.2s ease;
+                border-radius: 20px;
             `;
 
             const text = document.createElement('span');
             text.textContent = labelData.name;
             text.style.cssText = `
                 color: white;
-                font-size: 9px;
+                font-size: 8px;
                 font-weight: 500;
                 text-transform: uppercase;
-                letter-spacing: 0.3px;
+                letter-spacing: 1px;
                 line-height: 1.1;
                 font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             `;
@@ -303,8 +304,8 @@ window.labelsObserver = {
                 this.updateLabelsInContainer(labelsContainer, labelData, mediaCode);
 
                 const card = li.querySelector('.msg-conversation-card__content--selectable');
-                if (card && card.style.height !== '105px') {
-                    card.style.height = '105px';
+                if (card && card.style.height !== '110px') {
+                    card.style.height = '110px';
                 }
             }
         },

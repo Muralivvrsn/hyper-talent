@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -14,7 +16,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-
+export const storage = getStorage(app);
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -113,6 +115,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const addUpdate = async () => {
+    const db = getFirestore();
+    await setDoc(doc(db, 'updates', '1.3.9'), {
+      version: '1.3.9',
+      releaseDate: new Date(),
+      features: [
+        'Added keyboard shortcuts for navigation',
+        'Implemented dark mode support'
+      ],
+      bugs: [
+        'Fixed message loading issues',
+        'Resolved notification sync problems'
+      ],
+      suggestions: [
+        'Added ability to star messages (suggested by @user123)'
+      ]
+    });
+  };
   const logout = async () => {
     try {
       setAuthenticating(true); // Show loading state
@@ -139,6 +159,7 @@ export const AuthProvider = ({ children }) => {
     authenticating,
     login,
     logout,
+    addUpdate,
   };
 
   return (
