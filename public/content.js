@@ -164,6 +164,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Usage example:
         // Usage example:
         // window.labelObserver = new window.LabelObserverCore();
+        
+        // window.labelProfileCore.initialize();
 
         // Initialize keyboard shortcuts independently
         try {
@@ -189,12 +191,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   else if (message.type === "URL_PROFILE") {
-    waitForElement('.text-body-small a.ember-view')
+    waitForElement('h1.break-words')
       .then(() => {
         try {
           // window.profileNotesManager.init();
           window.profileNotes.init();
           window.labelProfiles.init();
+          window.labelProfileManager.initialize()
         } catch (error) {
           // console.error('Profile notes manager initialization error:', error);
         }

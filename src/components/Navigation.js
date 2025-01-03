@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { 
-  MessageSquare, 
-  Command, 
-  FileSpreadsheet, 
-  MessageCircle, 
-  LogOut, 
-  User, 
-  Sun, 
+import {
+  MessageSquare,
+  Command,
+  FileSpreadsheet,
+  MessageCircle,
+  LogOut,
+  User,
+  Sun,
   Moon,
   Shield // Add Shield icon for admin
 } from 'lucide-react';

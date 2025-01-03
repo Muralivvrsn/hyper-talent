@@ -135,9 +135,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Send message after storage is complete
         chrome.runtime.sendMessage({ action: 'ProfileNotesTriggered', page: message.key });
       });
-      chrome.sidePanel.open({
-        windowId: windowId,
-      });
+      if(message.key){
+        chrome.sidePanel.open({
+          windowId: windowId,
+        });
+      }
     });
 }
 

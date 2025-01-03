@@ -414,10 +414,12 @@ class NotesManager {
             console.log(profileInfo)
 
             // console.log(`Saving note for profile: ${profileId}`);
+            const profileId = btoa(profileInfo.url).replace(/[^a-zA-Z0-9]/g, '')
+            this.currentNoteKey = profileId
 
             const notesRef = db.collection('notes').doc(currentUser.uid);
             const noteData = {
-                [this.currentNoteKey]: {
+                [profileId]: {
                     name: profileInfo.name,
                     url: profileInfo.url,
                     code: profileImage,

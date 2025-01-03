@@ -175,15 +175,15 @@ const SheetPage = () => {
   }
 
   return (
-    <Card className="mx-auto max-w-4xl my-8">
-      <CardHeader>
+    <Card className="mx-auto max-w-4xl border-none m-0">
+      <CardHeader className="p-0">
         <CardTitle className="text-sm font-bold">Sheet Manager</CardTitle>
         <CardDescription className="text-sm">
           Sync and manage your LinkedIn connections using Google Sheets
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="p-6">
+      <CardContent className="">
         {!sheetData ? (
           <NoSheetView 
             onCreateSheet={handleCreate} 
