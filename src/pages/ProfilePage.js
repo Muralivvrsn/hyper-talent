@@ -34,7 +34,7 @@ const ProfileSkeleton = () => (
 const ProfilePage = () => {
     const { user } = useAuth();
     const [profileInfo, setProfileInfo] = useState(null);
-    const { profileData, loading, setLoading, getNotes, getLabels } = useProfileNote();
+    const { profileData, loading, setLoading, getNotes, getLabels, onIDBUpdate } = useProfileNote();
     const [labels, setLabels] = useState([]);
     const [isEditing, setIsEditing] = useState(true);
     const [editedNote, setEditedNote] = useState('');
@@ -267,7 +267,14 @@ const ProfilePage = () => {
                             </div>
 
                             <div className="space-y-3">
-                               { profileData?.connectionCode && <><ProfileLabels labels={labels}   profileId={createProfileId(profileData?.connectionCode)}  />
+                                    {profileData?.connectionCode && <>
+                                        <ProfileLabels
+                                            labels={labels}
+                                            profileData={profileData}
+                                            profileId={createProfileId(profileData?.connectionCode)}
+                                            getLabels={getLabels}
+                                            onIDBUpdate={onIDBUpdate}
+                                        />
                                 <ProfileNotes
                                     editedNote={editedNote}
                                     setEditedNote={setEditedNote}
