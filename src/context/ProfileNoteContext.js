@@ -5,6 +5,22 @@ import { useAuth } from './AuthContext';
 
 const ProfileNoteContext = createContext();
 
+const createEventEmitter = () => {
+  const listeners = new Set();
+  
+  return {
+    emit: (data) => {
+      listeners.forEach(listener => listener(data));
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    }
+  };
+};
+
+const idbEventEmitter = createEventEmitter();
+
 const initDB = async () => {
   try {
     const db = await openDB('notesDB', 1, {
@@ -25,6 +41,13 @@ const initDB = async () => {
 
 export function useProfileNote() {
   return useContext(ProfileNoteContext);
+}
+
+export function useIDBUpdates(callback) {
+  useEffect(() => {
+    const unsubscribe = idbEventEmitter.subscribe(callback);
+    return () => unsubscribe();
+  }, [callback]);
 }
 
 export function ProfileNoteProvider({ children }) {
@@ -94,6 +117,11 @@ export function ProfileNoteProvider({ children }) {
             const notesData = snapshot.data();
             try {
               await idb.put('notes', notesData, user.uid);
+              idbEventEmitter.emit({
+                type: 'notes',
+                data: notesData,
+                timestamp: new Date().toISOString()
+              });
             } catch (error) {
               console.error('Error storing notes:', error);
             }
@@ -105,6 +133,11 @@ export function ProfileNoteProvider({ children }) {
             const labelsData = snapshot.data();
             try {
               await idb.put('labels', labelsData, user.uid);
+              idbEventEmitter.emit({
+                type: 'labels',
+                data: labelsData,
+                timestamp: new Date().toISOString()
+              });
             } catch (error) {
               console.error('Error storing labels:', error);
             }
@@ -154,7 +187,8 @@ export function ProfileNoteProvider({ children }) {
     profileData,
     currentPage,
     setLoading,
-    setCurrentPage
+    setCurrentPage,
+    onIDBUpdate: idbEventEmitter.subscribe
   };
 
   return (

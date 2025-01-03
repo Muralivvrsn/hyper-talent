@@ -2,34 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { Card, CardContent } from "../components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "../components/ui/avatar";
-import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
-import { Textarea } from "../components/ui/textarea";
 import { useAuth } from '../context/AuthContext';
 import { useProfileNote } from '../context/ProfileNoteContext';
 import { getFirestore, doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
+import ProfileLabels from '../components/ProfileLabels';
+import ProfileNotes from '../components/ProfileNotes';
 
 // Skeleton component for loading state
 const ProfileSkeleton = () => (
-  <div className="animate-pulse">
-    <div className="flex items-center gap-2">
-      <div className="h-10 w-10 rounded-full bg-muted"></div>
-      <div className="h-4 w-32 bg-muted rounded"></div>
-    </div>
-    <div className="space-y-3 mt-4">
-      <div>
-        <div className="h-4 w-16 bg-muted rounded mb-2"></div>
-        <div className="flex gap-2">
-          <div className="h-5 w-16 bg-muted rounded"></div>
-          <div className="h-5 w-20 bg-muted rounded"></div>
+    <div className="animate-pulse">
+        <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-full bg-muted"></div>
+            <div className="h-4 w-32 bg-muted rounded"></div>
         </div>
-      </div>
-      <div>
-        <div className="h-4 w-16 bg-muted rounded mb-2"></div>
-        <div className="h-24 w-full bg-muted rounded"></div>
-      </div>
+        <div className="space-y-3 mt-4">
+            <div>
+                <div className="h-4 w-16 bg-muted rounded mb-2"></div>
+                <div className="flex gap-2">
+                    <div className="h-5 w-16 bg-muted rounded"></div>
+                    <div className="h-5 w-20 bg-muted rounded"></div>
+                </div>
+            </div>
+            <div>
+                <div className="h-4 w-16 bg-muted rounded mb-2"></div>
+                <div className="h-24 w-full bg-muted rounded"></div>
+            </div>
+        </div>
     </div>
-  </div>
 );
 
 const ProfilePage = () => {
@@ -268,84 +267,20 @@ const ProfilePage = () => {
                             </div>
 
                             <div className="space-y-3">
-                                <div>
-                                    <h3 className="text-sm font-medium mb-2">Labels</h3>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {labels && labels.length > 0 ? (
-                                            labels.map((label, index) => (
-                                                <Badge
-                                                    key={index}
-                                                    variant="outline"
-                                                    className="text-xs py-0"
-                                                    style={{
-                                                        borderColor: label.color || '#000000',
-                                                        color: 'inherit'
-                                                    }}
-                                                >
-                                                    {label.name}
-                                                </Badge>
-                                            ))
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">
-                                                No labels assigned
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h3 className="text-sm font-medium">Notes</h3>
-                                        {profileInfo?.updatedAt && !isEditing && (
-                                            <span className="text-xs text-muted-foreground">
-                                                {formatTimeAgo(profileInfo.updatedAt)}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="space-y-2">
-                                            <Textarea
-                                                value={editedNote}
-                                                onChange={(e) => setEditedNote(e.target.value)}
-                                                rows={3}
-                                                placeholder="Enter your notes here..."
-                                                className="w-full text-xs resize-none"
-                                            />
-                                            <div className="flex gap-1.5">
-                                                <Button
-                                                    onClick={handleSaveNote}
-                                                    disabled={isSaving || !hasChanges}
-                                                    size="sm"
-                                                    className="h-7 text-xs px-2"
-                                                >
-                                                    {isSaving ? 'Saving...' : 'Save'}
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={handleClearNote}
-                                                    disabled={isSaving}
-                                                    size="sm"
-                                                    className="h-7 text-xs px-2"
-                                                >
-                                                    Clear
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    onClick={() => {
-                                                        setIsEditing(false);
-                                                        setEditedNote(originalNote);
-                                                    }}
-                                                    disabled={isSaving}
-                                                    size="sm"
-                                                    className="h-7 text-xs px-2"
-                                                >
-                                                    Cancel
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                               { profileData?.connectionCode && <><ProfileLabels labels={labels}   profileId={createProfileId(profileData?.connectionCode)}  />
+                                <ProfileNotes
+                                    editedNote={editedNote}
+                                    setEditedNote={setEditedNote}
+                                    handleSaveNote={handleSaveNote}
+                                    handleClearNote={handleClearNote}
+                                    setIsEditing={setIsEditing}
+                                    originalNote={originalNote}
+                                    isSaving={isSaving}
+                                    hasChanges={hasChanges}
+                                    profileInfo={profileInfo}
+                                    isEditing={isEditing}
+                                    formatTimeAgo={formatTimeAgo}
+                                /></>}
                             </div>
                         </div>
                     )}
