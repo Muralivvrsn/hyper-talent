@@ -9,16 +9,29 @@ import { useAuth } from '../context/AuthContext';
 import { generateRandomColor } from '../utils/sheetUtils';
 import { useTheme } from '../context/ThemeContext';
 
-const LabelSearch = ({ searchQuery, setSearchQuery }) => (
+const LabelSearch = ({ searchQuery, setSearchQuery, handleCreateLabel, filteredLabels }) => (
   <div className="sticky top-0 bg-background pb-2 z-10">
-    <div className="relative">
-      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-      <Input
-        placeholder="Search labels..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="h-8 pl-8 text-xs"
-      />
+    <div className="space-y-1">
+      <div className="relative">
+        <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search labels..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-8 pl-8 text-xs"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && searchQuery.trim() && filteredLabels.length === 0) {
+              handleCreateLabel(searchQuery.trim());
+              setSearchQuery('');
+            }
+          }}
+        />
+      </div>
+      {searchQuery.trim() && filteredLabels.length === 0 && (
+        <p className="text-xs text-muted-foreground px-1">
+          Press Enter to create "{searchQuery.trim()}"
+        </p>
+      )}
     </div>
   </div>
 );
@@ -61,7 +74,6 @@ const LabelCreationForm = ({ newLabelName, setNewLabelName, handleCreateLabel, s
     </div>
   </div>
 );
-
 
 const LabelListItem = ({ name, data, profileId, handleToggleLabel, handleDeleteLabel, deletingLabel }) => (
   <div
@@ -222,8 +234,8 @@ const ProfileLabels = ({ labels, profileData, profileId, getLabels, onIDBUpdate 
     }
   };
 
-  const handleCreateLabel = async () => {
-    if (!newLabelName.trim() || !user) return;
+  const handleCreateLabel = async (labelName = newLabelName) => {
+    if (!labelName.trim() || !user) return;
     setLoading(true);
     try {
       const db = getFirestore();
@@ -231,7 +243,7 @@ const ProfileLabels = ({ labels, profileData, profileId, getLabels, onIDBUpdate 
       const updatedLabels = { ...allLabels };
       const color = generateRandomColor();
 
-      updatedLabels[newLabelName] = {
+      updatedLabels[labelName] = {
         codes: {
           [profileId]: {
             addedAt: new Date().toISOString(),
@@ -249,7 +261,7 @@ const ProfileLabels = ({ labels, profileData, profileId, getLabels, onIDBUpdate 
       setVisibleLabels([
         ...visibleLabels,
         {
-          name: newLabelName,
+          name: labelName,
           color
         }
       ]);
@@ -300,9 +312,11 @@ const ProfileLabels = ({ labels, profileData, profileId, getLabels, onIDBUpdate 
           </PopoverTrigger>
           <PopoverContent className="w-60 mr-4">
             <div className="flex flex-col h-[280px]">
-              <LabelSearch 
-                searchQuery={searchQuery} 
-                setSearchQuery={setSearchQuery} 
+              <LabelSearch
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                handleCreateLabel={handleCreateLabel}
+                filteredLabels={filteredLabels} 
               />
 
               <div className="overflow-y-auto flex-1 space-y-2">
