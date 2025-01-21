@@ -1,398 +1,385 @@
 window.labelFilterUI = {
+    elements: {
+        container: null,
+        button: null,
+        dropdown: null,
+        selectedLabelsWrapper: null,
+        selectedLabelsContainer: null
+    },
+
+    styles: `
+    .label-filter-container {
+        position: relative;
+        display: inline-block;
+        font-family: "Poppins", serif !important;
+        margin-left: 8px;
+        font-size: 13px;
+    }
     
-    createFilterDropdown() {
-        const labelButton = document.querySelector('#hypertalent-filter-btn');
-        const buttonRect = labelButton.getBoundingClientRect();
+    .label-filter-button {
+        padding: 6px 12px;
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 28px;
+        box-sizing: border-box;
+        font-size: 13px;
+        font-family: "Poppins", serif !important;
+        color: #444;
+        transition: all 0.2s ease;
+    }
 
-        const dropdown = document.createElement('div');
-        dropdown.id = 'hypertalent-dropdown';
-        dropdown.className = 'hypertalent-dropdown';
+    .label-filter-button:hover {
+        border-color: #ccc;
+        background: #f8f8f8;
+    }
+    
+    .label-count {
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-family: "Poppins", serif !important;
+        color: #666;
+        min-width: 14px;
+        text-align: center;
+    }
+    
+    .label-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 6px 0;
+        margin-top: 2px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        display: none;
+        z-index: 1000;
+        min-width: 220px;
+        font-size: 13px;
+        font-family: "Poppins", serif !important;
+    }
+    
+    .label-dropdown.show {
+        display: block;
+    }
+    
+    .label-option {
+        padding: 6px 12px;
+        cursor: pointer;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #444;
+        transition: background 0.2s ease;
+        position: relative;
+    }
+    
+    .label-option:hover {
+        background: #f5f5f5;
+    }
 
-        const updatePosition = () => {
-            const newRect = labelButton.getBoundingClientRect();
-            dropdown.style.position = 'fixed';
-            dropdown.style.top = `${newRect.bottom + window.scrollY + 5}px`;
-            dropdown.style.left = `${newRect.left + window.scrollX}px`;
-            dropdown.style.zIndex = '1000';
-        };
+    .label-option.selected {
+        background: #f8f8f8;
+    }
 
-        updatePosition();
+    .label-checkbox {
+        width: 14px;
+        height: 14px;
+        margin: 0;
+        border-radius: 3px;
+        border: 1px solid #ddd;
+        position: relative;
+        appearance: none;
+        cursor: pointer;
+    }
 
-        const labelList = document.createElement('ul');
-        labelList.className = 'hypertalent-list';
-        labelList.setAttribute('data-hypertalent', 'true');
+    .label-checkbox:checked {
+        border-color: #0073b1;
+        background: #0073b1;
+    }
 
-        // Add the SVG symbol definition to the document if it doesn't exist
-        if (!document.getElementById('checkmark-28')) {
-            const svgDefs = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svgDefs.style.display = 'none';
-            svgDefs.innerHTML = `
-                <symbol id="checkmark-28" viewBox="0 0 24 24" width="13px" height="13px">
-                    <path stroke-linecap="round" stroke-miterlimit="10" fill="none" d="M22.9 3.7l-15.2 16.6-6.6-7.1"></path>
-                </symbol>
-            `;
-            document.body.appendChild(svgDefs);
-        }
+    .label-checkbox:checked::after {
+        content: '✓';
+        position: absolute;
+        color: white;
+        font-size: 10px;
+        font-family: "Poppins", serif !important;
+        top: 1px;
+        left: 2px;
+    }
 
-        window.labelFilterCore.state.labelsCache.forEach((labelData, labelName) => {
-            const labelItem = this.createLabelItem(labelName);
-            labelList.appendChild(labelItem);
-        });
+    .label-text-filter {
+        flex-grow: 1;
+        font-size: 13px;
+        font-family: "Poppins", serif !important;
+        opacity: 0.9;
+    }
+    
+    .selected-labels-wrapper {
+        padding: 8px 12px;
+    }
+    
+    .selected-labels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .selected-label {
+        padding: 6px 12px;
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 25px;
+        box-sizing: border-box;
+        font-size: 12px;
+        font-family: "Poppins", serif !important;
+        color: #444;
+        transition: all 0.2s ease;
+    }
+    
+    .remove-label {
+        cursor: pointer;
+        width: 14px;
+        height: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.1);
+        color: #666;
+        font-size: 10px;
+        font-family: "Poppins", serif !important;
+        transition: all 0.2s ease;
+    }
+    
+    .remove-label:hover {
+        background: rgba(0,0,0,0.15);
+        color: #333;
+    }
 
-        dropdown.appendChild(labelList);
+    .label-option-remove {
+        opacity: 0;
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #f0f0f0;
+        color: #666;
+        font-size: 10px;
+        font-family: "Poppins", serif !important;
+        transition: all 0.2s ease;
+    }
 
-        const handleResize = () => requestAnimationFrame(updatePosition);
+    .label-option:hover .label-option-remove {
+        opacity: 1;
+    }
 
-        window.addEventListener('resize', handleResize);
-        window.addEventListener('scroll', handleResize);
+    .label-option-remove:hover {
+        background: #e0e0e0;
+        color: #333;
+    }
 
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.removedNodes.forEach((node) => {
-                    if (node === dropdown) {
-                        window.removeEventListener('resize', handleResize);
-                        window.removeEventListener('scroll', handleResize);
-                        observer.disconnect();
-                    }
-                });
-            });
-        });
-
-        observer.observe(document.body, { childList: true });
-
-        return dropdown;
-    },
-
-    setupConversationObserver() {
-        // Clean up existing observer if any
-        this.cleanupObserver();
-
-        const conversationsList = document.querySelector('.msg-conversations-container__conversations-list');
-        if (!conversationsList) return;
-
-        this.conversationsObserver = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    const hasNewConversations = Array.from(mutation.addedNodes).some(
-                        node => node.nodeName === 'LI'
-                    );
-
-                    if (hasNewConversations) {
-                        this.filterConversations(false);
-                        break;
-                    }
-                }
-            }
-        });
-
-        this.conversationsObserver.observe(conversationsList, {
-            childList: true,
-            subtree: false
-        });
-    },
-
-    createLabelItem(labelName) {
-        const labelContainer = document.createElement('li');
-        labelContainer.className = 'hypertalent-list-item';
-        labelContainer.setAttribute('data-hypertalent', 'true');
-
-        const checkboxWrapper = document.createElement('div');
-        checkboxWrapper.className = 'checkbox-wrapper-28';
-        checkboxWrapper.style.setProperty('--size', '20px');
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.className = 'promoted-input-checkbox';
-        checkbox.id = `hypertalent-checkbox-${labelName}`;
-        checkbox.name = 'label-filter-value';
-        checkbox.checked = window.labelFilterCore.state.allowedLabels.includes(labelName);
-        checkbox.setAttribute('data-hypertalent', 'true');
-
-        const checkmarkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        checkmarkSvg.innerHTML = '<path stroke-linecap="round" stroke-miterlimit="10" fill="none" d="M22.9 3.7l-15.2 16.6-6.6-7.1"></path>';
-        checkmarkSvg.setAttribute('viewBox', '0 0 24 24');
-
-        const label = document.createElement('label');
-        label.htmlFor = `hypertalent-checkbox-${labelName}`;
-        label.textContent = labelName;
-        label.setAttribute('data-hypertalent', 'true');
-
-        checkboxWrapper.appendChild(checkbox);
-        checkboxWrapper.appendChild(checkmarkSvg);
-        checkboxWrapper.appendChild(label);
-        labelContainer.appendChild(checkboxWrapper);
-
-        // Add the styles
-        const style = document.createElement('style');
-        style.textContent = `
-            .checkbox-wrapper-28 {
-                --size: 25px;
-                position: relative;
-            }
-            .checkbox-wrapper-28 *,
-            .checkbox-wrapper-28 *:before,
-            .checkbox-wrapper-28 *:after {
-                box-sizing: border-box;
-            }
-            .checkbox-wrapper-28 .promoted-input-checkbox {
-                border: 0;
-                clip: rect(0 0 0 0);
-                height: 1px;
-                margin: -1px;
-                overflow: hidden;
-                padding: 0;
-                position: absolute;
-                width: 1px;
-            }
-            .checkbox-wrapper-28 input:checked ~ svg {
-                height: calc(var(--size) * 0.6);
-                width: calc(var(--size) * 0.6);
-                -webkit-animation: draw-checkbox-28 ease-in-out 0.2s forwards;
-                        animation: draw-checkbox-28 ease-in-out 0.2s forwards;
-            }
-            .checkbox-wrapper-28 input:not(:checked) ~ svg {
-                height: 0;
-                width: calc(var(--size) * 0.6);
-            }
-            .checkbox-wrapper-28 label:active::after {
-                background-color: #e6e6e6;
-            }
-            .checkbox-wrapper-28 label {
-                color: #000000;
-                line-height: var(--size);
-                cursor: pointer;
-                position: relative;
-            }
-            .checkbox-wrapper-28 label:after {
-                content: "";
-                height: var(--size);
-                width: var(--size);
-                margin-right: 8px;
-                float: left;
-                border: 2px solid #000000;
-                border-radius: 3px;
-                transition: 0.15s all ease-out;
-            }
-            .checkbox-wrapper-28 svg {
-                stroke: #000000;
-                stroke-width: 3px;
-                height: 0;
-                width: calc(var(--size) * 0.6);
-                position: absolute;
-                left: calc(var(--size) * 0.21);
-                top: calc(var(--size) * 0.2);
-                stroke-dasharray: 33;
-                transition: height 0.2s ease-in-out;
-            }
-            .checkbox-wrapper-28 svg path {
-                stroke-dasharray: 60;
-                stroke-dashoffset: 0;
-            }
-            @-webkit-keyframes draw-checkbox-28 {
-                0% {
-                    stroke-dashoffset: 60;
-                }
-                100% {
-                    stroke-dashoffset: 0;
-                }
-            }
-            @keyframes draw-checkbox-28 {
-                0% {
-                    stroke-dashoffset: 60;
-                }
-                100% {
-                    stroke-dashoffset: 0;
-                }
-            }
-        `;
-
-        // Only append the style once
-        if (!document.querySelector('style[data-checkbox-style="28"]')) {
-            style.setAttribute('data-checkbox-style', '28');
-            document.head.appendChild(style);
-        }
-
-        checkbox.onchange = () => {
-            if (checkbox.checked) {
-                window.labelFilterCore.state.allowedLabels.push(labelName);
-            } else {
-                const index = window.labelFilterCore.state.allowedLabels.indexOf(labelName);
-                if (index > -1) {
-                    window.labelFilterCore.state.allowedLabels.splice(index, 1);
-                }
-            }
-            // Run filter and manage observer based on checked state
-            this.handleFilterChange(true);
-        };
-
-
-        return labelContainer;
-    },
-
-    async handleFilterChange(value) {
-        // First, run the filter
-        await this.filterConversations(value);
-
-        // Check if any checkboxes are checked
-        const hasCheckedBoxes = window.labelFilterCore.state.allowedLabels.length > 0;
-
-        if (hasCheckedBoxes) {
-            // Set up observer if we have checked boxes and observer isn't already active
-            this.setupConversationObserver();
-        } else {
-            // Remove observer if no boxes are checked
-            this.cleanupObserver();
-        }
-    },
+    .filter-loading-indicator {
+        background: rgba(255, 255, 255, 0.96) !important;
+        backdrop-filter: blur(4px);
+        font-size: 13px !important;
+        font-family: "Poppins", serif !important;
+    }
+`,
 
     setupFilterButton() {
-        const titleRow = document.querySelector('.msg-conversations-container__title-row');
-        if (!titleRow || document.querySelector('#hypertalent-filter-btn')) return;
+        if (document.querySelector('.label-filter-container')) {
+            return false;
+        }
 
-        const filterButton = document.createElement('button');
-        filterButton.id = 'hypertalent-filter-btn';
-        filterButton.className = 'artdeco-pill artdeco-pill--slate artdeco-pill--3 artdeco-pill--choice ember-view';
-        filterButton.style.marginLeft = '8px';
-        filterButton.innerHTML = '<span class="artdeco-pill__text">Filters</span>';
+        this.injectStyles();
+        const firstDiv = window.labelFilterUtils.findTargetContainer()?.querySelector('div');
+        if (!firstDiv) return false;
 
-        filterButton.addEventListener('click', () => {
-            const existingDropdown = document.querySelector('#hypertalent-dropdown');
-            if (existingDropdown) {
-                existingDropdown.classList.add('removing');
-                setTimeout(() => {
-                    existingDropdown.remove();
-                }, 150);
-                return;
-            }
+        this.createElements(firstDiv);
+        this.attachEventListeners();
+        return true;
+    },
 
-            const dropdown = this.createFilterDropdown();
-            document.body.appendChild(dropdown);
+    injectStyles() {
+        if (document.querySelector('style[data-label-filter-styles]')) {
+            return;
+        }
+        const style = window.labelFilterUtils.createElement('style');
+        style.setAttribute('data-label-filter-styles', 'true');
+        style.textContent = this.styles;
+        document.head.appendChild(style);
+    },
 
-            const handleClickOutside = (event) => {
-                if (!dropdown.contains(event.target) && !filterButton.contains(event.target)) {
-                    dropdown.remove();
-                    document.removeEventListener('click', handleClickOutside);
-                }
-            };
+    createElements(parentElement) {
+        this.elements.container = window.labelFilterUtils.createElement('div', 'label-filter-container');
+        this.elements.button = window.labelFilterUtils.createElement('button', 'label-filter-button');
+        this.elements.button.innerHTML = `Filter <span class="label-count">0</span>`;
+        this.elements.dropdown = window.labelFilterUtils.createElement('div', 'label-dropdown');
+        this.elements.selectedLabelsWrapper = window.labelFilterUtils.createElement('div', 'selected-labels-wrapper');
+        this.elements.selectedLabelsContainer = window.labelFilterUtils.createElement('div', 'selected-labels');
 
-            setTimeout(() => {
-                document.addEventListener('click', handleClickOutside);
-            }, 0);
+        this.elements.selectedLabelsWrapper.appendChild(this.elements.selectedLabelsContainer);
+        this.elements.selectedLabelsWrapper.style.display = 'none';
+        this.elements.container.appendChild(this.elements.button);
+        this.elements.container.appendChild(this.elements.dropdown);
+        parentElement.appendChild(this.elements.container);
+
+        const targetContainer = window.labelFilterUtils.findTargetContainer();
+        targetContainer.parentNode.insertBefore(
+            this.elements.selectedLabelsWrapper,
+            targetContainer.nextSibling
+        );
+    },
+
+    attachEventListeners() {
+        this.elements.button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.elements.dropdown.classList.toggle('show');
         });
 
-        titleRow.appendChild(filterButton);
+        document.addEventListener('click', (e) => {
+            if (!this.elements.container.contains(e.target)) {
+                this.elements.dropdown.classList.remove('show');
+            }
+        });
     },
 
-    updateFilterButton() {
-        this.setupFilterButton();
-    },
-
-    updateThemeUI() {
-        const isDarkTheme = window.labelFilterCore.state.themeCache === 'dark';
-        const dropdown = document.querySelector('#hypertalent-dropdown');
-        if (dropdown) {
-            dropdown.style.backgroundColor = isDarkTheme ? '#1D2226' : '#ffffff';
-            dropdown.style.boxShadow = isDarkTheme ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 4px 12px rgba(0, 0, 0, 0.15)';
-            dropdown.style.border = `1px solid ${isDarkTheme ? '#38434F' : '#e0e0e0'}`;
-
-            const items = dropdown.querySelectorAll('li');
-            items.forEach(item => {
-                item.style.backgroundColor = isDarkTheme ? '#1D2226' : '#ffffff';
-
-                const checkboxWrapper = item.querySelector('.checkbox-wrapper-28');
-                if (checkboxWrapper) {
-                    const label = checkboxWrapper.querySelector('label');
-                    if (label) {
-                        label.style.color = isDarkTheme ? '#ffffff' : '#000000';
-                    }
+    updateLabelsDropdown(labels) {
+        try{
+            this.elements.dropdown.innerHTML = '';
+            labels.forEach(label => {
+                const option = window.labelFilterUtils.createElement('div', 'label-option');
+                const isSelected = window.labelFilterCore.selectedLabels.has(label.label_id);
+                
+                if (isSelected) {
+                    option.classList.add('selected');
+                    // Set background color with 20% opacity when selected
+                    option.style.backgroundColor = `${label.label_color}33`; // 33 in hex is ~20% opacity
                 }
+    
+                const checkbox = window.labelFilterUtils.createElement('input', 'label-checkbox', {
+                    type: 'checkbox',
+                    value: label.label_id,
+                    checked: isSelected
+                });
+                
+                const labelDiv = window.labelFilterUtils.createElement('div', 'label-text-filter');
+                labelDiv.textContent = label.label_name;
+                labelDiv.style.color = label.label_color;
+                
+                const removeBtn = window.labelFilterUtils.createElement('div', 'label-option-remove');
+                removeBtn.textContent = '×';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.labelFilterCore.removeLabel(label.label_id);
+                    option.style.backgroundColor = 'transparent';
+                });
+                
+                option.appendChild(checkbox);
+                option.appendChild(labelDiv);
+                option.appendChild(removeBtn);
+                
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    checkbox.checked = !checkbox.checked;
+                    option.classList.toggle('selected');
+                    if (checkbox.checked) {
+                        option.style.backgroundColor = `${label.label_color}33`;
+                    } else {
+                        option.style.backgroundColor = 'transparent';
+                    }
+                    window.labelFilterCore.toggleLabel(label.label_id);
+                });
+      
+                this.elements.dropdown.appendChild(option);
             });
         }
+        catch(e){
+            console.log(e)
+        }
+    },
+
+    updateSelectedLabels() {
+        const selectedLabels = window.labelFilterCore.selectedLabels;
+        this.elements.selectedLabelsContainer.innerHTML = '';
+
+        selectedLabels.forEach(labelId => {
+            const labelInfo = window.labelFilterCore.state.labelsCache.get(labelId);
+            if (!labelInfo) return;
+
+            const labelElement = window.labelFilterUtils.createElement('div', 'selected-label');
+            labelElement.style.background = `#ffffff`;
+            labelElement.style.height = "28px";
+            labelElement.style.padding = "6px 12px";
+            labelElement.style.borderRadius = "6px";
+            labelElement.style.fontSize = "13px";
+
+            const labelText = document.createTextNode(labelInfo.name);
+            const removeButton = window.labelFilterUtils.createElement('span', 'remove-label');
+            removeButton.textContent = '×';
+
+            removeButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                window.labelFilterCore.removeLabel(labelId);
+            });
+
+            labelElement.appendChild(labelText);
+            labelElement.appendChild(removeButton);
+            this.elements.selectedLabelsContainer.appendChild(labelElement);
+        });
+
+        const count = this.elements.button.querySelector('.label-count');
+        count.textContent = selectedLabels.size;
+        this.elements.selectedLabelsWrapper.style.display = selectedLabels.size > 0 ? 'block' : 'none';
     },
 
     async filterConversations(value) {
-        // Helper function to get fresh DOM references
         const getFreshReferences = () => {
             const conversations = document.querySelectorAll('.msg-conversations-container__conversations-list > li.msg-conversation-listitem');
             const conversationsList = conversations[0]?.parentNode;
             return { conversations, conversationsList };
         };
 
-        // Initial references
         let { conversations, conversationsList } = getFreshReferences();
         if (!conversationsList) return;
 
-        // Find the last filtered conversation first
-        let lastFilteredConvo = null;
-        console.log(value)
-        if(value){
-             lastFilteredConvo = conversationsList.querySelector('.hypertalent-filter-checked');
-        }
-        else{
-             lastFilteredConvo = Array.from(conversationsList.querySelectorAll('.hypertalent-filter-checked')).pop();
-        }
+        let lastFilteredConvo = value ?
+            conversationsList.querySelector('.hypertalent-filter-checked') :
+            Array.from(conversationsList.querySelectorAll('.hypertalent-filter-checked')).pop();
 
-        // Create loading indicator
         let loadingEl = document.querySelector('.filter-loading-indicator');
         if (!loadingEl) {
-            loadingEl = document.createElement('div');
-            loadingEl.className = 'filter-loading-indicator';
-            loadingEl.style.cssText = `
-                position: absolute;
-                left: 0;
-                right: 0;
-                height: 100%;
-                background: rgba(255, 255, 255, 0.98);
-                z-index: 100;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                color: #666;
-                font-size: 14px;
-                line-height: 1.6;
-                padding: 20px;
-                text-align: center;
-                gap: 8px;
-                border-top: 1px solid #eee;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            `;
-    
-            // Create main text
-            const mainText = document.createElement('div');
-            mainText.style.cssText = `
-                font-weight: 500;
-                color: #333;
-                margin-bottom: 4px;
-            `;
-            mainText.textContent = 'Checking profiles...';
-    
-            // Create description text
-            const descText = document.createElement('div');
-            descText.style.cssText = `
-                font-size: 13px;
-                color: #666;
-                max-width: 280px;
-            `;
-            descText.textContent = 'This might take a moment as we review each profile to find your matches. Please wait...';
-    
-            loadingEl.appendChild(mainText);
-            loadingEl.appendChild(descText);
-            
+            loadingEl = this.createLoadingIndicator();
             conversationsList.style.position = 'relative';
             conversationsList.appendChild(loadingEl);
         }
 
-        // Position loading initially based on last filtered conversation
         if (lastFilteredConvo) {
-            const rect = lastFilteredConvo.getBoundingClientRect();
             loadingEl.style.top = `${110 * Array.from(conversationsList.querySelectorAll('.hypertalent-filter-checked')).length}px`;
         } else {
             loadingEl.style.top = '0';
             loadingEl.style.bottom = '0';
             loadingEl.style.display = 'flex';
-            loadingEl.style.alignItems = 'center';
-            loadingEl.style.justifyContent = 'center';
         }
 
         const hasActiveFilters = window.labelFilterCore.state.allowedLabels.length > 0;
@@ -401,12 +388,8 @@ window.labelFilterUI = {
                 conversation.querySelector('.msg-facepile-grid--no-facepile img');
             const nameEl = conversation.querySelector('.msg-conversation-listitem__participant-names .truncate');
 
-            if (!imgEl || !nameEl){
-                conversation.style.transition = 'opacity 0.5s ease';
-                conversation.style.opacity = '0';
-                if(hasActiveFilters)
-                    await window.labelFilterUtils.sleep(50);
-                conversation.style.display = 'none';
+            if (!imgEl || !nameEl) {
+                this.hideConversation(conversation, hasActiveFilters);
                 continue;
             }
 
@@ -416,50 +399,103 @@ window.labelFilterUI = {
             const isMatch = await window.labelFilterCore.checkLabelMatch(imgSrc, name);
 
             if (isMatch) {
-                if (conversation.classList.contains('hypertalent-filter-checked')) {
-                    continue;
-                } else {
-                    conversation.classList.add('hypertalent-filter-checked');
-                    conversation.style.transition = 'opacity 0.5s ease';
-                    conversation.style.display = 'block';
-                    conversation.style.opacity = '1';
+                if (!conversation.classList.contains('hypertalent-filter-checked')) {
+                    this.showConversation(conversation);
                     ({ conversations, conversationsList } = getFreshReferences());
-                    const rect = conversation.getBoundingClientRect();
                     loadingEl.style.top = `${110 * Array.from(conversationsList.querySelectorAll('.hypertalent-filter-checked')).length}px`;
-                    loadingEl.style.bottom = 'auto';
-                    loadingEl.style.height = '100%';
-                    loadingEl.style.display = 'block';
                 }
             } else {
-                conversation.classList.remove('hypertalent-filter-checked');
-                conversation.style.transition = 'opacity 0.5s ease';
-                conversation.style.opacity = '0';
-                if(hasActiveFilters)
-                    await window.labelFilterUtils.sleep(50);
-                conversation.style.display = 'none';
+                this.hideConversation(conversation, hasActiveFilters);
                 ({ conversations, conversationsList } = getFreshReferences());
             }
         }
-        ({ conversations, conversationsList } = getFreshReferences());
+
         if (!hasActiveFilters) {
             loadingEl.remove();
         }
     },
 
+    createLoadingIndicator() {
+        const loadingEl = document.createElement('div');
+        loadingEl.className = 'filter-loading-indicator';
+        loadingEl.style.cssText = `
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 20px;
+            text-align: center;
+            gap: 8px;
+            border-top: 1px solid #eee;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        `;
 
-    cleanupObserver() {
-        if (this.conversationsObserver) {
-            this.conversationsObserver.disconnect();
-            this.conversationsObserver = null;
-        }
+        const mainText = document.createElement('div');
+        mainText.style.cssText = `
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 4px;
+        `;
+        mainText.textContent = 'Checking profiles...';
+
+        const descText = document.createElement('div');
+        descText.style.cssText = `
+            font-size: 13px;
+            color: #666;
+            max-width: 280px;
+        `;
+        descText.textContent = 'This might take a moment as we review each profile to find your matches. Please wait...';
+
+        loadingEl.appendChild(mainText);
+        loadingEl.appendChild(descText);
+
+        return loadingEl;
     },
+
+    hideConversation(conversation, hasActiveFilters) {
+        conversation.classList.remove('hypertalent-filter-checked');
+        conversation.style.transition = 'opacity 0.5s ease';
+        conversation.style.opacity = '0';
+        if (hasActiveFilters) {
+            return new Promise(resolve =>
+                setTimeout(() => {
+                    conversation.style.display = 'none';
+                    resolve();
+                }, 50)
+            );
+        }
+        conversation.style.display = 'none';
+    },
+
+    showConversation(conversation) {
+        conversation.classList.add('hypertalent-filter-checked');
+        conversation.style.transition = 'opacity 0.5s ease';
+        conversation.style.display = 'block';
+        conversation.style.opacity = '1';
+    },
+
     cleanup() {
-        this.cleanupObserver();
-        const button = document.querySelector('#hypertalent-filter-btn');
-        if (button) button.remove();
-
-        const dropdown = document.querySelector('#hypertalent-dropdown');
-        if (dropdown) dropdown.remove();
+        if (this.elements.container) {
+            this.elements.container.remove();
+        }
+        if (this.elements.selectedLabelsWrapper) {
+            this.elements.selectedLabelsWrapper.remove();
+        }
+        this.elements = {
+            container: null,
+            button: null,
+            dropdown: null,
+            selectedLabelsWrapper: null,
+            selectedLabelsContainer: null
+        };
     }
-
 };

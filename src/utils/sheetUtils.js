@@ -33,7 +33,7 @@ export const getLastRow = async (spreadsheetId, token, sheetName) => {
     const data = await response.json();
     return (data.values || []).length;
   } catch (error) {
-    console.error('Error getting last row:', error);
+    // console.error('Error getting last row:', error);
     return 0;
   }
 };
@@ -47,7 +47,7 @@ export const getExistingIds = async (spreadsheetId, token, sheetName) => {
     const data = await response.json();
     return new Set((data.values || []).slice(1).map(row => row[0]));
   } catch (error) {
-    console.error('Error getting existing IDs:', error);
+    // console.error('Error getting existing IDs:', error);
     return new Set();
   }
 };
@@ -60,7 +60,7 @@ export const getSheetId = async (spreadsheetId, token, sheetName) => {
     const sheet = data.sheets.find(s => s.properties.title === sheetName);
     return sheet ? sheet.properties.sheetId : null;
   } catch (error) {
-    console.error('Error getting sheet ID:', error);
+    // console.error('Error getting sheet ID:', error);
     return null;
   }
 };
@@ -72,14 +72,14 @@ export const checkSheetStructure = async (spreadsheetId, token, sheetName) => {
     const data = await response.json(); return data.values?.[0] || [];
   }
   catch (error) {
-    console.error('Error checking sheet structure:', error);
+    // console.error('Error checking sheet structure:', error);
     return [];
   }
 };
 
 export const ensureHeaders = async (spreadsheetId, token, sheetName) => {
   try {
-    console.log(`Checking headers for ${sheetName}`);
+    // console.log(`Checking headers for ${sheetName}`);
     const currentHeaders = await checkSheetStructure(spreadsheetId, token, sheetName);
     const expectedHeaders = HEADERS[sheetName];
 
@@ -125,7 +125,7 @@ export const ensureHeaders = async (spreadsheetId, token, sheetName) => {
       );
     }
   } catch (error) {
-    console.error('Error ensuring headers:', error);
+    // console.error('Error ensuring headers:', error);
     throw error;
   }
 };
@@ -148,7 +148,7 @@ export const getSheetData = async (spreadsheetId, token, sheetName) => {
     const data = await response.json();
     return data.values || [];
   } catch (error) {
-    console.error('Error fetching sheet data:', error);
+    // console.error('Error fetching sheet data:', error);
     return [];
   }
 };
@@ -163,7 +163,7 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
     const idColumnIndex = headerIndices[idColumnName];
 
     if (idColumnIndex === null) {
-      console.error(`Cannot find ${idColumnName} column in sheet`);
+      // console.error(`Cannot find ${idColumnName} column in sheet`);
       return;
     }
 
@@ -234,7 +234,7 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (error) {
-        console.error('Error deleting rows:', error);
+        // console.error('Error deleting rows:', error);
         throw error;
       }
     }
@@ -328,7 +328,7 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
     }
 
   } catch (error) {
-    console.error('Error updating sheet:', error);
+    // console.error('Error updating sheet:', error);
   }
 };
 
@@ -361,7 +361,7 @@ export const createSheet = async (token, title) => {
 
     return sheet;
   } catch (error) {
-    console.error('Error creating sheet:', error);
+    // console.error('Error creating sheet:', error);
     throw error;
   }
 };
@@ -454,7 +454,7 @@ export const syncSheet = async (spreadsheetId, token, data) => {
 
 
   } catch (error) {
-    console.error('Error syncing sheet:', error);
+    // console.error('Error syncing sheet:', error);
     throw error;
   }
 };
@@ -475,7 +475,7 @@ export const syncDatabase = async (spreadsheetId, token, data, userId) => {
     }
 
   } catch (error) {
-    console.error('Error syncing DB:', error);
+    // console.error('Error syncing DB:', error);
     throw error;
   }
 };
@@ -486,13 +486,13 @@ async function syncSheetChangesToDB(sheetRow, headerIndices, existingDBData, use
   const profileCode = sheetRow[headerIndices['Profile Code']];
 
   if (!profileId) {
-    console.log('No Profile ID found in row, skipping...', sheetRow);
+    // console.log('No Profile ID found in row, skipping...', sheetRow);
     return;
   }
 
   const labelsStr = sheetRow[headerIndices['Labels']];
   if (labelsStr) {
-    console.log(`Processing labels for profile ${profileId}: ${labelsStr}`);
+    // console.log(`Processing labels for profile ${profileId}: ${labelsStr}`);
     const labelsRef = doc(db, 'labels', userId);
     const newLabels = labelsStr.split(',').map(l => l.trim()).filter(l => l);
 
@@ -509,14 +509,14 @@ async function syncSheetChangesToDB(sheetRow, headerIndices, existingDBData, use
     const codeToUse = profileCode || existingCode;
 
     for (const labelName of newLabels) {
-      console.log(`Processing label: ${labelName}`);
+      // console.log(`Processing label: ${labelName}`);
 
       const existingLabelName = Object.keys(updatedLabels).find(
         key => key.toLowerCase() === labelName.toLowerCase()
       );
 
       if (!existingLabelName) {
-        console.log(`Creating new label: ${labelName}`);
+        // console.log(`Creating new label: ${labelName}`);
         updatedLabels[labelName] = {
           codes: {},
           color: generateRandomColor(),
@@ -535,21 +535,21 @@ async function syncSheetChangesToDB(sheetRow, headerIndices, existingDBData, use
         url: sheetRow[headerIndices['Profile URL']]
       };
 
-      console.log(`Adding profile to label ${finalLabelName} with code:`, codeToUse);
+      // console.log(`Adding profile to label ${finalLabelName} with code:`, codeToUse);
       updatedLabels[finalLabelName].codes[profileId] = profileData;
     }
 
     try {
       await updateDoc(labelsRef, { labels: updatedLabels });
-      console.log('Successfully updated labels in DB');
+      // console.log('Successfully updated labels in DB');
     } catch (error) {
-      console.error('Error updating labels:', error);
+      // console.error('Error updating labels:', error);
     }
   }
 
   const noteStr = sheetRow[headerIndices['Note']];
   if (noteStr) {
-    console.log(`Processing note for profile ${profileId}: ${noteStr}`);
+    // console.log(`Processing note for profile ${profileId}: ${noteStr}`);
     const notesRef = doc(db, 'notes', userId);
 
     const existingNote = existingDBData?.notes?.[profileId];
@@ -566,9 +566,9 @@ async function syncSheetChangesToDB(sheetRow, headerIndices, existingDBData, use
       await updateDoc(notesRef, {
         [profileId]: noteData
       });
-      console.log('Successfully updated note in DB');
+      // console.log('Successfully updated note in DB');
     } catch (error) {
-      console.error('Error updating note:', error);
+      // console.error('Error updating note:', error);
     }
   }
 }
@@ -609,19 +609,19 @@ const generateRandomColor = () => {
 };
 
 export const processUploadLabels = async (spreadsheetId, token, userId) => {
-  console.log('Starting processUpdateLabels with spreadsheetId:', spreadsheetId);
+  // console.log('Starting processUpdateLabels with spreadsheetId:', spreadsheetId);
   try {
-    console.log('Fetching sheet data...');
+    // console.log('Fetching sheet data...');
     const sheetData = await getSheetData(spreadsheetId, token, 'Upload Labels');
-    console.log('Fetched rows:', sheetData?.length);
+    // console.log('Fetched rows:', sheetData?.length);
 
     if (!sheetData.length) {
-      console.log('No data found in sheet');
+      // console.log('No data found in sheet');
       return;
     }
 
     const headers = sheetData[0];
-    console.log('Headers found:', headers);
+    // console.log('Headers found:', headers);
 
     const headerIndices = {
       profileName: headers.indexOf('Profile Name'),
@@ -629,34 +629,34 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
       labelName: headers.indexOf('Label Name'),
       status: headers.indexOf('Status')
     };
-    console.log('Header indices:', headerIndices);
+    // console.log('Header indices:', headerIndices);
 
     if (headerIndices.profileName === -1 || headerIndices.profileUrl === -1 ||
       headerIndices.labelName === -1 || headerIndices.status === -1) {
-      console.error('Required headers not found:', headerIndices);
+      // console.error('Required headers not found:', headerIndices);
       return;
     }
 
     const rowsToProcess = sheetData.slice(1).filter(row =>
       row[headerIndices.profileUrl] && !row[headerIndices.status]
     );
-    console.log('Rows to process:', rowsToProcess.length);
+    // console.log('Rows to process:', rowsToProcess.length);
 
     if (!rowsToProcess.length) {
-      console.log('No new rows to process');
+      // console.log('No new rows to process');
       return;
     }
 
-    console.log('Initializing Firebase for user:', userId);
+    // console.log('Initializing Firebase for user:', userId);
     const db = getFirestore();
     const userLabelsRef = doc(db, 'labels', userId);
     const userLabelsDoc = await getDoc(userLabelsRef);
-    console.log('Firebase doc exists:', userLabelsDoc.exists());
+    // console.log('Firebase doc exists:', userLabelsDoc.exists());
 
     let labels = userLabelsDoc.exists() ? userLabelsDoc.data().labels || {} : {};
-    console.log('Current label count:', Object.keys(labels).length);
+    // console.log('Current label count:', Object.keys(labels).length);
 
-    console.log('Starting row processing...');
+    // console.log('Starting row processing...');
     for (let i = 0; i < rowsToProcess.length; i++) {
       const row = rowsToProcess[i];
       const rowIndex = sheetData.indexOf(row);
@@ -664,19 +664,19 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
       const profileUrl = row[headerIndices.profileUrl];
       const profileName = row[headerIndices.profileName];
 
-      console.log(`Processing row ${i + 1}/${rowsToProcess.length}:`, {
-        rowIndex,
-        labelName,
-        profileName,
-        profileUrl: profileUrl?.substring(0, 30) + '...'
-      });
+      // console.log(`Processing row ${i + 1}/${rowsToProcess.length}:`, {
+      //   rowIndex,
+      //   labelName,
+      //   profileName,
+      //   profileUrl: profileUrl?.substring(0, 30) + '...'
+      // });
 
       try {
         const labelExists = !!labels[labelName];
-        console.log(`Label "${labelName}" exists:`, labelExists);
+        // console.log(`Label "${labelName}" exists:`, labelExists);
 
         if (!labelExists) {
-          console.log(`Creating new label: ${labelName}`);
+          // console.log(`Creating new label: ${labelName}`);
           labels[labelName] = {
             color: generateRandomColor(),
             createdAt: new Date().toISOString(),
@@ -685,9 +685,9 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
         }
 
         const profileId = btoa(profileUrl).replace(/[^a-zA-Z0-9]/g, '');
-        console.log('Generated profileId:', profileId);
+        // console.log('Generated profileId:', profileId);
 
-        console.log('Adding profile to label...');
+        // console.log('Adding profile to label...');
         labels[labelName].codes[profileId] = {
           name: profileName,
           url: profileUrl,
@@ -695,7 +695,7 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
           addedAt: new Date().toISOString()
         };
 
-        console.log(`Updating status for row ${rowIndex + 1}`);
+        // console.log(`Updating status for row ${rowIndex + 1}`);
         const updateResponse = await fetch(
           `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Upload Labels!${String.fromCharCode(65 + headerIndices.status)}${rowIndex + 1}?valueInputOption=RAW`,
           {
@@ -710,11 +710,11 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
             })
           }
         );
-        console.log('Status update response:', updateResponse.status);
+        // console.log('Status update response:', updateResponse.status);
 
       } catch (error) {
-        console.error(`Error processing row ${rowIndex + 1}:`, error);
-        console.log('Marking row as error...');
+        // console.error(`Error processing row ${rowIndex + 1}:`, error);
+        // console.log('Marking row as error...');
 
         await fetch(
           `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Upload Labels!${String.fromCharCode(65 + headerIndices.status)}${rowIndex + 1}?valueInputOption=RAW`,
@@ -733,13 +733,13 @@ export const processUploadLabels = async (spreadsheetId, token, userId) => {
       }
     }
 
-    console.log('Updating Firebase with all changes...');
-    console.log('Final label count:', Object.keys(labels).length);
+    // console.log('Updating Firebase with all changes...');
+    // console.log('Final label count:', Object.keys(labels).length);
     await setDoc(userLabelsRef, { labels }, { merge: true });
-    console.log('Successfully processed all rows');
+    // console.log('Successfully processed all rows');
 
   } catch (error) {
-    console.error('Error in processUpdateLabels:', error);
+    // console.error('Error in processUpdateLabels:', error);
     throw error;
   }
 };

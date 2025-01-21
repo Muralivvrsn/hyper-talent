@@ -1,5 +1,29 @@
 window.floatingPanel = null;
 
+const getRecipientName = () => {
+    const nameElement = document.querySelector('.msg-entity-lockup__entity-title');
+    if (!nameElement) return null;
+    
+    const fullName = nameElement.textContent.trim();
+    const nameParts = fullName.split(' ');
+    
+    return {
+        firstName: nameParts[0] || '',
+        lastName: nameParts[nameParts.length - 1] || '',
+        fullName: fullName
+    };
+};
+
+const replacePlaceholders = (text) => {
+    const recipient = getRecipientName();
+    if (!recipient) return text;
+
+    return text
+        .replace(/<<first_name>>/g, recipient.firstName)
+        .replace(/<<last_name>>/g, recipient.lastName)
+        .replace(/<<name>>/g, recipient.fullName);
+};
+
 window.hideFloatingPanel = () => {
     if (floatingPanel) {
         floatingPanel.style.opacity = '0';
@@ -14,524 +38,342 @@ window.setupFloatingPanel = () => {
     if (floatingPanel) return floatingPanel;
 
     floatingPanel = document.createElement('div');
-    if (document.getElementById('floatingPanel')) return;
-    // Add this at the beginning of setupFloatingPanel
+    
     if (!document.getElementById('shortcuts-styles')) {
         const styleSheet = document.createElement('style');
         styleSheet.id = 'shortcuts-styles';
         styleSheet.textContent = `
-        #shortcut-list::-webkit-scrollbar {
-            width: 6px;
-        }
-        #shortcut-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 12px;
-        }
-        #shortcut-list::-webkit-scrollbar-thumb {
-            background: #c7c7c7;
-            border-radius: 12px;
-        }
-        #shortcut-list::-webkit-scrollbar-thumb:hover {
-            background: #a8a8a8;
-        }
-    `;
+            .floating-panel {
+                font-family: 'Poppins', -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto !important;
+                position: fixed !important;
+                height: auto !important;
+                max-height: 400px !important;
+                display: none !important;
+                z-index: 10000 !important;
+                padding: 16px !important;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                transform: translateY(10px) !important;
+                overflow: hidden !important;
+                border-radius: 12px !important;
+                background-color: white !important;
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+                backdrop-filter: blur(8px) !important;
+                border: 1px solid rgba(0, 0, 0, 0.08) !important;
+            }
+            .search-container {
+                position: relative !important;
+                margin-bottom: 12px !important;
+            }
+            .search-input {
+                width: 100% !important;
+                padding: 12px 16px !important;
+                border: 2px solid #e0e0e0 !important;
+                border-radius: 10px !important;
+                font-family: 'Poppins', sans-serif !important;
+                font-size: 14px !important;
+                outline: none !important;
+                transition: all 0.2s ease !important;
+                background: #f8f9fa !important;
+                color: black !important;
+            }
+            .search-input:focus {
+                border-color: #0a66c2 !important;
+                box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.1) !important;
+                background: white !important;
+            }
+            .template-list {
+                max-height: 320px !important;
+                overflow-y: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                list-style: none !important;
+            }
+            .template-item {
+                padding: 14px !important;
+                border-radius: 10px !important;
+                margin-bottom: 8px !important;
+                cursor: pointer !important;
+                background-color: #f8f9fa !important;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                border: 1px solid transparent !important;
+            }
+            .template-item.selected {
+                background-color: #f3f6f8 !important;
+                border-color: #0a66c2 !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+            }
+            .template-item:hover:not(.selected) {
+                background-color: #f3f6f8 !important;
+                transform: translateY(-1px) !important;
+                border-color: #e0e0e0 !important;
+            }
+            .template-title {
+                font-size: 14px !important;
+                font-weight: 600 !important;
+                color: #1a1a1a !important;
+                margin-bottom: 6px !important;
+            }
+            .template-preview {
+                font-size: 12px !important;
+                color: #666666 !important;
+                display: -webkit-box !important;
+                -webkit-line-clamp: 2 !important;
+                -webkit-box-orient: vertical !important;
+                overflow: hidden !important;
+                line-height: 1.5 !important;
+            }
+            .no-results {
+                text-align: center !important;
+                padding: 24px !important;
+                color: #666666 !important;
+                font-size: 14px !important;
+                font-weight: 500 !important;
+            }
+            .floating-panel[style*="display: block"] {
+                display: block !important;
+            }
+        `;
         document.head.appendChild(styleSheet);
     }
 
-    // Add Poppins font
-
-    floatingPanel.style.cssText = `
-        position: fixed;
-        height: auto;
-        max-height: 300px;
-        display: none;
-        z-index: 1000;
-        padding: 16px;
-        font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Fira Sans', Ubuntu, Oxygen, 'Oxygen Sans', Cantarell, 'Droid Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Lucida Grande', Helvetica, Arial, sans-serif;
-        transition: all 0.3s ease-in-out;
-        opacity: 0;
-        transform: translateY(10px);
-        overflow: hidden;
-        border-radius: 8px;
-        background-color: white;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    `;
-
-    // Event listeners
-    document.addEventListener('click', (event) => {
-        if (floatingPanel.style.display === 'block' &&
-            !floatingPanel.contains(event.target) &&
-            !event.target.closest('.msg-form__contenteditable')) {
-            window.hideFloatingPanel();
-        }
-    });
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && floatingPanel?.style?.display === 'block') {
-            window.hideFloatingPanel();
-        }
-    });
-
-    // Replace the updatePosition function in setupFloatingPanel
-    const updatePosition = () => {
-        const messageBox = document.querySelector('.msg-form__contenteditable');
-        if (messageBox) {
-          const messageBoxRect = messageBox.getBoundingClientRect();
-          floatingPanel.style.width = `${messageBoxRect.width}px`;
-          floatingPanel.style.left = `${messageBoxRect.left}px`;
-          floatingPanel.style.bottom = `${window.innerHeight - messageBoxRect.top + 10}px`;
-        }
-      };
-
-    // ResizeObserver setup
-    const resizeObserver = new ResizeObserver(updatePosition);
-
-    const observer = new MutationObserver(() => {
-        const messageBox = document.querySelector('.msg-form__contenteditable');
-        if (messageBox) {
-            updatePosition();
-            resizeObserver.observe(messageBox);
-        }
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-
-    const initialMessageBox = document.querySelector('.msg-form__contenteditable');
-    if (initialMessageBox) {
-        updatePosition();
-        resizeObserver.observe(initialMessageBox);
-    }
-
+    floatingPanel.className = 'floating-panel';
     floatingPanel.innerHTML = `
-        <div id="shortcuts-nav-typeahead" class="search-global-typeahead__typeahead">
-            <input class="search-global-typeahead__input" 
-                   placeholder="Search shortcuts" 
-                   dir="auto" 
-                   role="combobox" 
-                   aria-autocomplete="list" 
-                   aria-label="Search shortcuts" 
-                   type="text">
-            <div aria-hidden="true" class="search-global-typeahead__search-icon-container">
-                <svg role="none" aria-hidden="true" class="search-global-typeahead__search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-                    <path d="M14.56 12.44L11.3 9.18a5.51 5.51 0 10-2.12 2.12l3.26 3.26a1.5 1.5 0 102.12-2.12zM3 6.5A3.5 3.5 0 116.5 10 3.5 3.5 0 013 6.5z" fill="currentColor"></path>
-                </svg>
-            </div>
+        <div class="search-container">
+            <input type="text" 
+                   class="search-input" 
+                   placeholder="Type to search templates..."
+                   autocomplete="off">
         </div>
-        <ul style="height: 230px; overflow-y: auto; margin: 0; padding: 0; margin-top: 10px; list-style: none;"></ul>
+        <ul class="template-list"></ul>
     `;
-
-    floatingPanel.addEventListener('click', (event) => {
-        event.stopPropagation();
-    });
 
     document.body.appendChild(floatingPanel);
     return floatingPanel;
 };
 
-window.shortcutsObserver = {
-    observer: {
-        currentObserver: null,
-        debounceTimer: null,
-        unsubscribeFirestore: null,
-        isProcessing: false,
-        shortcutsCache: new Map(),
-        isFirestoreInitialized: false,
-        selectedIndex: -1,
-        maxIndex: -1,
-        filteredResults: [],
-        pTagObserver: null,
+const setupContentEditableHandlers = () => {
+    let currentElement = null;
+    let searchTimeout = null;
+    let templates = [];
+    let filteredTemplates = [];
+    let selectedIndex = -1;
 
-        // Helper function for name replacement
-        replaceName(content, name = '') {
-            let firstName = '[First Name]';
-            let lastName = '[Last Name]';
-            let fullName = '[Name]';
+    const selectTemplate = (index) => {
+        const listContainer = floatingPanel.querySelector('.template-list');
+        const items = listContainer.querySelectorAll('.template-item');
         
-            if (!name) {
-                const messageThread = document.querySelector('a.msg-thread__link-to-profile');
-                if (messageThread) {
-                    const nameElement = messageThread.querySelector('.msg-entity-lockup__entity-title');
-                    if (nameElement) {
-                        const nameParts = nameElement.textContent.trim().split(' ');
-                        if (nameParts.length >= 1) {
-                            firstName = nameParts[0];
-                            lastName = nameParts[nameParts.length - 1];
-                            fullName = nameElement.textContent.trim();
-                        }
-                    }
-                }
-            } else {
-                // If name is provided, split it
-                const nameParts = name.trim().split(' ');
-                if (nameParts.length >= 1) {
-                    firstName = nameParts[0];
-                    lastName = nameParts[nameParts.length - 1];
-                    fullName = name.trim();
-                }
-            }
+        // Remove previous selection
+        items.forEach(item => item.classList.remove('selected'));
         
-            return content
-                .replace(/<<first_name>>/g, firstName)
-                .replace(/<<last_name>>/g, lastName)
-                .replace(/<<name>>/g, fullName);
-        },
-
-        debounce(func, wait) {
-            return (...args) => {
-                clearTimeout(this.debounceTimer);
-                this.debounceTimer = setTimeout(() => func.apply(this, args), wait);
-            };
-        },
-
-        async initializeFirestoreListener() {
-            if (this.isFirestoreInitialized) return;
-
-            try {
-                const { db, currentUser } = await window.firebaseServices.initializeFirebase();
-                // console.log('Initializing Firestore listener for shortcuts');
-
-                this.unsubscribeFirestore = db.collection('shortcuts')
-                    .doc(currentUser.uid)
-                    .onSnapshot(doc => {
-                        if (!doc.exists) {
-                            // console.log('No shortcuts document found');
-                            return;
-                        }
-                        const shortcuts = doc.data().shortcuts || {};
-                        this.updateShortcutsCache(shortcuts);
-                    });
-
-                this.isFirestoreInitialized = true;
-            } catch (error) {
-                // console.error('Error initializing Firestore listener:', error);
-                this.isFirestoreInitialized = false;
-            }
-        },
-
-        updateShortcutsCache(shortcuts) {
-            const previousSize = this.shortcutsCache.size;
-            this.shortcutsCache.clear();
+        // Set new selection
+        selectedIndex = Math.max(0, Math.min(index, items.length - 1));
         
-            Object.entries(shortcuts).forEach(([key, data]) => {
-                this.shortcutsCache.set(key, data);
-            });
-        
-            if (this.shortcutsCache.size !== previousSize) {
-                // console.log(`Shortcuts cache updated: ${this.shortcutsCache.size} shortcuts available`);
-            }
-        
-            // Add this part - Update UI if panel is open
-            if (window.floatingPanel && window.floatingPanel.style.display === 'block') {
-                const searchInput = window.floatingPanel.querySelector('.search-global-typeahead__input');
-                const searchTerm = searchInput ? searchInput.value : '';
-                this.updateSearchResults(searchTerm);
-            }
-        },
+        if (items[selectedIndex]) {
+            items[selectedIndex].classList.add('selected');
+            items[selectedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    };
 
-        createResultItem(shortcut, isSelected = false) {
-            const item = document.createElement('li');
+    const renderTemplateList = (searchTerm = '') => {
+        const listContainer = floatingPanel.querySelector('.template-list');
+        if (!listContainer) return;
 
-            const contentDiv = document.createElement('div');
-            Object.assign(contentDiv.style, {
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                width: '100%'
-            });
+        const searchLower = searchTerm.toLowerCase();
+        filteredTemplates = templates.filter(template => 
+            template.title.toLowerCase().includes(searchLower) ||
+            template.message.toLowerCase().includes(searchLower)
+        );
 
-            const titleDiv = document.createElement('div');
-            titleDiv.textContent = shortcut.title;
-            Object.assign(titleDiv.style, {
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#191919',
-                marginBottom: '4px',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                background: '#f0f2f5',
-                display: 'inline-block',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-            });
+        if (filteredTemplates.length === 0) {
+            listContainer.innerHTML = `
+                <div class="no-results">
+                    No matching templates found
+                </div>
+            `;
+            selectedIndex = -1;
+            return;
+        }
 
-            const previewDiv = document.createElement('div');
-            previewDiv.textContent = shortcut.content.substring(0, 60) + '...';
-            Object.assign(previewDiv.style, {
-                fontSize: '12px',
-                color: '#666666',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                fontWeight: '400',
-                letterSpacing: '0.1px'
-            });
+        const html = filteredTemplates.map((template, index) => `
+            <li class="template-item ${index === 0 ? 'selected' : ''}" 
+                data-id="${template.template_id}"
+                role="option"
+                tabindex="-1">
+                <div class="template-title">${template.title}</div>
+                <div class="template-preview">${replacePlaceholders(template.message)}</div>
+            </li>
+        `).join('');
 
-            contentDiv.appendChild(titleDiv);
-            contentDiv.appendChild(previewDiv);
+        listContainer.innerHTML = html;
+        selectedIndex = 0;
 
-            Object.assign(item.style, {
-                padding: '12px 16px',
-                cursor: 'pointer',
-                borderBottom: '1px solid #eef3f8',
-                transition: 'background-color 0.15s ease',
-                display: 'flex',
-                alignItems: 'flex-start',
-                backgroundColor: isSelected ? '#f3f6f8' : 'transparent'
+        listContainer.querySelectorAll('.template-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                selectTemplate(index);
+                const template = filteredTemplates[index];
+                if (template) insertTemplate(template);
             });
 
             item.addEventListener('mouseenter', () => {
-                item.style.backgroundColor = '#f3f6f8';
+                selectTemplate(index);
+            });
+        });
+    };
+
+    const insertTemplate = (template) => {
+        if (!currentElement) return;
+
+        const pElement = currentElement.querySelector('p') || 
+                        currentElement.querySelector('div[contenteditable="true"]');
+        
+        if (pElement) {
+            const processedMessage = replacePlaceholders(template.message);
+            pElement.textContent = processedMessage;
+
+            ['input', 'keyup', 'keydown'].forEach(eventType => {
+                pElement.dispatchEvent(new Event(eventType, { bubbles: true }));
             });
 
-            item.addEventListener('mouseleave', () => {
-                item.style.backgroundColor = isSelected ? '#f3f6f8' : 'transparent';
-            });
-
-            item.addEventListener('click', () => {
-                this.applyShortcut(shortcut);
-            });
-
-            item.appendChild(contentDiv);
-            return item;
-        },
-
-        applyShortcut(shortcut) {
-            // console.log(shortcut)
-            try {
-                const messageBox = document.querySelector('.msg-form__contenteditable p');
-                if (messageBox) {
-                    messageBox.textContent = this.replaceName(shortcut.content);
-
-                    ['input', 'keyup', 'keydown'].forEach(eventType => {
-                        messageBox.dispatchEvent(new Event(eventType, { bubbles: true }));
-                    });
-
-                    
-                    const messageInput = document.querySelector('.msg-form__contenteditable');
-                    if (messageInput) {
-                        messageInput.focus();
-                        const range = document.createRange();
-                        const sel = window.getSelection();
-                        range.selectNodeContents(messageBox);
-                        range.collapse(false);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
-                    }
-                }
-                window.hideFloatingPanel();
-            } catch (err) {
-                // console.error('Failed to apply shortcut:', err);
-            }
-        },
-
-        handleMessageBoxChanges(mutations) {
-            if (this.isProcessing) return;
-            this.isProcessing = true;
-        
-            try {
-                const messageBox = document.querySelector('.msg-form__contenteditable');
-                if (!messageBox) return;
-        
-                for (const mutation of mutations) {
-                    if (mutation.type === 'characterData' || mutation.type === 'childList') {
-                        const content = messageBox.textContent.trim();
-        
-                        if (content === '') {
-                            window.hideFloatingPanel();
-                            continue;
-                        }
-        
-                        if (content.startsWith('/')) {
-                            const searchTerm = content.slice(1).trim().toLowerCase();
-                            // Always update results even if panel is already showing
-                            this.showFloatingPanel(messageBox);
-                            this.updateSearchResults(searchTerm);
-                        } else {
-                            window.hideFloatingPanel();
-                        }
-                    }
-                }
-            } finally {
-                this.isProcessing = false;
-            }
-        },
-
-        updateSearchResults(searchTerm = '') {
-            if (!window.floatingPanel) return;
-
-            // console.log(window.floatingPanel)
-            const resultsContainer = window.floatingPanel.querySelector('ul');
-            if (!resultsContainer) return;
-
-            const searchLower = searchTerm.toLowerCase();
-            resultsContainer.innerHTML = '';
-
-            const filteredResults = Array.from(this.shortcutsCache.entries())
-                .filter(([_, shortcut]) =>
-                    shortcut.title.toLowerCase().includes(searchLower) ||
-                    shortcut.content.toLowerCase().includes(searchLower)
-                )
-                .map(([_, shortcut]) => shortcut);
-
-            const fragment = document.createDocumentFragment();
-            
-            filteredResults.forEach((shortcut, index) => {
-                const resultItem = this.createResultItem(shortcut, index === this.selectedIndex);
-                fragment.appendChild(resultItem);
-            });
-
-            // console.log(filteredResults)
-
-            resultsContainer.appendChild(fragment);
-            this.maxIndex = filteredResults.length - 1;
-            this.selectedIndex = Math.min(this.selectedIndex, this.maxIndex);
-            this.filteredResults = filteredResults;
-        },
-
-        showFloatingPanel(messageBox) {
-            const panel = window.setupFloatingPanel();
-            if (!panel) return;
-        
-            const isNewlyOpened = panel.style.display !== 'block';
-            
-            panel.style.display = 'block';
-            setTimeout(() => {
-                panel.style.opacity = '1';
-                panel.style.transform = 'translateY(0)';
-            }, 0);
-        
-            const searchInput = panel.querySelector('.search-global-typeahead__input');
-            if (searchInput) {
-                // Only reset if newly opened
-                if (isNewlyOpened) {
-                    this.selectedIndex = -1;
-                    this.maxIndex = -1;
-                    this.filteredResults = [];
-                    searchInput.value = '';
-                    
-                    // Remove existing listeners
-                    searchInput.removeEventListener('input', this.handleSearch);
-                    searchInput.removeEventListener('keydown', this.handleKeyboardNavigation);
-        
-                    // Add new listeners
-                    searchInput.addEventListener('input', this.debounce((e) => {
-                        this.selectedIndex = -1;
-                        this.updateSearchResults(e.target.value);
-                    }, 150));
-        
-                    searchInput.addEventListener('keydown', (e) => this.handleKeyboardNavigation(e));
-                }
-        
-                // Always focus and update results
-                searchInput.focus();
-                this.updateSearchResults(searchInput.value);
-            }
-        },
-
-        handleKeyboardNavigation(event) {
-            const { key } = event;
-
-            switch (key) {
-                case 'ArrowDown':
-                    event.preventDefault();
-                    this.selectedIndex = Math.min(this.selectedIndex + 1, this.maxIndex);
-                    this.updateSearchResults(this.getCurrentSearchTerm());
-                    this.scrollToSelected();
-                    break;
-
-                case 'ArrowUp':
-                    event.preventDefault();
-                    this.selectedIndex = Math.max(this.selectedIndex - 1, -1);
-                    this.updateSearchResults(this.getCurrentSearchTerm());
-                    this.scrollToSelected();
-                    break;
-
-                case 'Enter':
-                    if (this.selectedIndex >= 0 && this.filteredResults[this.selectedIndex]) {
-                        this.applyShortcut(this.filteredResults[this.selectedIndex]);
-                    }
-                    break;
-            }
-        },
-
-        scrollToSelected() {
-            if (this.selectedIndex >= 0) {
-                const resultsContainer = window.floatingPanel?.querySelector('ul');
-                const selectedElement = resultsContainer?.children[this.selectedIndex];
-                if (selectedElement) {
-                    selectedElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }
-        },
-
-        getCurrentSearchTerm() {
-            return window.floatingPanel?.querySelector('.search-global-typeahead__input')?.value || '';
-        },
-
-        async setupMessageBoxObserver() {
-            const messageBox = document.querySelector('.msg-form__contenteditable');
-            if (!messageBox) {
-                setTimeout(() => this.setupMessageBoxObserver(), 1000);
-                return;
-            }
-
-            this.currentObserver = new MutationObserver(
-                this.debounce((mutations) => this.handleMessageBoxChanges(mutations), 200)
-            );
-
-            this.currentObserver.observe(messageBox, {
-                childList: true,
-                subtree: true,
-                characterData: true
-            });
-
-            await this.initializeFirestoreListener();
-        },
-
-        initialize() {
-            if (this.currentObserver) {
-                this.cleanup();
-            }
-            this.setupMessageBoxObserver();
-        },
-
-        cleanup() {
-            if (this.currentObserver) {
-                this.currentObserver.disconnect();
-                this.currentObserver = null;
-            }
-
-            if (this.unsubscribeFirestore) {
-                this.unsubscribeFirestore();
-                this.unsubscribeFirestore = null;
-                this.isFirestoreInitialized = false;
-            }
-
-            if (this.debounceTimer) {
-                clearTimeout(this.debounceTimer);
-                this.debounceTimer = null;
-            }
-
-            if (this.pTagObserver) {
-                this.pTagObserver.disconnect();
-                this.pTagObserver = null;
-            }
-
-            this.selectedIndex = -1;
-            this.maxIndex = -1;
-            this.filteredResults = [];
-            this.shortcutsCache.clear();
-            this.isProcessing = false;
-
-            if (window.floatingPanel) {
-                window.floatingPanel.remove();
-                window.floatingPanel = null;
-            }
+            pElement.focus();
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(pElement);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
         }
-    }
+
+        window.hideFloatingPanel();
+    };
+
+    const handleKeyboardNavigation = (event) => {
+        if (!floatingPanel || floatingPanel.style.display !== 'block') return;
+
+        switch (event.key) {
+            case 'ArrowDown':
+                event.preventDefault();
+                selectTemplate(selectedIndex + 1);
+                break;
+
+            case 'ArrowUp':
+                event.preventDefault();
+                selectTemplate(Math.max(0, selectedIndex - 1));
+                break;
+
+            case 'Enter':
+                event.preventDefault();
+                if (selectedIndex >= 0 && filteredTemplates[selectedIndex]) {
+                    insertTemplate(filteredTemplates[selectedIndex]);
+                }
+                break;
+
+            case 'Tab':
+                event.preventDefault();
+                selectTemplate(selectedIndex + 1);
+                break;
+
+            case 'Escape':
+                event.preventDefault();
+                window.hideFloatingPanel();
+                break;
+        }
+    };
+
+    const handleInput = (event) => {
+        const element = event.target;
+        currentElement = element.closest('[contenteditable="true"]');
+        const content = element.textContent.trim();
+        
+        if (content.startsWith('/')) {
+            const panel = window.setupFloatingPanel();
+            if (panel) {
+                panel.style.display = 'block';
+                setTimeout(() => {
+                    panel.style.opacity = '1';
+                    panel.style.transform = 'translateY(0)';
+                    
+                    const rect = currentElement.getBoundingClientRect();
+                    panel.style.width = `${rect.width}px`;
+                    panel.style.left = `${rect.left}px`;
+                    panel.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+                    
+                    const searchInput = panel.querySelector('.search-input');
+                    if (searchInput) {
+                        searchInput.value = content.slice(1);
+                        searchInput.focus();
+                        renderTemplateList(searchInput.value);
+                    }
+                }, 0);
+            }
+        } else {
+            window.hideFloatingPanel();
+        }
+    };
+
+    window.messageTemplateDatabase.addListener((updatedTemplates) => {
+        templates = updatedTemplates;
+        if (floatingPanel?.style.display === 'block') {
+            const searchInput = floatingPanel.querySelector('.search-input');
+            renderTemplateList(searchInput?.value || '');
+        }
+    });
+
+    const handleSearch = (event) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            selectedIndex = -1;
+            renderTemplateList(event.target.value);
+        }, 150);
+    };
+
+    // Setup keyboard events
+    document.addEventListener('keydown', handleKeyboardNavigation);
+
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1) {
+                    if (node.hasAttribute('contenteditable')) {
+                        setupElement(node);
+                    }
+                    node.querySelectorAll('[contenteditable="true"]').forEach(setupElement);
+                }
+            });
+        });
+    });
+
+    const setupElement = (element) => {
+        element.removeEventListener('input', handleInput);
+        element.addEventListener('input', handleInput);
+    };
+
+    document.querySelectorAll('[contenteditable="true"]').forEach(setupElement);
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    
+    const setupPanelHandlers = () => {
+        const panel = window.setupFloatingPanel();
+        if (!panel) return;
+
+        const searchInput = panel.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.removeEventListener('input', handleSearch);
+            searchInput.addEventListener('input', handleSearch);
+        }
+    };
+
+    setupPanelHandlers();
 };
+
+const initialize = () => {
+    setupContentEditableHandlers();
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}

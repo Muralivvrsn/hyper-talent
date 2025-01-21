@@ -1,156 +1,128 @@
-class LabelProfileCore {
+class LabelProfileManagerCore {
     constructor() {
+        this.listeners = new Set();
         this.state = {
             currentObserver: null,
             debounceTimer: null,
             isProcessing: false,
-            labelsCache: new Map(),
-            allowedLabels: [],
-            structuredLabels: []
+            labelsCache: new Map()
         };
+        window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
+        this.notifyListeners = this.notifyListeners.bind(this);
     }
 
-    async initialize() {
-        try {
-            console.log('Initializing label profile core');
-            if (!window.labelsDatabase) {
-                throw new Error('Labels database not found');
+    addLabelListener(callback) {
+        this.listeners.add(callback);
+        callback([...this.state.labelsCache.values()]);
+        return () => this.removeLabelListener(callback);
+    }
+
+    removeLabelListener(callback) {
+        this.listeners.delete(callback);
+    }
+
+    notifyListeners() {
+        const labelsArray = [...this.state.labelsCache.values()];
+        this.listeners.forEach(listener => {
+            try {
+                listener(labelsArray);
+            } catch (error) {
+                console.error('Error in label listener:', error);
             }
-            window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
-        } catch (error) {
-            console.error('Failed to initialize LabelProfileCore:', error);
-            window.labelUtils.showToast('Failed to initialize label system', 'error');
-        }
-    }
-
-    processLabelsObject(labels) {
-        if (!labels || typeof labels !== 'object') {
-            throw new Error('Invalid labels data structure');
-        }
-
-        return Object.entries(labels).map(([labelName, labelData]) => {
-            const { color, createdAt, codes } = labelData;
-            
-            const processedCodes = codes ? Object.entries(codes).map(([codeId, codeData]) => ({
-                id: codeId,
-                addedAt: codeData.addedAt,
-                name: codeData.name,
-                url: codeData.url,
-                code: codeData.code
-            })) : [];
-
-            return {
-                name: labelName,
-                id: labelName,
-                color: color || '#808080',
-                createdAt,
-                codes: processedCodes
-            };
         });
     }
 
     async handleLabelsUpdate(labels) {
-        try {
-            if (!labels) {
-                throw new Error('No labels data received');
-            }
-
-            let processedLabels;
-            if (Array.isArray(labels)) {
-                processedLabels = labels;
-            } else if (typeof labels === 'object') {
-                processedLabels = this.processLabelsObject(labels);
-            } else {
-                throw new Error('Invalid labels data format');
-            }
-
-            this.updateLabelsCache(processedLabels);
-            this.state.structuredLabels = processedLabels;
-
-            if (window.labelProfileUI) {
-                window.labelProfileUI.updateDropdown(this.state.labelsCache);
-            }
-        } catch (error) {
-            console.error('Error updating labels:', error);
-            window.labelUtils.showToast('Failed to update labels', 'error');
-        }
+        this.updateLabelsCache(labels);
+        window.labelProfileManagerUI.updateLabelsDropdown(labels);
+        this.notifyListeners();
     }
 
     updateLabelsCache(labels) {
-        try {
-            if (!labels) {
-                throw new Error('No labels provided for cache update');
-            }
-
-            this.state.labelsCache.clear();
-            
-            labels.forEach(label => {
-                if (!label.id || !label.name) {
-                    console.warn('Invalid label structure detected:', label);
-                    return;
-                }
-
-                this.state.labelsCache.set(label.id, {
-                    text: label.name,
-                    color: label.color || '#808080',
-                    value: label.id
-                });
+        this.state.labelsCache.clear();
+        labels.forEach(label => {
+            this.state.labelsCache.set(label.label_id, {
+                id: label.label_id,
+                name: label.label_name,
+                color: label.label_color,
+                profiles: label.profiles || []
             });
-
-            console.log('Labels cache updated successfully', this.state.labelsCache);
-        } catch (error) {
-            console.error('Error updating labels cache:', error);
-            window.labelUtils.showToast('Failed to update labels cache', 'error');
-        }
+        });
     }
 
-    handleTagSelection(value) {
+    
+
+    async applyLabel(labelId, profileData) {
+        console.log(labelId);
+        console.log(profileData)
         try {
-            if (!value) {
-                throw new Error('No label value provided for selection');
-            }
+            const { 
+                profileId, 
+                name, 
+                image_url, 
+                url, 
+                username, 
+                code = 'default'
+            } = profileData;
+    
 
-            if (typeof window.labelProfileAdd === 'function') {
-                window.labelProfileAdd(value);
-            } else {
-                throw new Error('window.labelProfileAdd is not defined');
+            // console.dir(profileData);
+            console.log(profileData)
+            // return;
+            const { db, currentUser } = await window.firebaseService.initialize();
+            if (!db || !currentUser) throw new Error('Not initialized');
+
+            // Create or update profile document
+            const profileRef = db.collection('profiles').doc(profileId);
+            const profileDoc = await profileRef.get();
+            if (!profileDoc.exists) {
+                await profileRef.set({
+                    n: name,          // name
+                    img: image_url,   // image url
+                    lu: new Date().toISOString(), // last updated
+                    u: url,          // url
+                    un: username,    // username
+                    c: code          // code
+                });
             }
+    
+            // Update label document with new profile
+            const labelRef = db.collection('profile_labels').doc(labelId);
+            await db.runTransaction(async (transaction) => {
+                const labelDoc = await transaction.get(labelRef);
+                if (!labelDoc.exists) {
+                    throw new Error('Label not found');
+                }
+    
+                const labelData = labelDoc.data();
+                const profiles = labelData.p || []; 
+    
+                // Only add if not already present
+                if (!profiles.includes(profileId)) {
+                    transaction.update(labelRef, {
+                        p: firebase.firestore.FieldValue.arrayUnion(profileId),
+                        lu: new Date().toISOString() // update last updated timestamp
+                    });
+                }
+            });
+    
+            return true;
         } catch (error) {
-            console.error('Error handling tag selection:', error);
-            window.labelUtils.showToast('Failed to apply label', 'error');
+            console.error('Failed to apply label:', error);
+            window.show_error('Failed to apply label');
+            return false;
         }
     }
 
-    getStructuredLabels() {
-        return this.state.structuredLabels;
+    getLabels() {
+        return [...this.state.labelsCache.values()];
+    }
+
+    cleanup() {
+        window.labelsDatabase.removeListener(this.handleLabelsUpdate);
+        this.state.labelsCache.clear();
+        this.listeners.clear();
     }
 }
 
-
-window.labelProfileManager = {
-    instance: null,
-
-    async initialize() {
-        if (!this.instance) {
-            try {
-                window.labelProfileUI.init();
-                this.instance = new LabelProfileCore();
-                await this.instance.initialize();
-                console.log('ui initlizing ..')
-                console.log('Label Profile Manager initialized successfully');
-            } catch (error) {
-                console.error('Failed to initialize Label Profile Manager:', error);
-                window.labelUtils.showToast('Failed to initialize label system', 'error');
-                throw error;
-            }
-        }
-        return this.instance;
-    },
-
-    getInstance() {
-        if (!this.instance) {
-            throw new Error('Label Profile Manager not initialized. Call initialize() first.');
-        }
-        return this.instance;
-    }
-};
+window.labelProfileManagerCore = new LabelProfileManagerCore();

@@ -6,6 +6,7 @@ class ProfileLabels {
         this.currentProfileId = null;
         this.initialized = false;
         this.styles = this.createStyles();
+        window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
     }
 
     createStyles() {
@@ -24,7 +25,8 @@ class ProfileLabels {
                 align-items: center !important;
                 padding: 0px 8px !important;
                 border-radius: 4px !important;
-                font-size: 12px !important;
+                font-size: 9px !important;
+                font-family: "Poppins", serif !important;
                 font-weight: 500 !important;
                 color: #fff !important;
                 cursor: default !important;
@@ -36,6 +38,7 @@ class ProfileLabels {
                 opacity: 0.8 !important;
                 font-weight: bold !important;
                 font-size: 14px !important;
+                font-family: "Poppins", serif !important;
             }
 
             .profile-label-delete:hover {
@@ -45,60 +48,17 @@ class ProfileLabels {
             .no-labels {
                 color: #666 !important;
                 font-size: 12px !important;
+                font-family: "Poppins", serif !important;
                 font-style: italic !important;
                 margin: 8px 0 !important;
             }
         `;
-
-
-        const links = [
-            {
-              rel: "preconnect",
-              href: "https://fonts.googleapis.com"
-            },
-            {
-              rel: "preconnect",
-              href: "https://fonts.gstatic.com",
-              crossorigin: ""
-            },
-            {
-              rel: "stylesheet",
-              href: "https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
-            }
-          ];
-          
-          links.forEach(linkAttributes => {
-            const link = document.createElement('link');
-            Object.entries(linkAttributes).forEach(([attr, value]) => {
-              link.setAttribute(attr, value);
-            });
-            document.head.appendChild(link);
-          });
         return styles;
-    }
-
-    async getFirebaseInstance() {
-        try {
-            const { db, currentUser } = await window.firebaseServices.initializeFirebase();
-            if (!db || !currentUser) {
-                throw new Error('Authentication failed');
-            }
-            return { db, currentUser };
-        } catch (error) {
-            console.error('Error getting Firebase instance:', error);
-            return null;
-        }
     }
 
     async init() {
         if (this.initialized) return;
-        
-        console.log('ProfileLabels: Initializing...');
-        
-        // Add styles to document
         document.head.appendChild(this.styles);
-
-        // Get initial profile info and set up listeners
         await this.setupProfile();
         this.initialized = true;
     }
@@ -109,47 +69,34 @@ class ProfileLabels {
 
         this.currentProfileId = this.createProfileId(profileInfo.connectionCode);
         
-        // Set up Firestore listener
-        this.subscribeToLabels();
-        
-        // Create labels container
         await this.createLabelsContainer();
     }
 
     async getProfileInfo() {
         try {
-            // Get URLs from both possible locations
             const connectionLink = document.querySelector('a[href*="/search/results/people"]');
             const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
-            console.log(connectionLink)
             const url = connectionLink?.href || mutualConnectionLink?.href || window.location.href;
             
-            // Get the profile name
             const nameElement = document.querySelector('a[aria-label] h1');
             const name = nameElement ? nameElement.textContent.trim() : '';
             
-            // Extract username from URL
             const username = this.extractUsername(url);
-            
-            // Try to get connection code
             let connectionCode = this.extractConnectionCode(url);
             
-            // If no connection code found, try mutual connection code
             if (!connectionCode) {
                 connectionCode = this.extractConnectionCodeFromMutual(url);
             }
             
-            // If still no code found, use username as fallback
             if (!connectionCode) {
                 connectionCode = username;
             }
 
-            // Get profile image
             const imgElement = document.querySelector('img.pv-top-card-profile-picture__image--show');
             const imageUrl = imgElement ? imgElement.getAttribute('src') : '';
 
             const profileId = this.createProfileId(connectionCode);
-
+            
             return {
                 url,
                 profileId,
@@ -160,7 +107,7 @@ class ProfileLabels {
                 addedAt: new Date().toISOString()
             };
         } catch (error) {
-            console.error('Error getting profile info:', error);
+            window.show_error('Error getting profile info');
             return null;
         }
     }
@@ -171,34 +118,25 @@ class ProfileLabels {
     }
 
     extractConnectionCode(url) {
-        // Handle encoded connection code
         const match = url.match(/connectionOf=%5B%22(.*?)%22%5D/);
-        console.log(match)
         if (match) return match[1];
         
-        // Handle direct connection links
         const directMatch = url.match(/connectionOf=\["([^"]+)"\]/);
         return directMatch ? directMatch[1] : null;
     }
 
     extractConnectionCodeFromMutual(url) {
-        // Handle encoded mutual connection code
         const match = url.match(/facetConnectionOf=%22(.*?)%22/);
         if (match) return match[1];
         
-        // Handle direct mutual connection links
         const directMatch = url.match(/facetConnectionOf="([^"]+)"/);
         return directMatch ? directMatch[1] : null;
     }
 
     createProfileId(connectionCode) {
-        console.log(connectionCode)
         if (!connectionCode) return null;
-        
-        const profileUrl = `https://www.linkedin.com/in/${connectionCode}`;
-        return btoa(profileUrl).replace(/=/g, '');
+        return connectionCode;
     }
-
 
     async waitForElement(selector, timeout = 5000) {
         const element = document.querySelector(selector);
@@ -239,51 +177,58 @@ class ProfileLabels {
         this.updateLabelsDisplay();
     }
 
-    async subscribeToLabels() {
-        if (this.unsubscribeFirestore) {
-            this.unsubscribeFirestore();
-        }
-
-        const firebase = await this.getFirebaseInstance();
-        if (!firebase) return;
-
-        const { db, currentUser } = firebase;
-
-        this.unsubscribeFirestore = db.collection('labels')
-            .doc(currentUser.uid)
-            .onSnapshot(async (doc) => {
-                if (!doc.exists) return;
-                this.labels = doc.data().labels || {};
-                this.updateLabelsDisplay();
-            }, async (error) => {
-                console.error('Firestore subscription error:', error);
-                // If there's an error, try to resubscribe after a short delay
-                setTimeout(() => this.subscribeToLabels(), 5000);
+    handleLabelsUpdate(newLabels) {
+        console.log(newLabels);
+        console.log('profile labels')
+        if (!Array.isArray(newLabels)) return;
+        
+        // Convert new structure to old format for compatibility
+        this.labels = {};
+        newLabels.forEach(label => {
+            this.labels[label.label_name] = {
+                color: label.label_color,
+                label_id: label.label_id,
+                codes: {}
+            };
+            
+            // Convert profiles to codes format
+            label.profiles.forEach(profile => {
+                if (profile && profile.profile_id) {
+                    this.labels[label.label_name].codes[profile.profile_id] = {
+                        addedAt: new Date().toISOString(),
+                        name: profile.name,
+                        url: profile.image_url,
+                        code: profile.code
+                    };
+                }
             });
+        });
+
+        console.log(this.labels)
+        
+        this.updateLabelsDisplay();
     }
 
     updateLabelsDisplay() {
         const container = document.querySelector('.profile-labels-container');
         if (!container) return;
 
-        // Clear existing labels
         container.innerHTML = '';
 
-        // Find matching labels for current profile
         const matchingLabels = [];
-        console.log(this.labels)
+
         for (const [labelName, labelData] of Object.entries(this.labels)) {
-            console.log(labelData);
-            console.log(this.currentProfileId)
+            console.log(this.currentProfileId);
+            console.log(labelData.codes)
             if (labelData.codes && Object.keys(labelData.codes).includes(this.currentProfileId)) {
-                
                 matchingLabels.push({
                     name: labelName,
-                    color: labelData.color
+                    color: labelData.color,
+                    label_id: labelData.label_id
                 });
             }
         }
-        console.log(matchingLabels)
+
         if (matchingLabels.length === 0) {
             const noLabels = document.createElement('div');
             noLabels.className = 'no-labels';
@@ -299,52 +244,44 @@ class ProfileLabels {
             
             labelElement.innerHTML = `
                 ${label.name}
-                <span class="profile-label-delete" data-label="${label.name}">×</span>
+                <span class="profile-label-delete" data-label-id="${label.label_id}">×</span>
             `;
 
-            labelElement.querySelector('.profile-label-delete').addEventListener('click', async () => {
-                await this.removeLabel(label.name);
+            labelElement.querySelector('.profile-label-delete').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const labelId = e.target.getAttribute('data-label-id');
+                await this.removeLabel(label.name, labelId);
             });
 
             container.appendChild(labelElement);
         });
     }
 
-    async removeLabel(labelName) {
+    async removeLabel(labelName, labelId) {
         try {
-            const firebase = await this.getFirebaseInstance();
-            if (!firebase) return;
-
-            const { db, currentUser } = firebase;
-            
-            const labelRef = db.collection('labels').doc(currentUser.uid);
-            const doc = await labelRef.get();
-            
-            if (!doc.exists) return;
-            
-            const labels = doc.data().labels || {};
-            const label = labels[labelName];
-            
-            if (!label || !label.codes) return;
-            
-            // Remove the current profile from the codes object
-            if (label.codes) {
-                const { [this.currentProfileId]: removed, ...remainingCodes } = label.codes;
-                
-                // Update Firestore
-                await labelRef.update({
-                    [`labels.${labelName}.codes`]: remainingCodes
-                });
+            if (!labelId || !this.currentProfileId) {
+                throw new Error('Missing label or profile ID');
             }
-            
+
+            const success = await window.labelsDatabase.removeProfileFromLabel(
+                labelId,
+                this.currentProfileId
+            );
+
+            if (success) {
+                window.show_success('Label removed');
+            } else {
+                throw new Error('Failed to remove label');
+            }
         } catch (error) {
             console.error('Error removing label:', error);
+            window.show_error('Failed to remove label');
         }
     }
 
     destroy() {
-        if (this.unsubscribeFirestore) {
-            this.unsubscribeFirestore();
+        if (window.labelsDatabase) {
+            window.labelsDatabase.removeListener(this.handleLabelsUpdate.bind(this));
         }
         
         const container = document.querySelector('.profile-labels-container');
@@ -360,5 +297,70 @@ class ProfileLabels {
     }
 }
 
-// Create global instance
-window.labelProfiles = new ProfileLabels();
+
+const observeProfileUrls = () => {
+    let lastUrl = '';
+    let profileLabels = null;
+
+    const waitForProfileElements = async () => {
+        // Wait up to 5 seconds for elements
+        const maxAttempts = 50; // 50 * 100ms = 5 seconds
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+            const connectionLink = document.querySelector('a[href*="/search/results/people"]');
+            const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
+
+            if (connectionLink || mutualConnectionLink) {
+                return true;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+
+        return false;
+    };
+
+    const observer = new MutationObserver(async () => {
+        const currentUrl = window.location.href;
+        if (currentUrl !== lastUrl) {
+            lastUrl = currentUrl;
+
+            // Cleanup existing instance
+            if (profileLabels) {
+                profileLabels.destroy();
+                profileLabels = null;
+            }
+
+            // Only initialize on profile pages
+            if (currentUrl.includes('linkedin.com/in/')) {
+                // Wait for required elements
+                const elementsPresent = await waitForProfileElements();
+                if (elementsPresent) {
+                    profileLabels = new ProfileLabels();
+                    profileLabels.init();
+                }
+            }
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Handle initial page load
+    if (window.location.href.includes('linkedin.com/in/')) {
+        // Wait for required elements on initial load
+        waitForProfileElements().then(elementsPresent => {
+            if (elementsPresent) {
+                profileLabels = new ProfileLabels();
+                profileLabels.init();
+            }
+        });
+    }
+};
+
+// Start observing URL changes
+observeProfileUrls();

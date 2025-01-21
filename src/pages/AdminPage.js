@@ -2,22 +2,32 @@ import React, { useState } from 'react';
 import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { PlusCircle, MinusCircle, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
+import { useMigration } from '../context/MigrationContext';
 const AdminPage = () => {
   const { user } = useAuth();
-  const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co','muralivvrsn75683@gmail.com'];
-  
+  const { migrating, error, progress, migrateDatabase } = useMigration();
+
+  const handleMigration = async () => {
+    const result = await migrateDatabase();
+    if (result.success) {
+      // console.log(`Migrated ${result.usersProcessed} users`);
+    }
+  };
+
+
+  const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
+
   const [version, setVersion] = useState('');
   const [featureInput, setFeatureInput] = useState('');
   const [bugInput, setBugInput] = useState('');
   const [suggestionInput, setSuggestionInput] = useState('');
-  
+
   const [features, setFeatures] = useState([]);
   const [bugs, setBugs] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
-  
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   if (!ADMIN_EMAILS.includes(user?.email)) {
@@ -104,9 +114,9 @@ const AdminPage = () => {
 
       const db = getFirestore();
       await setDoc(doc(db, 'updates', version), data);
-      
+
       setSuccess('Update published successfully!');
-      
+
       // Reset all fields
       setVersion('');
       setFeatureInput('');
@@ -170,8 +180,8 @@ const AdminPage = () => {
           </div>
           <div className="grid gap-2 mt-4">
             {features.map((feature, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="flex items-center justify-between p-3 bg-card rounded-lg border shadow-sm"
               >
                 <span className="flex-1 text-sm">{feature}</span>
@@ -211,8 +221,8 @@ const AdminPage = () => {
           </div>
           <div className="grid gap-2 mt-4">
             {bugs.map((bug, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="flex items-center justify-between p-3 bg-card rounded-lg border shadow-sm"
               >
                 <span className="flex-1 text-sm">{bug}</span>
@@ -252,8 +262,8 @@ const AdminPage = () => {
           </div>
           <div className="grid gap-2 mt-4">
             {suggestions.map((suggestion, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="flex items-center justify-between p-3 bg-card rounded-lg border shadow-sm"
               >
                 <span className="flex-1 text-sm">{suggestion}</span>
@@ -271,7 +281,7 @@ const AdminPage = () => {
 
         {error && (
           <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
-            {error}
+            {errors}
           </div>
         )}
 
@@ -296,6 +306,14 @@ const AdminPage = () => {
           )}
         </button>
       </form>
+
+      <div>
+        <button onClick={handleMigration} disabled={migrating}>
+          Migrate All Users
+        </button>
+        {migrating && <div>Progress: {progress}</div>}
+        {error && <div>Error: {error}</div>}
+      </div>
     </div>
   );
 };

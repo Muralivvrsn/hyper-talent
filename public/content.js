@@ -24,6 +24,28 @@ function waitForElement(selector, maxAttempts = 20) {
 }
 
 
+function waitForProfileElements(maxAttempts = 20) {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+
+    function checkElements() {
+      const connectionLink = document.querySelector('a[href*="/search/results/people"]');
+      const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
+
+      if (connectionLink || mutualConnectionLink) {
+        resolve(true);
+      } else if (attempts >= maxAttempts) {
+        reject(new Error('No profile elements found after max attempts'));
+      } else {
+        attempts++;
+        setTimeout(checkElements, 500);
+      }
+    }
+
+    checkElements();
+  });
+}
+
 
 // Variable to track whether the dark theme is active
 window.isDarkTheme = false;
@@ -84,6 +106,30 @@ function waitForNotesManager(maxAttempts = 20) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // console.log('Received message:', message.type);
 
+
+  const links = [
+    {
+        rel: "preconnect",
+        href: "https://fonts.googleapis.com"
+    },
+    {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossorigin: ""
+    },
+    {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap"
+    }
+  ];
+  
+  links.forEach(linkAttributes => {
+    const link = document.createElement('link');
+    Object.entries(linkAttributes).forEach(([attr, value]) => {
+        link.setAttribute(attr, value);
+    });
+    document.head.appendChild(link);
+  });
   if (message.type === "URL_UPDATED") {
     // console.log('Starting initialization process');
 
@@ -168,6 +214,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // window.labelProfileCore.initialize();
 
         // Initialize keyboard shortcuts independently
+        window.refreshService = new RefreshService();
         try {
           window.keyboard.shortcuts.observer();
           // console.log('Keyboard shortcuts initialized');
@@ -176,7 +223,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           initResults.errors.push('Keyboard shortcuts initialization failed');
         }
 
-        window.labelFilterCore.initialize()
+        window.labelFilterCore.initialize();
+        window.labelManagerCore.initialize();
+        // window.labelFilterCore.initialize();
         // console.log('Initialization complete with results:', initResults);
         sendResponse({
           success: true,
@@ -188,16 +237,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // console.error('Critical error in initialization process:', error);
         sendResponse({ success: false, error: error.message });
       });
+
     return true;
   }
   else if (message.type === "URL_PROFILE") {
-    waitForElement('h1.break-words')
+    waitForProfileElements()
       .then(() => {
         try {
           // window.profileNotesManager.init();
           window.profileNotes.init();
           window.labelProfiles.init();
-          window.labelProfileManager.initialize()
+          window.profileLabels.init();
+          window.labelProfileManagerCore.initialize();
+          // window.labelProfileManager.initialize()
         } catch (error) {
           // console.error('Profile notes manager initialization error:', error);
         }
@@ -207,5 +259,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
   }
 });
+
 
 

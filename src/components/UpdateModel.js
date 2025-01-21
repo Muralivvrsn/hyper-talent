@@ -20,7 +20,7 @@ const UpdateModal = ({ isOpen, onClose, currentVersion, previousVersion }) => {
         });
 
 
-        console.log(updateData)
+        // console.log(updateData)
 
         setUpdates(updateData);
       } catch (error) {

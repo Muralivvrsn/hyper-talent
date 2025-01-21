@@ -1,7 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithCredential, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
+import { getFirestore, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -13,10 +19,11 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 export const storage = getStorage(app);
+const db = getFirestore(app);
+
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -29,23 +36,60 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [authenticating, setAuthenticating] = useState(false);
-  const chrome = window.chrome
+  const chrome = window.chrome;
 
-  // Listen for Firebase auth state changes
+  // Listen for Firebase auth state changes and update user data
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeUser = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
+        
+        // Subscribe to user data changes
+        unsubscribeUser = onSnapshot(
+          doc(db, 'users', firebaseUser.uid),
+          (doc) => {
+            if (doc.exists()) {
+              const data = doc.data();
+              setUserData({
+                name: data.n || '',
+                email: data.e || '',
+                avatar: data.av || '',
+                createdAt: data.ca || null,
+                lastLogin: data.ll || null,
+                theme: data.th || 'light',
+                language: data.lg || 'en',
+                notifications: data.ne || false,
+                plan: data.p || 'free',
+                planExpiry: data.pe || null,
+                labelIds: data.d?.l || [],
+                noteIds: data.d?.n || [],
+                shortcutIds: data.d?.s || [],
+                spreadsheet: {
+                  id: data.sd?.id || null,
+                  createdAt: data.sd?.ca || null,
+                  lastSynced: data.sd?.ls || null
+                }
+              });
+            }
+          },
+          (error) => {
+            console.error('Error fetching user data:', error);
+            setError(error.message);
+          }
+        );
+
         setLoading(false);
       } else {
-        // If no Firebase user, check chrome identity
+        // Check chrome identity
         try {
           const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
           if (response.token) {
-            // If we have a token, sign in with Firebase
             setAuthenticating(true);
             const credential = GoogleAuthProvider.credential(null, response.token);
             const userCredential = await signInWithCredential(auth, credential);
@@ -55,6 +99,7 @@ export const AuthProvider = ({ children }) => {
           console.error('Auth check error:', error);
           setError(error.message);
           setUser(null);
+          setUserData(null);
         } finally {
           setLoading(false);
           setAuthenticating(false);
@@ -62,7 +107,12 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeUser) {
+        unsubscribeUser();
+      }
+    };
   }, []);
 
   const login = async () => {
@@ -154,12 +204,13 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    userData,
     loading,
     error,
     authenticating,
     login,
     logout,
-    addUpdate,
+    addUpdate
   };
 
   return (
