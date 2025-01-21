@@ -133,10 +133,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "URL_UPDATED") {
     // console.log('Starting initialization process');
 
+
     waitForElement('.msg-conversations-container__title-row')
       .then(async () => {
         // console.log('Container found, initializing managers');
 
+
+        window.labelFilterCore.initialize();
+        window.labelManagerCore.initialize();
         // Track initialization results
         const initResults = {
           success: true,
@@ -223,10 +227,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           initResults.errors.push('Keyboard shortcuts initialization failed');
         }
 
-        window.labelFilterCore.initialize();
-        window.labelManagerCore.initialize();
         // window.labelFilterCore.initialize();
-        // console.log('Initialization complete with results:', initResults);
+        // window.labelManagerCore.initialize();
+
         sendResponse({
           success: true,
           partialFailures: initResults.errors.length > 0,

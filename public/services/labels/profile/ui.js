@@ -374,6 +374,9 @@ window.labelProfileManagerUI = {
     },
 
     createConfirmationModal() {
+        if (document.querySelector('.confirmation-modal')) {
+            return; // Exit the method if modal is already present
+        }
         this.elements.confirmationModal = this.createElement('div', 'confirmation-modal');
         this.elements.confirmationModal.innerHTML = `
             <div class="confirmation-content">

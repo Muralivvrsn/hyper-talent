@@ -256,9 +256,11 @@ window.keyboard.shortcuts = {
         break;
 
       case 'KeyD':
-        event.preventDefault();
-        this.log('Delete shortcut triggered');
-        optionToFind = 'Delete conversation';
+        if(event.shiftKey){
+          event.preventDefault();
+          this.log('Delete shortcut triggered');
+          optionToFind = 'Delete conversation';
+        }
         break;
 
       case 'KeyM':
