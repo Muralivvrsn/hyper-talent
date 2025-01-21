@@ -520,7 +520,8 @@ window.labelManagerUI = {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'l' && !e.altKey && !e.ctrlKey && !e.metaKey && 
                 !this.state.editingLabelId && 
-                !document.activeElement.matches('input, textarea')) {
+                !document.activeElement.matches('input, textarea') && document.activeElement.getAttribute('contenteditable') !== 'true' &&
+                !document.activeElement.classList.contains('msg-form__contenteditable')) {
                 e.preventDefault();
                 this.toggleDropdown();
             }

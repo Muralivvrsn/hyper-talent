@@ -63,9 +63,9 @@ const Shortcuts = () => {
     essential: {
       title: "Essential Actions",
       shortcuts: [
-        { title: "Open Profile", keys: ["⌘", "O"], description: "Open profile in new tab", priority: "high" },
-        { title: "Show Shortcuts", keys: ["⌘", "⌥", "S"], description: "Show keyboard shortcuts" },
-        { title: "Quick Search", keys: ["⌘", "K"], description: "Search shortcuts" }
+        { title: "Open Profile", keys: ["O"], description: "Open profile in new tab", priority: "high" },
+        // { title: "Show Shortcuts", keys: ["⌘", "⌥", "S"], description: "Show keyboard shortcuts" },
+        // { title: "Quick Search", keys: ["⌘", "K"], description: "Search shortcuts" }
       ]
     },
     navigation: {
@@ -73,25 +73,25 @@ const Shortcuts = () => {
       shortcuts: [
         { title: "Navigate Up", keys: ["⌘", "↑"], description: "Go to previous conversation" },
         { title: "Navigate Down", keys: ["⌘", "↓"], description: "Go to next conversation" },
-        { title: "Toggle Panel", keys: ["⌘", "⇧", "L"], description: "Toggle floating panel" }
+        // { title: "Toggle Panel", keys: ["⌘", "⇧", "L"], description: "Toggle floating panel" }
       ]
     },
     conversation: {
       title: "Conversation Management",
       shortcuts: [
-        { title: "Archive", keys: ["⌘", "⇧", "A"], description: "Archive conversation" },
-        { title: "Mark as unread", keys: ["⌘", "U"], description: "Mark conversation as unread" },
-        { title: "Mark as read", keys: ["⌘", "I"], description: "Mark conversation as read" },
-        { title: "Delete", keys: ["⌘", "D"], description: "Delete conversation" }
+        { title: "Archive", keys: ["E"], description: "Archive conversation" },
+        { title: "Mark as read", keys: ["⇧", "I"], description: "Mark conversation as read" },
+        { title: "Mark as unread", keys: ["⇧", "U"], description: "Mark conversation as unread" },
+        { title: "Delete", keys: ["⇧", "D"], description: "Delete conversation" }
       ]
     },
     flags: {
       title: "Flags & States",
       shortcuts: [
-        { title: "Mute", keys: ["⌘", "M"], description: "Mute conversation" },
-        { title: "Unmute", keys: ["⌘", "⇧", "M"], description: "Unmute conversation" },
-        { title: "Star", keys: ["⌘", "S"], description: "Star conversation" },
-        { title: "Remove star", keys: ["⌘", "⇧", "S"], description: "Remove star from conversation" }
+        { title: "Mute", keys: ["M"], description: "Mute conversation" },
+        { title: "Unmute", keys: ["⇧", "M"], description: "Unmute conversation" },
+        { title: "Star", keys: ["S"], description: "Star conversation" },
+        { title: "Remove star", keys: ["⇧", "S"], description: "Remove star from conversation" }
       ]
     }
   };

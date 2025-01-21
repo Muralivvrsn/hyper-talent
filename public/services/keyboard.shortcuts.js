@@ -2,321 +2,111 @@
 window.keyboard = window.keyboard || {};
 window.keyboard.shortcuts = {
   isInitialized: false,
-  isNavigationInitialized: false,
   currentActiveIndex: -1,
-  dialog: null,
-  shortcuts: [
-    { title: "Archive", keys: "⌘ + ⇧ + A", description: "Archive conversation" },
-    { title: "Mark as unread", keys: "⌘ + U", description: "Mark conversation as unread" },
-    { title: "Mark as read", keys: "⌘ + I", description: "Mark conversation as read" },
-    { title: "Delete conversation", keys: "⌘ + D", description: "Delete conversation" },
-    { title: "Mute", keys: "⌘ + M", description: "Mute conversation" },
-    { title: "Unmute", keys: "⌘ + ⇧ + M", description: "Unmute conversation" },
-    { title: "Report", keys: "⌘ + R", description: "Report conversation" },
-    { title: "Restore", keys: "⌘ + ⇧ + R", description: "Restore conversation" },
-    { title: "Star", keys: "⌘ + S", description: "Star conversation" },
-    { title: "Remove star", keys: "⌘ + ⇧ + S", description: "Remove star from conversation" },
-    { title: "Move to Other", keys: "⌘ + ⇧ + B", description: "Move conversation to Other folder" },
-    { title: "Toggle floating panel", keys: "⌘ + ⇧ + L", description: "Toggle floating panel" },
-    { title: "Navigate Up", keys: "⌘ + ↑", description: "Go to previous conversation" },
-    { title: "Navigate Down", keys: "⌘ + ↓", description: "Go to next conversation" },
-    { title: "Open Profile", keys: "⌘ + O", description: "Open profile in new tab" },
-    { title: "Show Shortcuts", keys: "⌘ + ⌥ + S", description: "Show keyboard shortcuts" }
-  ],
+  debug: true, // Enable/disable logging
 
-  createShortcutsDialog() {
-    const dialog = document.createElement('div');
-    dialog.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 80%; 
-      transform: translate(-50%, -50%);
-      z-index: 50;
-      display: none;
-      width: 400px;  
-      background: white;
-      border-radius: 16px; 
-      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 10px 10px -5px rgb(0 0 0 / 0.10); 
-      overflow: hidden;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-  
-    const content = `
-      <div class="header" style="
-        background: rgb(37 99 235);
-        padding: 2rem 2.5rem;  
-        position: relative;
-      ">
-        <h2 style="
-          line-height: 1.3;
-          font-weight: 700; 
-          color: white;
-          margin: 0;
-          letter-spacing: -0.02em; 
-        ">Keyboard Shortcuts</h2>
-        
-        <button class="close-button" style="
-          position: absolute;
-          right: 10px;
-          top: 10px;
-          background: transparent;
-          border: none;
-          padding: 0.75rem;
-          border-radius: 12px; 
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          transition: all 0.2s ease; 
-        ">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-  
-        <div style="
-          position: relative;
-          margin-top: 1.25rem; 
-        ">
-          <input type="text" placeholder="Search shortcuts..." style="
-            width: 100%;
-            padding: 1rem 1.5rem 1rem 3.5rem;  
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2); 
-            color: white;
-            border-radius: 12px;  
-            font-weight: 500;
-            outline: none;
-            transition: all 0.2s ease;
-          ">
-          <svg style="
-            position: absolute;
-            left: 1.25rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 1.25rem;
-            height: 1.25rem;
-            color: rgba(255, 255, 255, 0.6); 
-          " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-        </div>
-      </div>
-  
-      <div id="shortcuts-list" style="
-        max-height: 70vh;  
-        overflow-y: auto;
-        padding: 0.5rem 0; 
-      "></div>
-    `;
-  
-    dialog.innerHTML = content;
-    document.body.appendChild(dialog);
-  
-    // Style the scrollbar
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = `
-      #shortcuts-list::-webkit-scrollbar {
-        width: 12px;  
-      }
-      #shortcuts-list::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      #shortcuts-list::-webkit-scrollbar-thumb {
-        background-color: rgba(0,0,0,0.2);
-        border-radius: 6px; 
-      }
-      .close-button:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-      }
-      input::placeholder {
-        color: rgba(255, 255, 255, 0.5);
-      }
-      input:focus {
-        background: white;
-        color: rgb(17 24 39);
-      }
-      input:focus::placeholder {
-        color: rgb(156 163 175);
-      }
-    `;
-    document.head.appendChild(styleSheet);
-  
-    // Add search functionality
-    const searchInput = dialog.querySelector('input');
-    searchInput.addEventListener('input', (e) => {
-      this.renderShortcuts(e.target.value);
-    });
-  
-    // Close button functionality
-    const closeButton = dialog.querySelector('.close-button');
-    closeButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.dialog.style.display = 'none';
-    });
-  
-    // Close dialog when clicking outside
-    document.addEventListener('click', (e) => {
-      if (this.dialog && !this.dialog.contains(e.target) && this.dialog.style.display === 'block') {
-        this.dialog.style.display = 'none';
-      }
-    });
-  
-    return dialog;
-  },
-  
-  renderShortcuts(searchTerm = '') {
-    const shortcutsList = document.getElementById('shortcuts-list');
-    const filteredShortcuts = this.shortcuts.filter(shortcut =>
-      shortcut.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      shortcut.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  
-    shortcutsList.innerHTML = filteredShortcuts.map(shortcut => `
-      <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center; 
-        padding: 1rem 2.5rem;  
-        border-bottom: 1px solid rgb(243 244 246);
-        transition: all 0.2s ease;
-        cursor: pointer;
-      " class="shortcut-item">
-        <div style="flex: 1;">  
-          <div style="
-            font-weight: 600; 
-            color: rgb(17 24 39);
-            margin-bottom: 0.25rem; 
-          ">${shortcut.title}</div>
-          <div style="
-            color: rgb(107 114 128);
-            font-weight: 400; 
-            font-size: 1.25rem;
-          ">${shortcut.description}</div>
-        </div>
-        <code style="
-          background: rgb(243 244 246);
-          padding: 0.5rem 0.75rem;
-          border-radius: 8px;
-          font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-          color: rgb(31 41 55);
-          font-weight: 500;
-          margin-left: 2rem; 
-          white-space: nowrap;  
-        ">${shortcut.keys}</code>
-      </div>
-    `).join('');
-  
-    // Add hover effect
-    const items = shortcutsList.querySelectorAll('.shortcut-item');
-    items.forEach(item => {
-      item.addEventListener('mouseover', () => {
-        item.style.backgroundColor = 'rgb(249 250 251)';
-      });
-      item.addEventListener('mouseout', () => {
-        item.style.backgroundColor = 'transparent';
-      });
-    });
+  log(...args) {
+    if (this.debug) {
+      console.log('[Keyboard Shortcuts]', ...args);
+    }
   },
 
-  toggleShortcutsDialog() {
-    if (!this.dialog) {
-      this.dialog = this.createShortcutsDialog();
-    }
+  shouldIgnoreShortcut() {
+    const activeElement = document.activeElement;
+    const isIgnorable =
+      (activeElement.tagName !== 'INPUT' &&
+        activeElement.tagName !== 'TEXTAREA' &&
+        activeElement.getAttribute('contenteditable') !== 'true' &&
+        !activeElement.classList.contains('msg-form__contenteditable'));
 
-    if (this.dialog.style.display === 'block') {
-      this.dialog.style.display = 'none';
-    } else {
-      this.dialog.style.display = 'block';
-      this.renderShortcuts();
+    if (isIgnorable) {
+      this.log('Ignoring shortcut - Active element:', activeElement.tagName, activeElement.className);
     }
+    return isIgnorable;
   },
 
   handleConversationNavigation(e) {
     // Only handle Cmd/Ctrl + up/down arrows
-    console.log(e.shiftKey)
-    if(e.shiftKey){
+    if (!((e.metaKey || e.ctrlKey) && !e.shiftKey) ||
+      (e.code !== 'ArrowDown' && e.code !== 'ArrowUp')) {
       return;
     }
-    if (!((e.metaKey || e.ctrlKey) && !e.shiftKey) || (e.code !== 'ArrowDown' && e.code !== 'ArrowUp')) {
-        return;
-    }
 
-    e.preventDefault(); // Prevent page scrolling
+    this.log('Navigation key pressed:', e.code);
+    e.preventDefault();
 
-    // Get the conversations list
     const conversationsList = document.querySelector('.msg-conversations-container__conversations-list');
     if (!conversationsList) {
-        return;
+      this.log('Conversations list not found');
+      return;
     }
 
-    // Get all visible conversation items
+    // Get all visible conversations
     const conversations = Array.from(conversationsList.getElementsByTagName('li')).filter(li => {
-        const computedStyle = window.getComputedStyle(li);
-        return computedStyle.display !== 'none';
+      const computedStyle = window.getComputedStyle(li);
+      return computedStyle.display !== 'none';
     });
 
     if (!conversations.length) {
-        return;
+      this.log('No visible conversations found');
+      return;
     }
 
-    // Find current active conversation if we don't have it
+    // Find current active conversation
     if (this.currentActiveIndex === -1) {
-        this.currentActiveIndex = conversations.findIndex(li =>
-            li.querySelector('.msg-conversation-listitem__active-text.visually-hidden')
-        );
-
-        // If still no active conversation found, start from the beginning
-        if (this.currentActiveIndex === -1) {
-            this.currentActiveIndex = 0;
-        }
+      this.currentActiveIndex = conversations.findIndex(li =>
+        li.querySelector('.msg-conversation-listitem__active-text.visually-hidden')
+      );
+      if (this.currentActiveIndex === -1) {
+        this.currentActiveIndex = 0;
+      }
     }
 
-    // Calculate new index based on arrow key
+    this.log('Current active index:', this.currentActiveIndex);
+
+    // Calculate new index
     let newIndex;
     if (e.code === 'ArrowDown') {
-        newIndex = this.currentActiveIndex + 1;
-        if (newIndex >= conversations.length) {
-            newIndex = 0; // Wrap to start
-        }
-    } else { // ArrowUp
-        newIndex = this.currentActiveIndex - 1;
-        if (newIndex < 0) {
-            newIndex = conversations.length - 1; // Wrap to end
-        }
+      newIndex = (this.currentActiveIndex + 1) % conversations.length;
+    } else {
+      newIndex = this.currentActiveIndex - 1;
+      if (newIndex < 0) newIndex = conversations.length - 1;
     }
 
-    // Find and click the selectable content element
+    this.log('New index:', newIndex);
+
+    // Click the conversation
     const selectableContent = conversations[newIndex].querySelector('.msg-conversation-card__content--selectable');
     if (selectableContent) {
-        selectableContent.click();
-        this.currentActiveIndex = newIndex;
+      this.log('Clicking conversation at index:', newIndex);
+      selectableContent.click();
+      this.currentActiveIndex = newIndex;
 
-        // Get the height of the selected conversation element
-        const conversationHeight = conversations[newIndex].offsetHeight;
-        
-        // Calculate scroll position
-        const containerTop = conversationsList.scrollTop;
-        const elementTop = conversations[newIndex].offsetTop;
-        const containerHeight = conversationsList.clientHeight;
-        
-        // Scroll based on direction
-        if (e.code === 'ArrowDown') {
-            // If element is below viewport
-            if (elementTop + conversationHeight > containerTop + containerHeight) {
-                conversationsList.scrollTop = elementTop - containerHeight + conversationHeight;
-            }
-        } else {
-            // If element is above viewport
-            if (elementTop < containerTop) {
-                conversationsList.scrollTop = elementTop;
-            }
-        }
+      // Handle scrolling
+      this.handleConversationScroll(conversations[newIndex], conversationsList, e.code === 'ArrowDown');
+    } else {
+      this.log('Selectable content not found for conversation');
     }
-},
+  },
+
+  handleConversationScroll(element, container, isDownward) {
+    const elementHeight = element.offsetHeight;
+    const containerTop = container.scrollTop;
+    const elementTop = element.offsetTop;
+    const containerHeight = container.clientHeight;
+
+    if (isDownward) {
+      if (elementTop + elementHeight > containerTop + containerHeight) {
+        container.scrollTop = elementTop - containerHeight + elementHeight;
+        this.log('Scrolling down to:', container.scrollTop);
+      }
+    } else {
+      if (elementTop < containerTop) {
+        container.scrollTop = elementTop;
+        this.log('Scrolling up to:', container.scrollTop);
+      }
+    }
+  },
 
   handleManualClick(e) {
     const conversationsList = document.querySelector('.msg-conversations-container__conversations-list');
@@ -326,139 +116,161 @@ window.keyboard.shortcuts = {
     if (clickedLi && conversationsList.contains(clickedLi)) {
       const conversations = Array.from(conversationsList.getElementsByTagName('li'));
       this.currentActiveIndex = conversations.indexOf(clickedLi);
+      this.log('Manual click - Updated active index:', this.currentActiveIndex);
     }
   },
 
   openProfileInNewTab() {
+    this.log('Attempting to open profile in new tab');
     const profileLink = document.querySelector('.msg-thread__link-to-profile');
     if (profileLink) {
+      this.log('Opening profile:', profileLink.href);
       window.open(profileLink.href, '_blank');
     } else {
-
+      this.log('Profile link not found');
       window.labelUtil.showToast('Profile link not found', 'error');
     }
   },
 
   findAndClickOption(optionText) {
-    function pollForOption() {
-      const profileLink = document.querySelector('.msg-title-bar');
-      const activeConversation = profileLink.querySelector('.msg-thread-actions__dropdown');
-      if (activeConversation) {
-        const inboxShortcuts = activeConversation.querySelector('.msg-thread-actions__dropdown-options');
+    this.log('Looking for option:', optionText);
 
-        if (inboxShortcuts) {
-          const children = inboxShortcuts.querySelector('.artdeco-dropdown__content-inner');
-          const ul = children?.getElementsByTagName('ul')[0];
-          if (ul) {
-            const targetItem = Array.from(ul.querySelectorAll('div')).find(item =>
-              item.textContent.includes(optionText)
-            );
+    const pollForOption = () => {
+      const titleBar = document.querySelector('.msg-title-bar');
+      const dropdown = titleBar?.querySelector('.msg-thread-actions__dropdown');
 
-            if (targetItem) {
-              targetItem.click();
-              const dropdown = document.querySelector('.msg-thread-actions__dropdown-container');
-              if (dropdown) {
-                dropdown.style.opacity = '1';
-              }
-            } else {
-              const dropdown = document.querySelector('.msg-thread-actions__dropdown-container');
-              if (dropdown) {
-                dropdown.style.opacity = '1';
-              }
-            }
-          } else {
-            setTimeout(pollForOption, 500);
-          }
+      if (!dropdown) {
+        this.log('Dropdown not found');
+        return;
+      }
+
+      const button = dropdown.querySelector('button.msg-thread-actions__control');
+      if (!button) {
+        this.log('Dropdown button not found');
+        return;
+      }
+
+      // Click the dropdown button
+      this.log('Clicking dropdown button');
+      button.click();
+
+      setTimeout(() => {
+        const options = document.querySelectorAll('.msg-thread-actions__dropdown-option');
+        this.log('Found options:', options.length);
+
+        const targetOption = Array.from(options).find(option =>
+          option.textContent.trim().includes(optionText)
+        );
+
+        if (targetOption) {
+          this.log('Found target option, clicking:', optionText);
+          targetOption.click();
         } else {
-          setTimeout(pollForOption, 500);
+          this.log('Target option not found:', optionText);
         }
-      } else {
-        const dropdown = document.querySelector('.msg-thread-actions__dropdown-container');
-        if (dropdown) {
-          dropdown.style.opacity = '1';
-        }
-      }
-    }
+      }, 100);
+    };
 
-    const profileLink = document.querySelector('.msg-title-bar');
-    const activeConversation = profileLink?.querySelector('.msg-thread-actions__dropdown');
-    if (activeConversation) {
-      const button = activeConversation.querySelector('button.msg-thread-actions__control');
-      const dropdown = activeConversation.querySelector('.msg-thread-actions__dropdown-container');
-      if (button) {
-        dropdown.style.opacity = '0';
-        button.click();
-        setTimeout(pollForOption, 500);
-      }
-    }
+    pollForOption();
   },
 
   handleKeyboardShortcuts(event) {
-    if(event.shiftKey)
-      return;
-    if (!(event.metaKey || event.ctrlKey)) return;
 
-    // Handle shortcuts dialog
-    if (event.altKey && event.code === 'KeyS') {
-      event.preventDefault();
-      this.toggleShortcutsDialog();
-      return;
+    if (event.key === 'Escape') {
+      const focusedElement = document.querySelector('.msg-form__contenteditable:focus');
+      if (focusedElement) {
+        this.log('Unfocusing message form with Escape');
+        focusedElement.blur();
+        document.body.focus();
+        return;
+      }
     }
+    if (!this.shouldIgnoreShortcut()) return;
+    const isCtrlCmd = event.metaKey || event.ctrlKey;
+    if (isCtrlCmd) return;
 
-    // Handle profile opening
-    if (event.code === 'KeyO') {
-      event.preventDefault();
-      this.openProfileInNewTab();
-      return;
-    }
+
+
+
+    this.log('Keyboard shortcut detected:', event.code, {
+      shift: event.shiftKey,
+      ctrl: event.ctrlKey,
+      meta: event.metaKey
+    });
 
     let optionToFind = null;
 
     switch (event.code) {
-      case 'KeyA':
+      case 'KeyE':
+        event.preventDefault();
+        this.log('Archive shortcut triggered');
+        optionToFind = 'Archive';
+        break;
+
+      case 'KeyR':
+        event.preventDefault();
         if (event.shiftKey) {
-          event.preventDefault();
-          optionToFind = 'Archive';
+          this.log('Unfocus shortcut triggered (Shift + R)');
+          // Find any focused input or contenteditable
+          const focusedElement = document.querySelector('.msg-form__contenteditable:focus');
+          if (focusedElement) {
+            focusedElement.blur();
+            // Focus the body to ensure keyboard shortcuts work
+            document.body.focus();
+            this.log('Message form unfocused');
+          } else {
+            this.log('No message form to unfocus');
+          }
+        } else {
+          this.log('Focus reply shortcut triggered (R)');
+          const msgForm = document.querySelector('.msg-form__contenteditable');
+          if (msgForm) {
+            msgForm.focus();
+            this.log('Message form focused');
+          } else {
+            this.log('Message form not found');
+          }
         }
         break;
-      case 'KeyU':
+
+      case 'KeyO':
         event.preventDefault();
-        optionToFind = 'Mark as unread';
+        this.log('Open profile shortcut triggered');
+        this.openProfileInNewTab();
         break;
+
       case 'KeyI':
-        event.preventDefault();
-        optionToFind = 'Mark as read';
+        if (event.shiftKey) {
+          event.preventDefault();
+          this.log('Mark as read shortcut triggered');
+          optionToFind = 'Mark as read';
+        }
         break;
+
+      case 'KeyU':
+        if (event.shiftKey) {
+          event.preventDefault();
+          this.log('Mark as unread shortcut triggered');
+          optionToFind = 'Mark as unread';
+        }
+        break;
+
       case 'KeyD':
         event.preventDefault();
+        this.log('Delete shortcut triggered');
         optionToFind = 'Delete conversation';
         break;
+
       case 'KeyM':
         event.preventDefault();
-        optionToFind = 'Mute';
-        if (event.shiftKey) {
-          optionToFind = 'Unmute';
-        }
+        this.log('Mute/Unmute shortcut triggered');
+        optionToFind = event.shiftKey ? 'Unmute' : 'Mute';
         break;
+
       case 'KeyS':
         event.preventDefault();
-        if (event.shiftKey) {
-          optionToFind = 'Remove star';
-        } else {
-          optionToFind = 'Star';
-        }
-        break;
-      case 'KeyB':
-        if (event.shiftKey) {
-          event.preventDefault();
-          optionToFind = 'Move to Other';
-        }
-        break;
-      case 'KeyL':
-        if (event.shiftKey) {
-          event.preventDefault();
-          document.dispatchEvent(new CustomEvent('TOGGLE_FLOATING_PANEL_EVENT'));
-        }
+        this.log('Star/Unstar shortcut triggered');
+        optionToFind = event.shiftKey ? 'Remove star' : 'Star';
         break;
     }
 
@@ -469,17 +281,23 @@ window.keyboard.shortcuts = {
 
   observer() {
     if (this.isInitialized) {
+      this.log('Already initialized');
       return;
     }
 
+    this.log('Initializing keyboard shortcuts');
+
     // Initialize keyboard shortcuts
-    document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
-    
+    document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+
     // Initialize conversation navigation
-    document.addEventListener('keydown', this.handleConversationNavigation.bind(this));
-    document.addEventListener('click', this.handleManualClick.bind(this));
+    document.addEventListener('keydown', (e) => this.handleConversationNavigation(e));
+    document.addEventListener('click', (e) => this.handleManualClick(e));
 
     this.isInitialized = true;
-    console.log('Keyboard shortcuts and navigation initialized successfully');
+    this.log('Initialization complete');
   }
 };
+
+// Initialize keyboard shortcuts
+window.keyboard.shortcuts.observer();
