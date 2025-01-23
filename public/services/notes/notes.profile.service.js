@@ -63,7 +63,7 @@ class ProfileNotes {
                 
                 const id = this.extractProfileId(url);
                 if (!id) return null;
-                console.log(id)
+                // console.log(id)
                 return { 
                     profileId: id,
                     username: null

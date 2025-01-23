@@ -28,111 +28,119 @@ class NotesDatabase {
         }
     }
 
-    cleanupSubscriptions() {
-        if (this.currentSubscriptionBatch) {
-            this.currentSubscriptionBatch.forEach(unsub => {
-                if (typeof unsub === 'function') {
-                    unsub();
-                }
-            });
-            this.currentSubscriptionBatch.clear();
-        }
-    }
 
     async setupRealtimeSync() {
         try {
             const { db, currentUser } = await window.firebaseService.initialize();
             if (!db || !currentUser) return;
-
-            this.cleanupSubscriptions();
-
+    
+            // First, ensure complete cleanup
+            if (this.currentSubscriptionBatch) {
+                this.currentSubscriptionBatch.forEach(unsub => {
+                    try {
+                        unsub();
+                    } catch (e) {
+                        console.error('Notes Cleanup error:', e);
+                    }
+                });
+            }
+    
+            // Reset all subscriptions and state
             this.currentSubscriptionBatch = new Set();
-            this.pendingNotes = new Map();
-            this.lastProcessedChunk = -1;
-            this.totalChunks = 0;
-
-            const chunkArray = (arr, size) => {
-                const chunks = [];
-                for (let i = 0; i < arr.length; i += size) {
-                    chunks.push(arr.slice(i, i + size));
-                }
-                return chunks;
-            };
-
+            this.notes = {};
+    
+            // Set up the user document listener first
             const userRef = db.collection('users').doc(currentUser.uid);
-            const userUnsubscribe = userRef.onSnapshot(async (userDoc) => {
-                try {
+            const userUnsubscribe = userRef.onSnapshot(
+                (userDoc) => {
+                    // Clear existing note listeners first
+                    this.currentSubscriptionBatch.forEach(unsub => {
+                        if (unsub !== userUnsubscribe) { // Keep user listener active
+                            try {
+                                unsub();
+                            } catch (e) {
+                                console.error('Notes listener cleanup error:', e);
+                            }
+                        }
+                    });
+    
+                    // Reset to only user listener
+                    this.currentSubscriptionBatch = new Set([userUnsubscribe]);
+    
                     if (!userDoc.exists) {
-                        console.warn('User document not found');
+                        // console.log('User doc not found');
                         return;
                     }
-
-                    const userData = userDoc.data();
-                    const noteIds = userData?.d?.n || [];
-                    console.log(userData);
-                    console.log(noteIds)
-
-                    const noteIdChunks = chunkArray(noteIds, 10);
-                    this.totalChunks = noteIdChunks.length;
-
-                    const newBatch = new Set([userUnsubscribe]);
-
-                    this.notes = {};
-                    this.pendingNotes.clear();
-                    this.lastProcessedChunk = -1;
-
-                    noteIdChunks.forEach((chunk, chunkIndex) => {
-                        if (!chunk.length) return;
-
+    
+                    const noteIds = userDoc.data()?.d?.n || [];
+                    // console.log('User doc updated, note IDs:', noteIds);
+    
+                    // Set up new listeners for each note
+                    noteIds.forEach(noteId => {
                         const noteUnsubscribe = db.collection('profile_notes')
-                            .where(firebase.firestore.FieldPath.documentId(), 'in', chunk)
-                            .onSnapshot(async (noteSnapshot) => {
-                                try {
-                                    // Process notes in this chunk
-                                    noteSnapshot.docs.forEach(doc => {
-                                        const noteData = doc.data();
-                                        this.pendingNotes.set(doc.id, {
-                                            id: doc.id,
-                                            note: noteData.n,           // note content
-                                            lastUpdated: noteData.lu,   // last updated
-                                            profileId: noteData.p     // profile data
-                                        });
-                                    });
-
-                                    this.lastProcessedChunk = Math.max(this.lastProcessedChunk, chunkIndex);
-
-                                    // if (this.lastProcessedChunk === this.totalChunks - 1) {
-                                        this.notes = Object.fromEntries(this.pendingNotes);
-                                        console.log(this.notes)
-                                        this.notifyListeners();
-                                    // }
-                                } catch (error) {
-                                    console.error('Error processing note chunk:', error);
+                            .doc(noteId)
+                            .onSnapshot(
+                                async (noteDoc) => {
+                                    if (!noteDoc.exists) {
+                                        // console.log(`Note ${noteId} does not exist`);
+                                        return;
+                                    }
+    
+                                    const noteData = noteDoc.data();
+                                    // console.log(`Note ${noteId} updated:`, noteData);
+    
+                                    // Update notes object
+                                    this.notes[noteId] = {
+                                        id: noteDoc.id,
+                                        note: noteData.n,         // note content
+                                        lastUpdated: noteData.lu, // last updated
+                                        profileId: noteData.p     // profile data
+                                    };
+    
+                                    // console.log('Notes updated:', this.notes);
+                                    this.notifyListeners();
+                                },
+                                error => {
+                                    console.error(`Note ${noteId} listener error:`, error);
                                 }
-                            }, error => {
-                                console.error('Note listener error:', error);
-                            });
-
-                        newBatch.add(noteUnsubscribe);
+                            );
+    
+                        this.currentSubscriptionBatch.add(noteUnsubscribe);
                     });
-
-                    const oldBatch = this.currentSubscriptionBatch;
-                    this.currentSubscriptionBatch = newBatch;
-                    oldBatch.forEach(unsub => unsub());
-
-                } catch (error) {
-                    console.error('Error processing user data:', error);
+    
+                    if (noteIds.length === 0) {
+                        this.notes = {};
+                        this.notifyListeners();
+                    }
+                },
+                error => {
+                    console.error('User document listener error:', error);
                 }
-            }, error => {
-                console.error('User listener error:', error);
-            });
-
+            );
+    
+            // Add initial user subscription
             this.currentSubscriptionBatch.add(userUnsubscribe);
-
+            // console.log('Notes sync setup completed');
+    
         } catch (error) {
             console.error('Setup realtime sync failed:', error);
             this.cleanupSubscriptions();
         }
+    }
+    
+    // Make sure cleanup is thorough
+    cleanupSubscriptions() {
+        if (this.currentSubscriptionBatch) {
+            this.currentSubscriptionBatch.forEach(unsub => {
+                try {
+                    unsub();
+                } catch (e) {
+                    console.error('Cleanup error:', e);
+                }
+            });
+            this.currentSubscriptionBatch.clear();
+        }
+        this.notes = {};
     }
 
     addListener(callback) {
@@ -208,7 +216,7 @@ class NotesDatabase {
     async getNotes(profileId) {
         try {
             // Search through the notes object for matching profileId
-            console.log(this.notes)
+            // console.log(this.notes)
             for (const [noteId, noteData] of Object.entries(this.notes)) {
                 if (noteData.profileId === profileId) {
                     return {

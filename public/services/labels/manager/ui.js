@@ -617,7 +617,38 @@ window.labelManagerUI = {
         });
     },
 
+
+    getRandomColor (){
+        // 20 distinct, visually appealing colors
+        const colors = [
+            '#FF3B30', // Red
+            '#FF9500', // Orange
+            '#FFCC00', // Yellow
+            '#34C759', // Green
+            '#00C7BE', // Teal
+            '#32ADE6', // Light Blue
+            '#007AFF', // Blue
+            '#5856D6', // Purple
+            '#AF52DE', // Magenta
+            '#FF2D55', // Pink
+            '#5AC8FA', // Sky Blue
+            '#4CD964', // Lime Green
+            '#FF6B6B', // Coral
+            '#A0522D', // Sienna
+            '#6A5ACD', // Slate Blue
+            '#2E8B57', // Sea Green
+            '#BA55D3', // Medium Orchid
+            '#CD853F', // Peru
+            '#48D1CC', // Medium Turquoise
+            '#FF1493'  // Deep Pink
+        ];
+        
+        // Return a random color from the array
+        return colors[Math.floor(Math.random() * colors.length)];
+    },
+        
     async handleEdit(labelId) {
+        const actionType = `label_edit_${labelId}`;
         const label = this.state.filteredLabels.find(l => l.label_id === labelId);
         if (!label) return;
     
@@ -685,18 +716,21 @@ window.labelManagerUI = {
                 return;
             }
     
+            if (!window.start_action(actionType, `Giving "${label.label_name}" a makeover...`)) {
+                return;
+            }
+    
             const success = await window.labelsDatabase.editLabel(labelId, {
                 label_name: newName,
                 label_color: label.label_color
             });
     
             if (success) {
-                window.show_success('Label updated successfully', 3000);
+                window.complete_action(actionType, true, `Label "${label.label_name}" is now "${newName}" - looking fresh! ✨`);
                 this.state.editingLabelId = null;
                 overlay.classList.remove('show');
-                // No need to refresh - listener will handle update
             } else {
-                window.show_error('Failed to update label', 3000);
+                window.complete_action(actionType, false, `Oops! Couldn't update "${label.label_name}" - stage fright perhaps? 🎭`);
             }
         };
     
@@ -725,53 +759,27 @@ window.labelManagerUI = {
     },
     
     async handleDelete(labelId) {
+        const actionType = `label_delete_${labelId}`;
         const label = this.state.filteredLabels.find(l => l.label_id === labelId);
         if (!label) return;
     
         this.showConfirmation('delete', label, async () => {
+            if (!window.start_action(actionType, `Preparing to bid farewell to "${label.label_name}"...`)) {
+                return;
+            }
+    
             const success = await window.labelsDatabase.deleteLabel(labelId);
             if (success) {
-                window.show_success('Label deleted successfully', 3000);
-                // No need to refresh - listener will handle update
+                window.complete_action(actionType, true, `"${label.label_name}" has left the building! 👋`);
             } else {
-                window.show_error('Failed to delete label', 3000);
+                window.complete_action(actionType, false, `"${label.label_name}" is being stubborn and refuses to leave! 🤔`);
             }
         });
     },
-
-    getRandomColor (){
-        // 20 distinct, visually appealing colors
-        const colors = [
-            '#FF3B30', // Red
-            '#FF9500', // Orange
-            '#FFCC00', // Yellow
-            '#34C759', // Green
-            '#00C7BE', // Teal
-            '#32ADE6', // Light Blue
-            '#007AFF', // Blue
-            '#5856D6', // Purple
-            '#AF52DE', // Magenta
-            '#FF2D55', // Pink
-            '#5AC8FA', // Sky Blue
-            '#4CD964', // Lime Green
-            '#FF6B6B', // Coral
-            '#A0522D', // Sienna
-            '#6A5ACD', // Slate Blue
-            '#2E8B57', // Sea Green
-            '#BA55D3', // Medium Orchid
-            '#CD853F', // Peru
-            '#48D1CC', // Medium Turquoise
-            '#FF1493'  // Deep Pink
-        ];
-        
-        // Return a random color from the array
-        return colors[Math.floor(Math.random() * colors.length)];
-    },
-
-
+    
     async handleAddLabel(labelName) {
+        const actionType = `label_add_${labelName}`;
         labelName = labelName.trim().toUpperCase();
-        // console.log('Adding label:', labelName);
         
         if (labelName === '') {
             window.show_error('Label name cannot be empty', 3000);
@@ -792,6 +800,10 @@ window.labelManagerUI = {
             return;
         }
     
+        if (!window.start_action(actionType, `Crafting a cozy home for "${labelName}"...`)) {
+            return;
+        }
+    
         const labelId = `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const labelColor = this.getRandomColor();
         
@@ -801,20 +813,24 @@ window.labelManagerUI = {
             label_color: labelColor,
             profiles: []
         };
+
     
+        console.log(newLabel)
         const success = await window.labelsDatabase.addLabel(newLabel);
-        this.handleLabelClick(newLabel)
+
+        console.log(success)
+
+        
         if (success) {
-            window.show_success('Label added successfully', 3000);
+            window.complete_action(actionType, true, `Welcome to the family, "${labelName}"! 🎉`);
+            this.handleLabelClick(newLabel);
             this.elements.searchInput.value = '';
             this.filterLabels();
             this.renderLabels();
         } else {
-            window.show_error('Failed to add label', 3000);
+            window.complete_action(actionType, false, `"${labelName}" got shy and couldn't join us! 🙈`);
         }
     },
-        
-  
 
     navigateList(direction) {
         const maxIndex = this.state.filteredLabels.length - 1;
@@ -868,7 +884,7 @@ window.labelManagerUI = {
         if (window.labelManagerCore.applyLabel) {
             window.labelManagerCore.applyLabel(label.label_id, profile_info);
         }
-        window.show_success(`${label.label_name} Added to ${profile_info.name} successfully`, 3000);
+        // window.show_success(`${label.label_name} Added to ${profile_info.name} successfully`, 3000);
         this.hideDropdown();
     },
 
@@ -1075,3 +1091,5 @@ window.labelManagerUI = {
         // console.log('[LabelManagerUI] Cleanup complete');
     }
 };
+
+

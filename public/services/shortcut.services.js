@@ -1,8 +1,14 @@
 window.floatingPanel = null;
 
 const getRecipientName = () => {
-    const nameElement = document.querySelector('.msg-entity-lockup__entity-title');
-    if (!nameElement) return null;
+    let nameElement = document.querySelector('.msg-entity-lockup__entity-title');
+    if (!nameElement){
+        nameElement = document.querySelector('.msg-connections-typeahead__top-fixed-section span.artdeco-pill__text');
+    }
+    if(!nameElement){
+        nameElement = document.querySelector('h2.msg-overlay-bubble-header__title span');
+    }
+    if(!nameElement) return null;
     
     const fullName = nameElement.textContent.trim();
     const nameParts = fullName.split(' ');
@@ -222,19 +228,29 @@ const setupContentEditableHandlers = () => {
 
     const insertTemplate = (template) => {
         if (!currentElement) return;
-
+    
         const pElement = currentElement.querySelector('p') || 
                         currentElement.querySelector('div[contenteditable="true"]');
         
         if (pElement) {
             const processedMessage = replacePlaceholders(template.message);
-            pElement.textContent = processedMessage;
-
-            ['input', 'keyup', 'keydown'].forEach(eventType => {
-                pElement.dispatchEvent(new Event(eventType, { bubbles: true }));
-            });
-
+            
+            pElement.innerHTML = processedMessage;
+    
+            // Minimal event dispatch
+            const event = new Event('input', { bubbles: true });
+            pElement.dispatchEvent(event);
+    
+            window.hideFloatingPanel();
+            // Simulate Shift+Enter 
             pElement.focus();
+            const shiftEnterEvent = new KeyboardEvent('keydown', {
+                key: 'Enter',
+                code: 'Enter',
+                shiftKey: true,
+                bubbles: true
+            });
+            pElement.dispatchEvent(shiftEnterEvent);
             const range = document.createRange();
             const sel = window.getSelection();
             range.selectNodeContents(pElement);
@@ -242,8 +258,6 @@ const setupContentEditableHandlers = () => {
             sel.removeAllRanges();
             sel.addRange(range);
         }
-
-        window.hideFloatingPanel();
     };
 
     const handleKeyboardNavigation = (event) => {

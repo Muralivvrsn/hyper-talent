@@ -4,7 +4,16 @@ window.labelFilterUI = {
         button: null,
         dropdown: null,
         selectedLabelsWrapper: null,
-        selectedLabelsContainer: null
+        selectedLabelsContainer: null,
+        searchInput: null,
+        searchResults: null
+    },
+    state: {
+        currentFocusIndex: -1,
+        visibleOptions: [],
+        isSearching: false,
+        labels: [],          // All labels
+        filteredLabels: []
     },
 
     styles: `
@@ -204,8 +213,106 @@ window.labelFilterUI = {
         font-size: 13px !important;
         font-family: "Poppins", serif !important;
     }
+    .label-search-container {
+        padding: 8px 12px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .label-search-input {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        font-size: 13px;
+        font-family: "Poppins", sans-serif !important;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+
+    .label-search-input:focus {
+        border-color: #0073b1;
+        box-shadow: 0 0 0 1px rgba(0, 115, 177, 0.2);
+    }
+
+    .label-option.keyboard-focus {
+        background: #f0f0f0;
+        outline: none;
+    }
+
+    .no-results {
+        padding: 12px;
+        text-align: center;
+        color: #666;
+        font-size: 13px;
+        font-family: "Poppins", sans-serif !important;
+    }
+        .label-search-results {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-right: 1px;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+}
+
+.label-search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.label-search-results::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.label-search-results::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+}
 `,
 
+
+    renderLabels() {
+        if (!this.elements.searchResults) return;
+
+        this.elements.searchResults.innerHTML = '';
+        this.state.visibleOptions = [];
+
+        if (!this.state.filteredLabels.length) {
+            const noResults = window.labelFilterUtils.createElement('div', 'no-results');
+            noResults.textContent = 'No labels found';
+            this.elements.searchResults.appendChild(noResults);
+            return;
+        }
+
+        this.state.filteredLabels.forEach(label => {
+            const option = window.labelFilterUtils.createElement('div', 'label-option');
+            const isSelected = window.labelFilterCore?.selectedLabels.has(label.label_id);
+
+            if (isSelected) {
+                option.classList.add('selected');
+                option.style.backgroundColor = `${label.label_color}33`;
+            }
+
+            const checkbox = window.labelFilterUtils.createElement('input', 'label-checkbox', {
+                type: 'checkbox',
+                value: label.label_id,
+                checked: isSelected
+            });
+
+            const labelDiv = window.labelFilterUtils.createElement('div', 'label-text-filter');
+            labelDiv.textContent = label.label_name;
+            labelDiv.style.color = label.label_color;
+
+            option.appendChild(checkbox);
+            option.appendChild(labelDiv);
+
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.selectCurrentOption(option);
+            });
+
+            this.elements.searchResults.appendChild(option);
+            this.state.visibleOptions.push(option);
+        });
+    },
     setupFilterButton() {
         if (document.querySelector('.label-filter-container')) {
             return false;
@@ -217,6 +324,7 @@ window.labelFilterUI = {
 
         this.createElements(firstDiv);
         this.attachEventListeners();
+        this.setupKeyboardNavigation();
         return true;
     },
 
@@ -231,13 +339,32 @@ window.labelFilterUI = {
     },
 
     createElements(parentElement) {
+        // Create existing elements
         this.elements.container = window.labelFilterUtils.createElement('div', 'label-filter-container');
         this.elements.button = window.labelFilterUtils.createElement('button', 'label-filter-button');
         this.elements.button.innerHTML = `Filter <span class="label-count">0</span>`;
         this.elements.dropdown = window.labelFilterUtils.createElement('div', 'label-dropdown');
+
+        // Create search container and input
+        const searchContainer = window.labelFilterUtils.createElement('div', 'label-search-container');
+        this.elements.searchInput = window.labelFilterUtils.createElement('input', 'label-search-input', {
+            type: 'text',
+            placeholder: 'Search labels...'
+        });
+        searchContainer.appendChild(this.elements.searchInput);
+
+        // Create results container
+        this.elements.searchResults = window.labelFilterUtils.createElement('div', 'label-search-results');
+
+        // Append search elements to dropdown
+        this.elements.dropdown.appendChild(searchContainer);
+        this.elements.dropdown.appendChild(this.elements.searchResults);
+
+        // Create selected labels elements
         this.elements.selectedLabelsWrapper = window.labelFilterUtils.createElement('div', 'selected-labels-wrapper');
         this.elements.selectedLabelsContainer = window.labelFilterUtils.createElement('div', 'selected-labels');
 
+        // Append everything
         this.elements.selectedLabelsWrapper.appendChild(this.elements.selectedLabelsContainer);
         this.elements.selectedLabelsWrapper.style.display = 'none';
         this.elements.container.appendChild(this.elements.button);
@@ -249,82 +376,176 @@ window.labelFilterUI = {
             this.elements.selectedLabelsWrapper,
             targetContainer.nextSibling
         );
+        this.initializeLabels();
     },
 
     attachEventListeners() {
+        // Existing click handlers
         this.elements.button.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.elements.dropdown.classList.toggle('show');
+            this.toggleDropdown();
         });
 
         document.addEventListener('click', (e) => {
             if (!this.elements.container.contains(e.target)) {
-                this.elements.dropdown.classList.remove('show');
+                this.closeDropdown();
+            }
+        });
+
+        // Search input handler
+        this.elements.searchInput.addEventListener('input', (e) => {
+            this.handleSearch(e.target.value);
+        });
+
+        // Global keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' && !this.isInputFocused() && !document.activeElement.matches('input, textarea') && document.activeElement.getAttribute('contenteditable') !== 'true' &&
+            !document.activeElement.classList.contains('msg-form__contenteditable')) {
+                e.preventDefault();
+                this.toggleDropdown(true);
             }
         });
     },
 
-    updateLabelsDropdown(labels) {
-        try{
-            this.elements.dropdown.innerHTML = '';
-            labels.forEach(label => {
-                const option = window.labelFilterUtils.createElement('div', 'label-option');
-                const isSelected = window.labelFilterCore.selectedLabels.has(label.label_id);
-                
-                if (isSelected) {
-                    option.classList.add('selected');
-                    // Set background color with 20% opacity when selected
-                    option.style.backgroundColor = `${label.label_color}33`; // 33 in hex is ~20% opacity
-                }
-    
-                const checkbox = window.labelFilterUtils.createElement('input', 'label-checkbox', {
-                    type: 'checkbox',
-                    value: label.label_id,
-                    checked: isSelected
-                });
-                
-                const labelDiv = window.labelFilterUtils.createElement('div', 'label-text-filter');
-                labelDiv.textContent = label.label_name;
-                labelDiv.style.color = label.label_color;
-                
-                const removeBtn = window.labelFilterUtils.createElement('div', 'label-option-remove');
-                removeBtn.textContent = '×';
-                removeBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    window.labelFilterCore.removeLabel(label.label_id);
-                    option.style.backgroundColor = 'transparent';
-                });
-                
-                option.appendChild(checkbox);
-                option.appendChild(labelDiv);
-                option.appendChild(removeBtn);
-                
-                option.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    checkbox.checked = !checkbox.checked;
-                    option.classList.toggle('selected');
-                    if (checkbox.checked) {
-                        option.style.backgroundColor = `${label.label_color}33`;
-                    } else {
-                        option.style.backgroundColor = 'transparent';
+    isInputFocused() {
+        return document.activeElement.tagName === 'INPUT' ||
+            document.activeElement.tagName === 'TEXTAREA';
+    },
+
+    setupKeyboardNavigation() {
+        this.elements.dropdown.addEventListener('keydown', (e) => {
+            const options = this.state.visibleOptions;
+
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.moveFocus(1, options);
+                    break;
+
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.moveFocus(-1, options);
+                    break;
+
+                case 'Enter':
+                    e.preventDefault();
+                    if (this.state.currentFocusIndex >= 0) {
+                        this.selectCurrentOption(options[this.state.currentFocusIndex]);
+                    } else if (this.elements.searchInput.value && options.length > 0) {
+                        // Select first option when pressing enter in search
+                        this.selectCurrentOption(options[0]);
                     }
-                    window.labelFilterCore.toggleLabel(label.label_id);
-                });
-      
-                this.elements.dropdown.appendChild(option);
-            });
+                    break;
+
+                case 'Escape':
+                    e.preventDefault();
+                    this.closeDropdown();
+                    break;
+            }
+        });
+    },
+
+    moveFocus(direction, options) {
+        const maxIndex = options.length - 1;
+        let newIndex = this.state.currentFocusIndex + direction;
+
+        if (newIndex < 0) newIndex = maxIndex;
+        if (newIndex > maxIndex) newIndex = 0;
+
+        this.updateFocus(newIndex, options);
+    },
+
+    updateFocus(index, options) {
+        // Remove previous focus
+        options.forEach(opt => opt.classList.remove('keyboard-focus'));
+
+        if (index >= 0 && options[index]) {
+            options[index].classList.add('keyboard-focus');
+            options[index].scrollIntoView({ block: 'nearest' });
         }
-        catch(e){
-            console.log(e)
+
+        this.state.currentFocusIndex = index;
+    },
+
+    selectCurrentOption(option) {
+        if (option) {
+            const checkbox = option.querySelector('input[type="checkbox"]');
+            const labelId = checkbox.value;
+            checkbox.checked = !checkbox.checked;
+            option.classList.toggle('selected');
+
+            if (checkbox.checked) {
+                option.style.backgroundColor = `${window.labelFilterCore?.state.labelsCache.get(labelId).color}33`;
+            } else {
+                option.style.backgroundColor = 'transparent';
+            }
+
+            window.labelFilterCore?.toggleLabel(labelId);
         }
     },
 
+    toggleDropdown(focusSearch = false) {
+        const isVisible = this.elements.dropdown.classList.contains('show');
+        
+        if (!isVisible) {
+            this.elements.dropdown.classList.add('show');
+            // No need to update labels, just render current state
+            this.renderLabels();
+            if (focusSearch) {
+                this.elements.searchInput.focus();
+            }
+        } else {
+            this.closeDropdown();
+        }
+    },
+    
+
+    closeDropdown() {
+        this.elements.dropdown.classList.remove('show');
+        this.elements.searchInput.value = '';
+        this.state.currentFocusIndex = -1;
+        // Reset filtered labels to show all when reopening
+        this.state.filteredLabels = this.state.labels;
+    },
+
+    handleSearch(query) {
+        if (!query.trim()) {
+            this.state.filteredLabels = this.state.labels;
+        } else {
+            this.state.filteredLabels = this.state.labels.filter(label => 
+                label.label_name.toLowerCase().includes(query.toLowerCase().trim())
+            );
+        }
+        this.renderLabels();
+    },
+
+    initializeLabels() {
+        if (window.labelFilterCore?.state.labels) {
+            this.updateLabelsDropdown(window.labelFilterCore?.state.labels);
+        } else {
+            // If labels aren't available yet, show loading state
+            const loadingMsg = window.labelFilterUtils.createElement('div', 'no-results');
+            loadingMsg.textContent = 'Loading labels...';
+            this.elements.searchResults.appendChild(loadingMsg);
+        }
+    },
+
+    updateLabelsDropdown(labels) {
+        const sortedLabels = [...labels].sort((a, b) => 
+            a.label_name.localeCompare(b.label_name)
+        );
+        
+        this.state.labels = sortedLabels;
+        this.state.filteredLabels = sortedLabels;
+        this.renderLabels();
+    },
+
     updateSelectedLabels() {
-        const selectedLabels = window.labelFilterCore.selectedLabels;
+        const selectedLabels = window.labelFilterCore?.selectedLabels;
         this.elements.selectedLabelsContainer.innerHTML = '';
 
         selectedLabels.forEach(labelId => {
-            const labelInfo = window.labelFilterCore.state.labelsCache.get(labelId);
+            const labelInfo = window.labelFilterCore?.state.labelsCache.get(labelId);
             if (!labelInfo) return;
 
             const labelElement = window.labelFilterUtils.createElement('div', 'selected-label');
@@ -340,7 +561,7 @@ window.labelFilterUI = {
 
             removeButton.addEventListener('click', (e) => {
                 e.stopPropagation();
-                window.labelFilterCore.removeLabel(labelId);
+                window.labelFilterCore?.removeLabel(labelId);
             });
 
             labelElement.appendChild(labelText);
@@ -382,7 +603,7 @@ window.labelFilterUI = {
             loadingEl.style.display = 'flex';
         }
 
-        const hasActiveFilters = window.labelFilterCore.state.allowedLabels.length > 0;
+        const hasActiveFilters = window.labelFilterCore?.state.allowedLabels.length > 0;
         for (const conversation of conversations) {
             const imgEl = conversation.querySelector('.msg-selectable-entity__entity img') ||
                 conversation.querySelector('.msg-facepile-grid--no-facepile img');
@@ -396,7 +617,7 @@ window.labelFilterUI = {
             const imgSrc = imgEl.getAttribute('src');
             const name = nameEl.textContent.trim();
 
-            const isMatch = await window.labelFilterCore.checkLabelMatch(imgSrc, name);
+            const isMatch = await window.labelFilterCore?.checkLabelMatch(imgSrc, name);
 
             if (isMatch) {
                 if (!conversation.classList.contains('hypertalent-filter-checked')) {

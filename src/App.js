@@ -14,10 +14,13 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
-
+import { useOtherUsers } from './context/OtherUsersContext';
 const MainLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const { currentPage, setCurrentPage } = useProfileNote();
+
+  
+
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
   
@@ -78,6 +81,7 @@ function AppContent() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateVersions, setUpdateVersions] = useState({ current: '', previous: '' });
   const chrome = window.chrome;
+  const { otherUsers, loading, error } = useOtherUsers();
 
   useEffect(() => {
     // Check for updates
@@ -90,6 +94,8 @@ function AppContent() {
         setShowUpdateModal(true);
       }
     });
+
+    console.log(otherUsers)
   }, []);
 
   const handleCloseUpdateModal = () => {

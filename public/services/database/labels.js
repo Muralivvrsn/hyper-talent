@@ -6,7 +6,7 @@ class LabelsDatabase {
         this.pendingLabels = new Map();
         this.lastProcessedChunk = -1;
         this.totalChunks = 0;
-        
+
         window.firebaseService.addAuthStateListener(this.handleAuthStateChange.bind(this));
     }
 
@@ -32,195 +32,165 @@ class LabelsDatabase {
             const { db, currentUser } = await window.firebaseService.initialize();
             if (!db || !currentUser) return;
     
-            // Cleanup existing subscriptions properly
-            this.cleanupSubscriptions();
+            if (this.currentSubscriptionBatch) {
+                this.currentSubscriptionBatch.forEach(unsub => {
+                    try { unsub(); } catch (e) { console.error('Cleanup error:', e); }
+                });
+            }
     
-            // Initialize subscription tracking
             this.currentSubscriptionBatch = new Set();
-            this.pendingLabels = new Map();
-            this.lastProcessedChunk = -1;
-            this.totalChunks = 0;
+            this.labels = [];
     
-            // Function to chunk array into smaller arrays
-            const chunkArray = (arr, size) => {
-                const chunks = [];
-                for (let i = 0; i < arr.length; i += size) {
-                    chunks.push(arr.slice(i, i + size));
-                }
-                return chunks;
-            };
-    
-            // Set up user document listener first
             const userRef = db.collection('users').doc(currentUser.uid);
-            const userUnsubscribe = userRef.onSnapshot(async (userDoc) => {
-                try {
-                    if (!userDoc.exists) {
-                        console.warn('User document not found');
-                        return;
+            const userUnsubscribe = userRef.onSnapshot((userDoc) => {
+                this.currentSubscriptionBatch.forEach(unsub => {
+                    if (unsub !== userUnsubscribe) {
+                        try { unsub(); } catch (e) { console.error('Label listener cleanup error:', e); }
                     }
+                });
     
-                    const userData = userDoc.data();
-                    const labelIds = userData?.d?.l || [];
+                this.currentSubscriptionBatch = new Set([userUnsubscribe]);
+                if (!userDoc.exists) return;
     
-                    // Split labelIds into chunks of 10 (Firestore limit)
-                    const labelIdChunks = chunkArray(labelIds, 10);
-                    this.totalChunks = labelIdChunks.length;
+                const labelIds = userDoc.data()?.d?.l || [];
     
-                    // Create new subscription batch
-                    const newBatch = new Set([userUnsubscribe]);
-    
-                    // Clear existing labels for a fresh start
-                    this.labels = [];
-                    this.pendingLabels.clear();
-                    this.lastProcessedChunk = -1;
-    
-                    // Set up listeners for each chunk of labels
-                    labelIdChunks.forEach((chunk, chunkIndex) => {
-                        // Skip empty chunks
-                        if (!chunk.length) return;
-    
-                        const labelUnsubscribe = db.collection('profile_labels')
-                            .where(firebase.firestore.FieldPath.documentId(), 'in', chunk)
-                            .onSnapshot(async (labelSnapshot) => {
-                                try {
-                                    // Collect all profile IDs from this chunk's labels
-                                    const allProfileIds = new Set();
-                                    const chunkLabelData = new Map();
-    
-                                    labelSnapshot.docs.forEach(doc => {
-                                        const labelData = doc.data();
-                                        labelData.p?.forEach(profileId => allProfileIds.add(profileId));
-                                        chunkLabelData.set(doc.id, {
-                                            label_id: doc.id,
-                                            label_name: labelData.n,
-                                            label_color: labelData.c,
-                                            profiles: [] // Will be populated with profile data
-                                        });
-                                    });
-    
-                                    // Fetch profiles in chunks
-                                    const profileIds = [...allProfileIds];
-                                    const profileChunks = chunkArray(profileIds, 10);
-    
-                                    // Fetch all profile data
-                                    for (const profileChunk of profileChunks) {
-                                        if (!profileChunk.length) continue;
-    
-                                        const profilesSnapshot = await db.collection('profiles')
-                                            .where(firebase.firestore.FieldPath.documentId(), 'in', profileChunk)
-                                            .get();
-    
-                                        // Create profile objects
-                                        profilesSnapshot.docs.forEach(doc => {
-                                            const profile = doc.data();
-                                            labelSnapshot.docs.forEach(labelDoc => {
-                                                const labelData = labelDoc.data();
-                                                if (labelData.p?.includes(doc.id)) {
-                                                    const labelState = chunkLabelData.get(labelDoc.id);
-                                                    if (labelState) {
-                                                        labelState.profiles.push({
-                                                            profile_id: doc.id,
-                                                            name: profile.n,
-                                                            image_url: profile.img,
-                                                            code: profile.c
-                                                        });
-                                                    }
-                                                }
-                                            });
-                                        });
-                                    }
-    
-                                    // Store processed labels
-                                    chunkLabelData.forEach((labelState, labelId) => {
-                                        this.pendingLabels.set(labelId, labelState);
-                                    });
-    
-                                    // Track chunk processing
-                                    this.lastProcessedChunk = Math.max(this.lastProcessedChunk, chunkIndex);
-    
-                                    // If this was the last chunk, update the final labels array
-                                    if (this.lastProcessedChunk === this.totalChunks - 1) {
-                                        this.labels = Array.from(this.pendingLabels.values());
-                                        this.notifyListeners();
-                                    }
-                                } catch (error) {
-                                    console.error('Error processing label chunk:', error);
-                                    window.show_error('Error syncing label data');
+                labelIds.forEach(labelId => {
+                    const labelUnsubscribe = db.collection('profile_labels')
+                        .doc(labelId)
+                        .onSnapshot(async (labelDoc) => {
+                            if (!labelDoc.exists) {
+                                const labelIndex = this.labels.findIndex(l => l.label_id === labelId);
+                                if (labelIndex !== -1) {
+                                    this.labels.splice(labelIndex, 1);
+                                    this.notifyListeners();
                                 }
-                            }, error => {
-                                console.error('Label listener error:', error);
-                                window.show_error('Error in label sync');
-                            });
+                                return;
+                            }
     
-                        newBatch.add(labelUnsubscribe);
-                    });
+                            const labelData = labelDoc.data();
+                            const profileIds = labelData.p || [];
+                            const profiles = [];
     
-                    // Cleanup old batch and set new one atomically
-                    const oldBatch = this.currentSubscriptionBatch;
-                    this.currentSubscriptionBatch = newBatch;
-                    oldBatch.forEach(unsub => unsub());
+                            await Promise.all(profileIds.map(async profileId => {
+                                const profileDoc = await db.collection('profiles')
+                                    .doc(profileId)
+                                    .get();
     
-                } catch (error) {
-                    console.error('Error processing user data:', error);
-                    window.show_error('Error syncing user data');
+                                if (profileDoc.exists) {
+                                    const profile = profileDoc.data();
+                                    profiles.push({
+                                        profile_id: profileDoc.id,
+                                        name: profile.n,
+                                        image_url: profile.img,
+                                        code: profile.c
+                                    });
+                                }
+                            }));
+    
+                            const labelIndex = this.labels.findIndex(l => l.label_id === labelId);
+                            const newLabel = {
+                                label_id: labelDoc.id,
+                                label_name: labelData.n,
+                                label_color: labelData.c,
+                                profiles
+                            };
+    
+                            if (labelIndex === -1) {
+                                this.labels.push(newLabel);
+                            } else {
+                                this.labels[labelIndex] = newLabel;
+                            }
+    
+                            this.notifyListeners();
+                        }, error => {
+                            console.error(`Label ${labelId} listener error:`, error);
+                        });
+    
+                    this.currentSubscriptionBatch.add(labelUnsubscribe);
+                });
+    
+                if (labelIds.length === 0) {
+                    this.labels = [];
+                    this.notifyListeners();
                 }
             }, error => {
-                console.error('User listener error:', error);
-                window.show_error('Error in user sync');
+                console.error('User document listener error:', error);
             });
     
-            // Store initial user subscription
             this.currentSubscriptionBatch.add(userUnsubscribe);
     
         } catch (error) {
             console.error('Setup realtime sync failed:', error);
-            window.show_error('Failed to sync labels');
             this.cleanupSubscriptions();
         }
     }
-    
-    // Helper method to clean up subscriptions
+
+    // Make sure cleanup is thorough
     cleanupSubscriptions() {
         if (this.currentSubscriptionBatch) {
             this.currentSubscriptionBatch.forEach(unsub => {
                 try {
                     unsub();
-                } catch (error) {
-                    console.error('Error cleaning up subscription:', error);
+                } catch (e) {
+                    console.error('Cleanup error:', e);
                 }
             });
             this.currentSubscriptionBatch.clear();
         }
+        this.labels = [];
     }
     async addLabel(labelData) {
         try {
             const { db, currentUser } = await window.firebaseService.initialize();
             if (!db || !currentUser) throw new Error('Not initialized');
-
-            // First, update the user's document to include the new label ID
+    
             const userRef = db.collection('users').doc(currentUser.uid);
+            const userDoc = await userRef.get();
+            const userData = userDoc.data();
+            const userLabelIds = userData?.d?.l || [];
+    
+            // Chunk the label IDs to handle Firebase 'in' query limitation
+            const checkLabelNames = async (labelIds) => {
+                const existingLabelsQuery = await db.collection('profile_labels')
+                    .where(firebase.firestore.FieldPath.documentId(), 'in', labelIds)
+                    .get();
+    
+                return existingLabelsQuery.docs.map(doc => doc.data().n);
+            };
+    
+            const chunks = [];
+            for (let i = 0; i < userLabelIds.length; i += 10) {
+                chunks.push(userLabelIds.slice(i, i + 10));
+            }
+    
+            const existingLabelNames = (await Promise.all(
+                chunks.map(checkLabelNames)
+            )).flat();
+    
+            if (existingLabelNames.includes(labelData.label_name)) {
+                return false;
+            }
+    
             await db.runTransaction(async (transaction) => {
                 const userDoc = await transaction.get(userRef);
                 const userData = userDoc.data();
                 const userLabels = userData?.d?.l || [];
-                
-                // Only add if not already present
+    
                 if (!userLabels.includes(labelData.label_id)) {
                     transaction.update(userRef, {
                         'd.l': firebase.firestore.FieldValue.arrayUnion(labelData.label_id)
                     });
                 }
             });
-
-            // Create the label document
+    
             const labelRef = db.collection('profile_labels').doc(labelData.label_id);
             await labelRef.set({
-                n: labelData.label_name,     // name
-                c: labelData.label_color,    // color
-                lu: new Date().toISOString(), // last updated
-                p: []                        // profile IDs array
+                n: labelData.label_name,
+                c: labelData.label_color,
+                lu: new Date().toISOString(),
+                p: []
             });
-
+    
             return true;
         } catch (error) {
             console.error('Failed to add label:', error);
@@ -259,7 +229,7 @@ class LabelsDatabase {
                 const userDoc = await transaction.get(userRef);
                 const userData = userDoc.data();
                 const userLabels = userData?.d?.l || [];
-                
+
                 if (userLabels.includes(labelId)) {
                     transaction.update(userRef, {
                         'd.l': firebase.firestore.FieldValue.arrayRemove(labelId)
@@ -329,6 +299,7 @@ class LabelsDatabase {
     notifyListeners() {
         this.listeners.forEach(callback => {
             try {
+                // console.log("labels changed");
                 // console.log(this.labels)
                 callback(this.labels);
             } catch (error) {

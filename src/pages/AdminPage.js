@@ -5,10 +5,10 @@ import { useAuth } from '../context/AuthContext';
 import { useMigration } from '../context/MigrationContext';
 const AdminPage = () => {
   const { user } = useAuth();
-  const { migrating, error, progress, migrateDatabase } = useMigration();
+  const { add_label_user } = useMigration();
 
   const handleMigration = async () => {
-    const result = await migrateDatabase();
+    const result = await add_label_user();
     if (result.success) {
       // console.log(`Migrated ${result.usersProcessed} users`);
     }
@@ -279,11 +279,11 @@ const AdminPage = () => {
           </div>
         </div>
 
-        {error && (
+        {/* {error && (
           <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
             {errors}
           </div>
-        )}
+        )} */}
 
         {success && (
           <div className="bg-green-50 text-green-600 p-3 rounded-md text-sm">
@@ -307,13 +307,12 @@ const AdminPage = () => {
         </button>
       </form>
 
-      <div>
-        <button onClick={handleMigration} disabled={migrating}>
+      {/* <div>
+        <button onClick={handleMigration}>
           Migrate All Users
         </button>
-        {migrating && <div>Progress: {progress}</div>}
-        {error && <div>Error: {error}</div>}
-      </div>
+       
+      </div> */}
     </div>
   );
 };

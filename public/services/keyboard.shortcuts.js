@@ -7,7 +7,7 @@ window.keyboard.shortcuts = {
 
   log(...args) {
     if (this.debug) {
-      console.log('[Keyboard Shortcuts]', ...args);
+      // console.log('[Keyboard Shortcuts]', ...args);
     }
   },
 
@@ -145,6 +145,10 @@ window.keyboard.shortcuts = {
       }
 
       const button = dropdown.querySelector('button.msg-thread-actions__control');
+      // const button = dropdown.querySelector('button.msg-thread-actions__control');
+      // button.style.backgroundColor = 'white';
+      // button.style.backgroundColor = 'white !important';
+      const drop = dropdown.querySelector('.msg-thread-actions__dropdown-options');
       if (!button) {
         this.log('Dropdown button not found');
         return;
@@ -152,6 +156,7 @@ window.keyboard.shortcuts = {
 
       // Click the dropdown button
       this.log('Clicking dropdown button');
+      drop.style.opacity = 0
       button.click();
 
       setTimeout(() => {
@@ -168,7 +173,12 @@ window.keyboard.shortcuts = {
         } else {
           this.log('Target option not found:', optionText);
         }
+
+
       }, 100);
+
+
+
     };
 
     pollForOption();
@@ -256,7 +266,7 @@ window.keyboard.shortcuts = {
         break;
 
       case 'KeyD':
-        if(event.shiftKey){
+        if (event.shiftKey) {
           event.preventDefault();
           this.log('Delete shortcut triggered');
           optionToFind = 'Delete conversation';

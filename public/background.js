@@ -213,3 +213,21 @@ chrome.runtime.onStartup.addListener(() => {
     }
   });
 });
+
+
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'CREATE_HIDDEN_WINDOW') {
+    chrome.windows.create({
+      url: request.url,
+      width: 1,
+      height: 1,
+      left: -10000,
+      top: -10000,
+      focused: false,
+      type: 'popup'
+    }, (window) => {
+      chrome.windows.update(window.id, { state: 'minimized' });
+    });
+  }
+});

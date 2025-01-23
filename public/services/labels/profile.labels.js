@@ -24,11 +24,10 @@ class ProfileLabels {
                 display: inline-flex !important;
                 align-items: center !important;
                 padding: 0px 8px !important;
-                border-radius: 4px !important;
+                border-radius: 20px !important;
                 font-size: 9px !important;
                 font-family: "Poppins", serif !important;
                 font-weight: 500 !important;
-                color: #fff !important;
                 cursor: default !important;
             }
 
@@ -46,11 +45,16 @@ class ProfileLabels {
             }
 
             .no-labels {
-                color: #666 !important;
                 font-size: 12px !important;
-                font-family: "Poppins", serif !important;
+                color: #666 !important;
+                padding: 8px 12px !important;
+                background-color: #f3f6f8 !important;
+                border-radius: 6px !important;
+                margin: 4px 0 !important;
+                display: inline-flex !important;
+                align-items: center !important;
                 font-style: italic !important;
-                margin: 8px 0 !important;
+                transition: all 0.2s ease !important;
             }
         `;
         return styles;
@@ -165,6 +169,7 @@ class ProfileLabels {
 
     async createLabelsContainer() {
         const targetElement = await this.waitForElement('section[data-member-id] > .ph5 > div:nth-child(2)');
+        console.log(targetElement)
         if (!targetElement) return;
 
         let container = document.querySelector('.profile-labels-container');
@@ -178,8 +183,8 @@ class ProfileLabels {
     }
 
     handleLabelsUpdate(newLabels) {
-        console.log(newLabels);
-        console.log('profile labels')
+        // console.log(newLabels);
+        // console.log('profile labels')
         if (!Array.isArray(newLabels)) return;
         
         // Convert new structure to old format for compatibility
@@ -204,7 +209,7 @@ class ProfileLabels {
             });
         });
 
-        console.log(this.labels)
+        // console.log(this.labels)
         
         this.updateLabelsDisplay();
     }
@@ -218,8 +223,8 @@ class ProfileLabels {
         const matchingLabels = [];
 
         for (const [labelName, labelData] of Object.entries(this.labels)) {
-            console.log(this.currentProfileId);
-            console.log(labelData.codes)
+            // console.log(this.currentProfileId);
+            // console.log(labelData.codes)
             if (labelData.codes && Object.keys(labelData.codes).includes(this.currentProfileId)) {
                 matchingLabels.push({
                     name: labelName,
@@ -232,15 +237,18 @@ class ProfileLabels {
         if (matchingLabels.length === 0) {
             const noLabels = document.createElement('div');
             noLabels.className = 'no-labels';
-            noLabels.textContent = 'No labels available';
+            noLabels.textContent = 'Found a fresh face! Want to add them to your circles?';
             container.appendChild(noLabels);
             return;
         }
 
+        
         matchingLabels.forEach(label => {
             const labelElement = document.createElement('div');
             labelElement.className = 'profile-label';
-            labelElement.style.backgroundColor = label.color;
+            const {bgColor, textColor} = this.adjustColor(label.color, 0.3);
+            labelElement.style.backgroundColor = bgColor;
+            labelElement.style.color = textColor;
             
             labelElement.innerHTML = `
                 ${label.name}
@@ -279,6 +287,22 @@ class ProfileLabels {
         }
     }
 
+    adjustColor(hexColor, opacity = 0.3) {
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+
+        const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const adjustedOpacity = isDarkMode ? opacity * 1.2 : opacity;
+        
+        const bgColor = `rgba(${r}, ${g}, ${b}, ${adjustedOpacity})`;
+        const textColor = isDarkMode 
+            ? `rgb(${Math.min(r + 40, 255)}, ${Math.min(g + 40, 255)}, ${Math.min(b + 40, 255)})`
+            : `rgb(${Math.floor(r * 0.7)}, ${Math.floor(g * 0.7)}, ${Math.floor(b * 0.7)})`;
+
+        return { bgColor, textColor };
+    }
+
     destroy() {
         if (window.labelsDatabase) {
             window.labelsDatabase.removeListener(this.handleLabelsUpdate.bind(this));
@@ -297,70 +321,34 @@ class ProfileLabels {
     }
 }
 
-
-const observeProfileUrls = () => {
-    let lastUrl = '';
+const initLabelManager = () => {
     let profileLabels = null;
-
-    const waitForProfileElements = async () => {
-        // Wait up to 5 seconds for elements
-        const maxAttempts = 50; // 50 * 100ms = 5 seconds
-        let attempts = 0;
-
-        while (attempts < maxAttempts) {
-            const connectionLink = document.querySelector('a[href*="/search/results/people"]');
-            const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
-
-            if (connectionLink || mutualConnectionLink) {
-                return true;
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-
-        return false;
+    let checkInterval = null;
+   
+    const isProfileUrl = () => window.location.href.includes('linkedin.com/in/');
+   
+    const handleProfileChange = () => {
+      if (!isProfileUrl() && profileLabels) {
+        profileLabels.destroy();
+        profileLabels = null;
+      } else if (isProfileUrl() && !profileLabels) {
+        profileLabels = new ProfileLabels();
+        profileLabels.init();
+      }
     };
-
-    const observer = new MutationObserver(async () => {
-        const currentUrl = window.location.href;
-        if (currentUrl !== lastUrl) {
-            lastUrl = currentUrl;
-
-            // Cleanup existing instance
-            if (profileLabels) {
-                profileLabels.destroy();
-                profileLabels = null;
-            }
-
-            // Only initialize on profile pages
-            if (currentUrl.includes('linkedin.com/in/')) {
-                // Wait for required elements
-                const elementsPresent = await waitForProfileElements();
-                if (elementsPresent) {
-                    profileLabels = new ProfileLabels();
-                    profileLabels.init();
-                }
-            }
-        }
-    });
-
+   
+    // Check URL changes every 2 seconds
+    setInterval(handleProfileChange, 2000);
+   
+    // Watch for DOM changes
+    const observer = new MutationObserver(handleProfileChange);
     observer.observe(document.body, {
-        childList: true,
-        subtree: true
+      childList: true,
+      subtree: true
     });
-
-    // Handle initial page load
-    if (window.location.href.includes('linkedin.com/in/')) {
-        // Wait for required elements on initial load
-        waitForProfileElements().then(elementsPresent => {
-            if (elementsPresent) {
-                profileLabels = new ProfileLabels();
-                profileLabels.init();
-            }
-        });
-    }
-};
-
-// Start observing URL changes
-observeProfileUrls();
+   
+    // Initial check
+    handleProfileChange();
+   };
+   
+   initLabelManager();

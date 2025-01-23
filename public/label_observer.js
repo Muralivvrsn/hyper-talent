@@ -326,3 +326,78 @@ class LinkedInLabelManager {
 
 // Initialize and expose the manager globally
 window.linkedInLabelManager = new LinkedInLabelManager();
+
+
+const observeMessagingPage = () => {
+    let lastUrl = '';
+
+    const isMessagingPage = (url) => {
+        return url.includes('messaging/thread/');
+    };
+
+    const waitForMessagingContainer = async () => {
+        const maxAttempts = 50; // 5 seconds total
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+            const container = document.querySelector('.msg-cross-pillar-inbox-top-bar-wrapper__container');
+            
+            if (container) {
+                return true;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+
+        return false;
+    };
+
+    const initializeLabelManager = () => {
+        // Only initialize if it doesn't exist
+        if (!window.linkedInLabelManager) {
+            window.linkedInLabelManager = new LinkedInLabelManager();
+            // window.linkedInLabelManager.initialize();
+        }
+    };
+
+    const cleanupLabelManager = () => {
+        if (window.linkedInLabelManager) {
+            window.linkedInLabelManager.destroy();
+            window.linkedInLabelManager = null;
+        }
+    };
+
+    const observer = new MutationObserver(async () => {
+        const currentUrl = window.location.href;
+        if (currentUrl !== lastUrl) {
+            lastUrl = currentUrl;
+
+            if (!isMessagingPage(currentUrl)) {
+                cleanupLabelManager();
+            } else {
+                const containerExists = await waitForMessagingContainer();
+                if (containerExists) {
+                    initializeLabelManager();
+                }
+            }
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    // Handle initial page load
+    const initialUrl = window.location.href;
+    if (isMessagingPage(initialUrl)) {
+        waitForMessagingContainer().then(containerExists => {
+            if (containerExists) {
+                initializeLabelManager();
+            }
+        });
+    }
+};
+
+observeMessagingPage()

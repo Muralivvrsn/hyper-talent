@@ -12,6 +12,7 @@ import { MigrationProvider } from './context/MigrationContext';
 import { LabelProvider } from './context/LabelContext';
 import { NotesProvider } from './context/NotesContext';
 import { TemplateProvider } from './context/TemplateContext';
+import { OtherUsersProvider } from './context/OtherUsersContext';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
@@ -20,6 +21,7 @@ root.render(
         <DataProvider>
         <MigrationProvider>
             <SheetProvider>
+            <OtherUsersProvider>
             <ThemeProvider>
                 <LabelProvider>
                     <NotesProvider>
@@ -31,6 +33,7 @@ root.render(
                     </NotesProvider>
                 </LabelProvider>
             </ThemeProvider>
+            </OtherUsersProvider>
             </SheetProvider>
         </MigrationProvider>
         </DataProvider>

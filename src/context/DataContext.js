@@ -1,6 +1,14 @@
-// context/DataContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc,
+  collection,
+  getDocs,
+  deleteDoc
+} from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { onSnapshot } from 'firebase/firestore';
 
@@ -16,57 +24,74 @@ export const useData = () => {
 
 export const DataProvider = ({ children }) => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const db = getFirestore();
 
   useEffect(() => {
-    let unsubscribe;
+    let unsubscribe = null;
 
-    const initializeData = async () => {
+    const fetchUserTemplates = async () => {
       if (!user?.uid) {
-        setMessages([]);
+        setTemplates([]);
         setLoading(false);
         return;
       }
 
       try {
-        const docRef = doc(db, 'shortcuts', user.uid);
+        const userDocRef = doc(db, 'users', user.uid);
         
-        // Set up real-time listener
-        unsubscribe = onSnapshot(docRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const messagesList = Object.entries(data.shortcuts || {}).map(([id, message]) => ({
-              id,
-              ...message
-            }));
+        // Set up real-time listener for user document
+        unsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            const templateIds = userData.d?.s || []; // Get template IDs
 
-            const sortedMessages = messagesList.sort((a, b) =>
-              new Date(b.lastUpdate) - new Date(a.lastUpdate)
-            );
+            // Fetch template details from message_template collection
+            if (templateIds.length > 0) {
+              const templatePromises = templateIds.map(async (templateId) => {
+                const templateDocRef = doc(db, 'message_templates', templateId);
+                const templateDocSnap = await getDoc(templateDocRef);
+                
+                if (templateDocSnap.exists()) {
+                  const templateData = templateDocSnap.data();
+                  console.log(templateData)
+                  return {
+                    id: templateId,
+                    title: templateData.t,
+                    content: templateData.n,
+                    lastUpdated: templateData.lu
+                  };
+                }
+                return null;
+              });
 
-            setMessages(sortedMessages);
+              const fetchedTemplates = await Promise.all(templatePromises);
+              // // Filter out any null values (in case a template was not found)
+              setTemplates(fetchedTemplates.filter(Boolean).sort((a, b) => 
+                new Date(b.lastUpdated) - new Date(a.lastUpdated)
+              ));
+            } else {
+              setTemplates([]);
+            }
           } else {
-            // Initialize empty document if it doesn't exist
-            setDoc(docRef, { shortcuts: {} });
-            setMessages([]);
+            setTemplates([]);
           }
           setLoading(false);
         }, (err) => {
-          setError('Failed to fetch messages');
+          setError('Failed to fetch templates');
           console.error('Fetch error:', err);
           setLoading(false);
         });
       } catch (err) {
-        setError('Failed to initialize data');
+        setError('Failed to initialize templates');
         console.error('Init error:', err);
         setLoading(false);
       }
     };
 
-    initializeData();
+    fetchUserTemplates();
 
     // Cleanup subscription on unmount
     return () => {
@@ -76,81 +101,88 @@ export const DataProvider = ({ children }) => {
     };
   }, [user]);
 
-  const addMessage = async (newMessage) => {
+  const addTemplate = async (newTemplate) => {
     try {
-      const docRef = doc(db, 'shortcuts', user.uid);
-      const docSnap = await getDoc(docRef);
-      const currentData = docSnap.data() || { shortcuts: {} };
+      // Generate unique template ID
+      const templateId = `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Add template to message_template collection
+      const templateDocRef = doc(db, 'message_templates', templateId);
+      await setDoc(templateDocRef, {
+        t: newTemplate.title,
+        n: newTemplate.content,
+        lu: new Date().toISOString()
+      });
 
-      const newId = crypto.randomUUID();
-      const newData = {
-        ...currentData,
-        shortcuts: {
-          ...currentData.shortcuts,
-          [newId]: {
-            title: newMessage.title,
-            content: newMessage.content,
-            lastUpdate: new Date().toISOString()
-          }
-        }
-      };
+      // Update user's template list
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const userData = userDocSnap.data();
+      
+      const updatedTemplateIds = [...(userData.d?.s || []), templateId];
+      
+      await updateDoc(userDocRef, {
+        'd.s': updatedTemplateIds
+      });
 
-      await setDoc(docRef, newData);
       return true;
     } catch (err) {
-      setError('Failed to add message');
+      setError('Failed to add template');
       console.error('Add error:', err);
       return false;
     }
   };
 
-  const editMessage = async (id, editedMessage) => {
+  const editTemplate = async (id, editedTemplate) => {
     try {
-      const docRef = doc(db, 'shortcuts', user.uid);
-      const docSnap = await getDoc(docRef);
-      const currentData = docSnap.data();
+      // Update template in message_template collection
+      const templateDocRef = doc(db, 'message_templates', id);
+      await updateDoc(templateDocRef, {
+        t: editedTemplate.title,
+        n: editedTemplate.content,
+        lu: new Date().toISOString()
+      });
 
-      const updatedShortcuts = {
-        ...currentData.shortcuts,
-        [id]: {
-          title: editedMessage.title,
-          content: editedMessage.content,
-          lastUpdate: new Date().toISOString()
-        }
-      };
-
-      await updateDoc(docRef, { shortcuts: updatedShortcuts });
       return true;
     } catch (err) {
-      setError('Failed to update message');
+      setError('Failed to update template');
       console.error('Update error:', err);
       return false;
     }
   };
 
-  const deleteMessage = async (id) => {
+  const deleteTemplate = async (id) => {
     try {
-      const docRef = doc(db, 'shortcuts', user.uid);
-      const docSnap = await getDoc(docRef);
-      const currentData = docSnap.data();
-
-      const { [id]: removed, ...remainingShortcuts } = currentData.shortcuts;
-      await updateDoc(docRef, { shortcuts: remainingShortcuts });
+      // Remove template from message_template collection
+      const templateDocRef = doc(db, 'message_template', id);
+      await deleteDoc(templateDocRef);
+  
+      // Remove template ID from user's template list
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const userData = userDocSnap.data();
+      
+      const updatedTemplateIds = (userData.d?.s || []).filter(templateId => templateId !== id);
+      
+      await updateDoc(userDocRef, {
+        'd.s': updatedTemplateIds
+      });
+  
       return true;
     } catch (err) {
-      setError('Failed to delete message');
+      setError('Failed to delete template');
       console.error('Delete error:', err);
       return false;
     }
   };
 
   const value = {
-    messages,
+    templates,
     loading,
     error,
-    addMessage,
-    editMessage,
-    deleteMessage
+    addTemplate,
+    editTemplate,
+    deleteTemplate
   };
 
   return (

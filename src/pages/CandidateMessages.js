@@ -25,7 +25,8 @@ import { Textarea } from "../components/ui/textarea";
 import { formatDistanceToNow } from 'date-fns';
 
 const CandidateMessages = () => {
-  const { messages, loading, error, addMessage, editMessage, deleteMessage } = useData();
+  const { templates, loading, error, addTemplate, editTemplate, deleteTemplate } = useData();
+  console.log(templates)
   const [editingMessage, setEditingMessage] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', content: '' });
   const [showAddForm, setShowAddForm] = useState(false);
@@ -37,7 +38,7 @@ const CandidateMessages = () => {
     if (!newMessage.title || !newMessage.content) return;
     setIsSaving(true);
     try {
-      const success = await addMessage(newMessage);
+      const success = await addTemplate(newMessage);
       if (success) {
         setShowAddForm(false);
         setNewMessage({ title: '', content: '' });
@@ -52,7 +53,7 @@ const CandidateMessages = () => {
 
     setIsSaving(true);
     try {
-      const success = await editMessage(editingMessage.id, editForm);
+      const success = await editTemplate(editingMessage.id, editForm);
       if (success) {
         setEditingMessage(null);
         setEditForm({ title: '', content: '' });
@@ -67,7 +68,7 @@ const CandidateMessages = () => {
 
     setIsSaving(true);
     try {
-      await deleteMessage(deleteConfirmMessage.id);
+      await deleteTemplate(deleteConfirmMessage.id);
       setDeleteConfirmMessage(null);
     } finally {
       setIsSaving(false);
@@ -75,6 +76,7 @@ const CandidateMessages = () => {
   };
 
   const formatDate = (date) => {
+    console.log(date)
     return formatDistanceToNow(new Date(date), { addSuffix: true });
   };
 
@@ -272,7 +274,7 @@ const CandidateMessages = () => {
         </AlertDialog>
 
         {/* Messages List */}
-        {messages.length === 0 ? (
+        {templates.length === 0 ? (
           <div className="text-center p-8">
             <MessageSquarePlus className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-2 text-sm font-semibold">No messages yet</h3>
@@ -280,7 +282,7 @@ const CandidateMessages = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((message) => (
+            {templates.map((message) => (
               <div
                 key={message.id}
                 className="group flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent cursor-pointer"
@@ -296,7 +298,7 @@ const CandidateMessages = () => {
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-semibold">{message.title}</div>
                     <div className="text-xs text-foreground">
-                      {formatDate(message.lastUpdate)}
+                      {formatDate(message.lastUpdated)}
                     </div>
                   </div>
                 </div>

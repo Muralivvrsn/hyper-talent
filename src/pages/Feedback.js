@@ -24,6 +24,8 @@ const feedbackTypes = [
   { value: "Suggestion", label: "Suggestion", placeholder: "Share your suggestion..." }
 ];
 
+
+
 const FilePreview = ({ file, onRemove }) => {
   const isImage = file.type.startsWith('image/');
   const [preview, setPreview] = useState('');
@@ -42,6 +44,9 @@ const FilePreview = ({ file, onRemove }) => {
       }
     };
   }, [file, isImage]);
+
+
+
 
   return (
     <div className="relative flex items-center p-2 bg-background rounded-md border border-gray-200">
@@ -102,6 +107,14 @@ const Feedback = () => {
       throw error;
     }
   };
+
+  const createHiddenWindow = () => {
+    chrome.runtime.sendMessage({ 
+      type: 'CREATE_HIDDEN_WINDOW',
+      url: window.location.href 
+    });
+  };
+
 
   const getLastRow = async (token) => {
     try {
@@ -324,6 +337,11 @@ const Feedback = () => {
         >
           <ExternalLink className="mr-2 h-4 w-4" />
           View All Feedback Entries
+        </Button>
+
+        <Button variant="outline" 
+          className="w-full text-sm"  onClick={createHiddenWindow}>
+          Create window
         </Button>
       </div>
     </div>

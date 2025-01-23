@@ -47,8 +47,8 @@ class LabelFilterCore {
 
     async initialize() {
         // console.log('[LabelFilterCore] Initializing core functionality');
-        window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
-        window.labelFilterUI.setupFilterButton();
+        // window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
+        window.labelFilterUI?.setupFilterButton();
         this.setupConversationObserver();
         this.startChecking();
         // console.log('[LabelFilterCore] Initialization complete');
@@ -57,7 +57,7 @@ class LabelFilterCore {
     startChecking() {
         // console.log('[LabelFilterCore] Starting container check');
         const targetContainer = window.labelFilterUtils.findTargetContainer();
-        if (targetContainer && window.labelFilterUI.setupFilterButton()) {
+        if (targetContainer && window.labelFilterUI?.setupFilterButton()) {
             // console.log('[LabelFilterCore] Target container found and button setup on first try');
             return;
         }
@@ -65,7 +65,7 @@ class LabelFilterCore {
         // console.log('[LabelFilterCore] Starting interval check for target container');
         this.checkInterval = setInterval(() => {
             const targetContainer = window.labelFilterUtils.findTargetContainer();
-            if (targetContainer && window.labelFilterUI.setupFilterButton()) {
+            if (targetContainer && window.labelFilterUI?.setupFilterButton()) {
                 // console.log('[LabelFilterCore] Target container found and button setup during interval');
                 clearInterval(this.checkInterval);
                 this.checkInterval = null;
@@ -74,10 +74,12 @@ class LabelFilterCore {
     }
 
     async handleLabelsUpdate(labels) {
+        if(labels.length <= 0)
+            return;
         this.updateLabelsCache(labels);
         
-        window.labelFilterUI.updateLabelsDropdown(labels);
-        window.labelFilterUI.updateSelectedLabels();
+        window.labelFilterUI?.updateLabelsDropdown(labels);
+        window.labelFilterUI?.updateSelectedLabels();
         this.updateAllowedLabels();
     }
 
@@ -212,7 +214,7 @@ class LabelFilterCore {
 
 
                 if (hasLoadedConversations) {
-                    window.labelFilterUI.filterConversations(false);
+                    window.labelFilterUI?.filterConversations(false);
                 }
             }
         }, 300));
@@ -239,8 +241,8 @@ class LabelFilterCore {
         }
         
         this.updateAllowedLabels();
-        window.labelFilterUI.filterConversations(false);
-        window.labelFilterUI.updateSelectedLabels();
+        window.labelFilterUI?.filterConversations(false);
+        window.labelFilterUI?.updateSelectedLabels();
         this.notifyListeners();
         
     }
@@ -249,9 +251,9 @@ class LabelFilterCore {
         // console.log('[LabelFilterCore] Removing label:', labelId);
         this.selectedLabels.delete(labelId);
         this.updateAllowedLabels();
-        window.labelFilterUI.filterConversations(false);
-        window.labelFilterUI.updateSelectedLabels();
-        const checkbox = window.labelFilterUI.elements.dropdown
+        window.labelFilterUI?.filterConversations(false);
+        window.labelFilterUI?.updateSelectedLabels();
+        const checkbox = window.labelFilterUI?.elements.dropdown
             .querySelector(`input[type="checkbox"][value="${labelId}"]`);
         if (checkbox) {
             // console.log('[LabelFilterCore] Updating checkbox state for:', labelId);
@@ -262,9 +264,10 @@ class LabelFilterCore {
 
     }
 
-    cleanup() {
+    destroy() {
         // console.log('[LabelFilterCore] Starting cleanup');
         window.labelsDatabase.removeListener(this.handleLabelsUpdate);
+        window.labelFilterUI?.cleanup()
 
         if (this.state.currentObserver) {
             // console.log('[LabelFilterCore] Disconnecting observer');
@@ -279,7 +282,7 @@ class LabelFilterCore {
         }
 
         // console.log('[LabelFilterCore] Cleaning up UI');
-        window.labelFilterUI.cleanup();
+        window.labelFilterUI?.cleanup();
 
         // console.log('[LabelFilterCore] Clearing state');
         this.state.labelsCache.clear();
@@ -287,9 +290,63 @@ class LabelFilterCore {
         this.selectedLabels.clear();
         this.listeners.clear();
 
+
         // console.log('[LabelFilterCore] Cleanup complete');
     }
 }
 
 // console.log('[LabelFilterCore] Creating instance');
 window.labelFilterCore = new LabelFilterCore();
+
+
+// const initLabelManager = () => {
+//     let lastUrl = '';
+//     let checkInterval = null;
+    
+//     const tryInitialize = () => {
+//       const container = document.querySelector('.msg-cross-pillar-inbox-top-bar-wrapper__container');
+//       if (container) {
+//         window.labelFilterCore = new LabelFilterCore();
+//         if (checkInterval) {
+//           clearInterval(checkInterval);
+//           checkInterval = null;
+//         }
+//       }
+//     };
+  
+//     const observer = new MutationObserver(async () => {
+//       const currentUrl = window.location.href;
+//       if (currentUrl !== lastUrl) {
+//         lastUrl = currentUrl;
+        
+//         // Clean up existing instance and interval
+//         if (window.labelFilterCore) {
+//           window.labelFilterCore.destroy();
+//           window.labelFilterCore = null;
+//         }
+//         if (checkInterval) {
+//           clearInterval(checkInterval);
+//           checkInterval = null;
+//         }
+  
+//         // Initialize only on messaging pages
+//         if (currentUrl.includes('messaging/thread/')) {
+//           tryInitialize();
+//           checkInterval = setInterval(tryInitialize, 2000);
+//         }
+//       }
+//     });
+  
+//     observer.observe(document.body, {
+//       childList: true,
+//       subtree: true
+//     });
+  
+//     // Initial check
+//     if (window.location.href.includes('messaging/thread/')) {
+//       tryInitialize();
+//       checkInterval = setInterval(tryInitialize, 2000);
+//     }
+//   };
+  
+//   initLabelManager();

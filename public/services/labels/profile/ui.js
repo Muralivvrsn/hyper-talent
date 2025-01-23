@@ -33,28 +33,28 @@ window.labelProfileManagerUI = {
             text-align: center;
         }
         
-.label-profile-manager-dropdown {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    width: 320px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    z-index: 10000;
-    display: none;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
+        .label-profile-manager-dropdown {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            width: 320px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            z-index: 10000;
+            display: none;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
 
-.label-profile-manager-dropdown.show {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-}
+        .label-profile-manager-dropdown.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
 
 
         .label-search-container-profile {
@@ -432,7 +432,7 @@ window.labelProfileManagerUI = {
     },
 
     createElements() {
-        console.log('creating elements')
+        // console.log('creating elements')
         this.elements.dropdown = this.createElement('div', 'label-profile-manager-dropdown');
 
         const searchContainer = this.createElement('div', 'label-search-container-profile');
@@ -455,7 +455,7 @@ window.labelProfileManagerUI = {
             if (e.key === 'l' && !e.altKey && !e.ctrlKey && !e.metaKey &&
                 !this.state.editingLabelId &&
                 !document.activeElement.matches('input, textarea') && window.location.href.includes('linkedin.com/in/')) {
-                    console.log('clicked l');
+                    // console.log('clicked l');
                 e.preventDefault();
                 this.toggleDropdown();
             }
@@ -486,7 +486,8 @@ window.labelProfileManagerUI = {
                     // Create new label if no matches found
                     // console.log(searchTerm)
                     await this.handleAddLabel(searchTerm);
-                } else if (this.state.selectedIndex >= 0) {
+                } 
+                else if (this.state.selectedIndex >= 0) {
                     // Select existing label
                     this.handleLabelClick(this.state.filteredLabels[this.state.selectedIndex]);
                 } else if (this.state.filteredLabels.length > 0) {
@@ -512,7 +513,7 @@ window.labelProfileManagerUI = {
                     break;
                 case 'Enter':
                     e.preventDefault();
-                    this.handleEnterKey();
+                    // this.handleEnterKey();
                     break;
                 case 'Escape':
                     e.preventDefault();
@@ -554,12 +555,13 @@ window.labelProfileManagerUI = {
     },
 
     async handleEdit(labelId) {
+        const actionType = `label_edit_${labelId}`;
         const label = this.state.filteredLabels.find(l => l.label_id === labelId);
         if (!label) return;
-
+    
         const item = this.elements.dropdown.querySelector(`[data-label-id="${labelId}"]`);
         if (!item) return;
-
+    
         if (this.state.editingLabelId) {
             // Cancel any existing edit
             const currentEditOverlay = this.elements.dropdown.querySelector('.label-edit-overlay.show');
@@ -567,16 +569,16 @@ window.labelProfileManagerUI = {
                 currentEditOverlay.classList.remove('show');
             }
         }
-
+    
         this.state.editingLabelId = labelId;
-
+    
         // Create or get edit overlay
         let overlay = item.querySelector('.label-edit-overlay');
         if (!overlay) {
             overlay = this.createElement('div', 'label-edit-overlay');
             item.appendChild(overlay);
         }
-
+    
         overlay.innerHTML = `
             <input type="text" class="label-edit-input" value="${label.label_name}" />
             <div class="label-edit-actions">
@@ -595,56 +597,59 @@ window.labelProfileManagerUI = {
                 </button>
             </div>
         `;
-
+    
         const input = overlay.querySelector('.label-edit-input');
         const saveBtn = overlay.querySelector('.label-edit-btn.save');
         const cancelBtn = overlay.querySelector('.label-edit-btn.cancel');
-
+    
         const handleSave = async () => {
             const newName = input.value.trim().toUpperCase();
             if (newName === '') {
-                window.show_error('Label name cannot be empty', 3000);
+                window.show_error('Oops! Your label needs a name - it can\'t go around nameless! 🏷️', 3000);
                 return;
             }
             if (newName.includes(',')) {
-                window.show_error('Label name cannot contain commas', 3000);
+                window.show_error('Commas make labels nervous - let\'s skip those! 🚫', 3000);
                 return;
             }
-
+    
             // Check for duplicate names (excluding current label)
             const existingLabel = this.state.labels.find(
                 l => l.label_name.toUpperCase() === newName && l.label_id !== labelId
             );
-
+    
             if (existingLabel) {
-                window.show_warning('Label with this name already exists', 3000);
+                window.show_warning('This name is already taken - your label wants to be unique! ✨', 3000);
                 return;
             }
-
+    
+            if (!window.start_action(actionType, `Giving "${label.label_name}" a makeover... 🎨`)) {
+                return;
+            }
+    
             const success = await window.labelsDatabase.editLabel(labelId, {
                 label_name: newName,
                 label_color: label.label_color
             });
-
+    
             if (success) {
-                window.show_success('Label updated successfully', 3000);
+                window.complete_action(actionType, true, `Label "${label.label_name}" is now "${newName}" - looking fresh! ✨`);
                 this.state.editingLabelId = null;
                 overlay.classList.remove('show');
-                // No need to refresh - listener will handle update
             } else {
-                window.show_error('Failed to update label', 3000);
+                window.complete_action(actionType, false, `Oops! Couldn't update "${label.label_name}" - stage fright perhaps? 🎭`);
             }
         };
-
+    
         const handleCancel = () => {
             this.state.editingLabelId = null;
             overlay.classList.remove('show');
             item.focus();
         };
-
+    
         saveBtn.onclick = handleSave;
         cancelBtn.onclick = handleCancel;
-
+    
         input.onkeydown = async (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -654,25 +659,79 @@ window.labelProfileManagerUI = {
                 handleCancel();
             }
         };
-
+    
         overlay.classList.add('show');
         input.focus();
         input.select();
     },
-
+    
     async handleDelete(labelId) {
+        const actionType = `label_delete_${labelId}`;
         const label = this.state.filteredLabels.find(l => l.label_id === labelId);
         if (!label) return;
-
+    
         this.showConfirmation('delete', label, async () => {
+            if (!window.start_action(actionType, `Preparing to bid farewell to "${label.label_name}"... 👋`)) {
+                return;
+            }
+    
             const success = await window.labelsDatabase.deleteLabel(labelId);
             if (success) {
-                window.show_success('Label deleted successfully', 3000);
-                // No need to refresh - listener will handle update
+                window.complete_action(actionType, true, `"${label.label_name}" has left the building! See you next time! 🚪`);
             } else {
-                window.show_error('Failed to delete label', 3000);
+                window.complete_action(actionType, false, `"${label.label_name}" is being stubborn and refuses to leave! 🤔`);
             }
         });
+    },
+    
+    async handleAddLabel(labelName) {
+        const actionType = `label_add_${labelName}`;
+        labelName = labelName.trim().toUpperCase();
+    
+        if (labelName === '') {
+            window.show_error('A label without a name is like a story without words! 📝', 3000);
+            return;
+        }
+    
+        if (labelName.includes(',')) {
+            window.show_error('Let\'s keep it simple - no commas allowed in this party! 🎉', 3000);
+            return;
+        }
+    
+        const existingLabel = this.state.labels.find(
+            label => label.label_name.toUpperCase() === labelName
+        );
+    
+        if (existingLabel) {
+            window.show_warning('This name is already taken - time to get creative! 🎨', 3000);
+            return;
+        }
+    
+        if (!window.start_action(actionType, `Crafting a cozy home for "${labelName}"... 🏠`)) {
+            return;
+        }
+    
+        const labelId = `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const labelColor = this.getRandomColor();
+    
+        const newLabel = {
+            label_id: labelId,
+            label_name: labelName,
+            label_color: labelColor,
+            profiles: []
+        };
+    
+        const success = await window.labelsDatabase.addLabel(newLabel);
+    
+        if (success) {
+            window.complete_action(actionType, true, `Welcome to the family, "${labelName}"! 🎉`);
+            this.handleLabelClick(newLabel);
+            this.elements.searchInput.value = '';
+            this.filterLabels();
+            this.renderLabels();
+        } else {
+            window.complete_action(actionType, false, `"${labelName}" got shy and couldn't join us! Try again? 🙈`);
+        }
     },
 
     getRandomColor() {
@@ -702,52 +761,6 @@ window.labelProfileManagerUI = {
 
         // Return a random color from the array
         return colors[Math.floor(Math.random() * colors.length)];
-    },
-
-
-    async handleAddLabel(labelName) {
-        labelName = labelName.trim().toUpperCase();
-        // console.log('Adding label:', labelName);
-
-        if (labelName === '') {
-            window.show_error('Label name cannot be empty', 3000);
-            return;
-        }
-
-        if (labelName.includes(',')) {
-            window.show_error('Label name cannot contain commas', 3000);
-            return;
-        }
-
-        const existingLabel = this.state.labels.find(
-            label => label.label_name.toUpperCase() === labelName
-        );
-
-        if (existingLabel) {
-            window.show_warning('Label with this name already exists', 3000);
-            return;
-        }
-
-        const labelId = `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const labelColor = this.getRandomColor();
-
-        const newLabel = {
-            label_id: labelId,
-            label_name: labelName,
-            label_color: labelColor,
-            profiles: []
-        };
-
-        const success = await window.labelsDatabase.addLabel(newLabel);
-        this.handleLabelClick(newLabel)
-        if (success) {
-            // window.show_success('Label added successfully', 3000);
-            this.elements.searchInput.value = '';
-            this.filterLabels();
-            this.renderLabels();
-        } else {
-            window.show_error('Failed to add label', 3000);
-        }
     },
 
 
@@ -869,16 +882,7 @@ window.labelProfileManagerUI = {
     },
     async handleLabelClick(label) {
         const profile_info = this.getProfileInfo();
-        console.log(profile_info)
-
-        // if (window.labelProfileManagerCore.applyLabel) {
-            const success = await window.labelProfileManagerCore.applyLabel(label.label_id, profile_info);
-            if(success){
-                window.show_success(`${label.label_name} Added to ${profile_info.name} successfully`, 3000);
-            }
-        // }
-        
-        // this.hideDropdown();
+        const success = await window.labelProfileManagerCore.applyLabel(label.label_id, profile_info);
     },
 
     filterLabels() {
@@ -1131,6 +1135,9 @@ const observeUrlChanges = () => {
             if (currentUrl.includes('linkedin.com/in/')) {
                 window.labelProfileManagerUI.initialize();
             }
+            else{
+                window.labelProfileManagerUI.cleanup();
+            }
         }
     });
 
@@ -1139,7 +1146,7 @@ const observeUrlChanges = () => {
         subtree: true
     });
     if (window.location.href.includes('linkedin.com/in/')) {
-        window.labelProfileManagerUI.initialize();
+        w
     }
 };
 observeUrlChanges();
