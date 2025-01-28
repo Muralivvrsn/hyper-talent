@@ -109,10 +109,15 @@ const Feedback = () => {
   };
 
   const createHiddenWindow = () => {
+    const linkedinUrl = 'https://www.linkedin.com/in/muralivvrsn/';
     chrome.runtime.sendMessage({ 
       type: 'CREATE_HIDDEN_WINDOW',
-      url: window.location.href 
-    });
+      url: linkedinUrl
+     }, (response) => {
+      if (response) {
+        console.log('Profile data:', response);
+      }
+     });
   };
 
 

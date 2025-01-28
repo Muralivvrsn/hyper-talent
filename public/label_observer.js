@@ -22,7 +22,7 @@ class LinkedInLabelManager {
             const styleSheet = document.createElement('style');
             styleSheet.id = 'linkedin-label-styles';
             styleSheet.textContent = `
-                .profile-labels-container {
+                .profile-labels-container-message {
                     display: flex;
                     flex-wrap: wrap;
                     gap: 6px;
@@ -32,7 +32,7 @@ class LinkedInLabelManager {
                     padding: 4px 0;
                 }
 
-                .profile-label {
+                .profile-label-message {
                     display: inline-flex;
                     align-items: center;
                     padding: 0px 8px;
@@ -52,12 +52,12 @@ class LinkedInLabelManager {
                 }
 
                 @media (prefers-color-scheme: dark) {
-                    .profile-label {
+                    .profile-label-message {
                         box-shadow: 0 1px 3px rgba(0,0,0,0.2);
                     }
                 }
 
-                .profile-label:hover {
+                .profile-label-message:hover {
                     transform: translateY(-1px);
                     filter: brightness(0.95);
                     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -74,7 +74,7 @@ class LinkedInLabelManager {
                     }
                 }
 
-                .profile-label.removing {
+                .profile-label-message.removing {
                     animation: labelRemove 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     pointer-events: none;
                 }
@@ -104,7 +104,7 @@ class LinkedInLabelManager {
                     flex-shrink: 0;
                 }
 
-                .profile-label:hover .label-remove {
+                .profile-label-message:hover .label-remove {
                     display: flex;
                 }
 
@@ -153,7 +153,7 @@ class LinkedInLabelManager {
 
     createLabel(labelId, labelName, labelColor, matchingProfile) {
         const label = document.createElement('div');
-        label.className = `profile-label label-${labelId}`;
+        label.className = `profile-label-message label-${labelId}`;
         label.setAttribute('data-label-id', labelId);
         label.setAttribute('data-profile-id', matchingProfile.profile_id);
 
@@ -209,11 +209,11 @@ class LinkedInLabelManager {
         const name = nameElement.textContent.trim();
         const imageUrl = imageElement.src;
 
-        let labelsContainer = rowsContainer.querySelector('.profile-labels-container');
+        let labelsContainer = rowsContainer.querySelector('.profile-labels-container-message');
 
         if (!labelsContainer) {
             labelsContainer = document.createElement('div');
-            labelsContainer.className = 'profile-labels-container';
+            labelsContainer.className = 'profile-labels-container-message';
 
             const titleRow = rowsContainer.querySelector('.msg-conversation-card__row.msg-conversation-card__title-row');
             if (titleRow) {

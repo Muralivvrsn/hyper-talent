@@ -248,9 +248,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then(() => {
         try {
           // window.profileNotesManager.init();
+          // window.profileLabels.init();
+          window.profileManagerLabels.init()
           window.profileNotes.init();
-          window.labelProfiles.init();
-          window.profileLabels.init();
+          // window.labelProfiles.init();
+          
           window.labelProfileManagerCore.initialize();
           // window.labelProfileManager.initialize()
         } catch (error) {

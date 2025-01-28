@@ -454,7 +454,8 @@ window.labelProfileManagerUI = {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'l' && !e.altKey && !e.ctrlKey && !e.metaKey &&
                 !this.state.editingLabelId &&
-                !document.activeElement.matches('input, textarea') && window.location.href.includes('linkedin.com/in/')) {
+                !document.activeElement.matches('input, textarea') && window.location.href.includes('linkedin.com/in/') && document.activeElement.getAttribute('contenteditable') !== 'true' &&
+                !document.activeElement.classList.contains('msg-form__contenteditable')) {
                     // console.log('clicked l');
                 e.preventDefault();
                 this.toggleDropdown();
