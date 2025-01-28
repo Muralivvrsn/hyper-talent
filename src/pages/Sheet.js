@@ -1,17 +1,17 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { ExternalLink, Loader2, FileSpreadsheet, RefreshCw, Upload, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useSheet } from '../context/SheetContext';
 import { fetchCollectionData, createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
 import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
+import { useSheet } from '../context/SheetContext';
 
 const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled }) => (
   <div className="w-full">
-    <Button 
-      className="w-full h-auto py-4 px-6 flex flex-col items-center gap-2" 
+    <Button
+      className="w-full h-auto py-4 px-6 flex flex-col items-center gap-2"
       onClick={onClick}
       disabled={disabled || loading}
       variant="outline"
@@ -34,7 +34,7 @@ const NoSheetView = ({ onCreateSheet, isLoading }) => (
       <h3 className="text-xl font-semibold">No Sheet Connected</h3>
       <p className="text-muted-foreground">Create a Google Sheet to manage your LinkedIn connections</p>
     </div>
-    <Button 
+    <Button
       size="lg"
       onClick={onCreateSheet}
       disabled={isLoading}
@@ -123,7 +123,7 @@ const SheetPage = () => {
       setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
       const token = await getGoogleToken();
       const data = await fetchCollectionData(user.uid);
-      
+
       if (syncType === "Sheet") {
         await syncSheet(sheetData.spreadsheetId, token, data);
       } else {
@@ -148,19 +148,45 @@ const SheetPage = () => {
     try {
       setLoadingStates(prev => ({ ...prev, updateLabels: true }));
       const token = await getGoogleToken();
-      await processUploadLabels(sheetData.spreadsheetId, token, user.uid);
 
-      const data = await fetchCollectionData(user.uid);
-      await syncSheet(sheetData.spreadsheetId, token, data);
+      const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetData.spreadsheetId}/values/Profile Data`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const updatedSheetData = {
-        ...sheetData,
-        lastSync: new Date().toISOString()
-      };
-      await setDoc(doc(getFirestore(), 'sheets', user.uid), updatedSheetData);
-      setSheetData(updatedSheetData);
+      const sheetResponse = await response.json();
+      const sheetRows = sheetResponse.values || [];
+
+      if (sheetRows.length === 0) {
+        console.log('No data found in sheet');
+        return;
+      }
+
+      const headerIndices = {};
+      sheetRows[0].forEach((header, index) => {
+        headerIndices[header] = index;
+      });
+
+      const updatedRowCount = await processUploadLabels(
+        sheetRows,
+        headerIndices,
+        user.uid,
+        sheetData.spreadsheetId,
+        token
+      );
+
+      if (updatedRowCount > 0) {
+        const updatedSheetData = {
+          ...sheetData,
+          lastSync: new Date().toISOString()
+        };
+
+        await setDoc(doc(getFirestore(), 'sheets', user.uid), updatedSheetData);
+        setSheetData(updatedSheetData);
+      }
+
     } catch (error) {
-      console.error(error);
+      console.error('Error processing upload:', error);
     } finally {
       setLoadingStates(prev => ({ ...prev, updateLabels: false }));
     }
@@ -175,28 +201,26 @@ const SheetPage = () => {
   }
 
   return (
-    <Card className="mx-auto max-w-4xl border-none m-0">
-      <CardHeader className="p-0">
-        <CardTitle className="text-sm font-bold">Sheet Manager</CardTitle>
-        <CardDescription className="text-sm">
+    <div className="mx-auto max-w-4xl my-8">
+        <h1 className="text-lg font-bold">Sheet Manager</h1>
+        <span className="text-sm">
           Sync and manage your LinkedIn connections using Google Sheets
-        </CardDescription>
-      </CardHeader>
+        </span>
 
-      <CardContent className="">
+      <CardContent className="p-6">
         {!sheetData ? (
-          <NoSheetView 
-            onCreateSheet={handleCreate} 
-            isLoading={loadingStates.create} 
+          <NoSheetView
+            onCreateSheet={handleCreate}
+            isLoading={loadingStates.create}
           />
         ) : (
           <div className="space-y-6">
-            <SheetActions 
+            <SheetActions
               loadingStates={loadingStates}
               onSync={handleSync}
               onUpload={handleUpload}
             />
-            
+
             <div className="flex flex-col items-center gap-4 pt-4 border-t">
               <p className="text-xs text-muted-foreground">
                 Last synced: {formatDate(sheetData.lastSync)}
@@ -213,7 +237,7 @@ const SheetPage = () => {
           </div>
         )}
       </CardContent>
-    </Card>
+    </div>
   );
 };
 
