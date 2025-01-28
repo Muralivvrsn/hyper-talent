@@ -307,12 +307,12 @@ const AdminPage = () => {
         </button>
       </form>
 
-      {/* <div>
+      <div>
         <button onClick={handleMigration}>
           Migrate All Users
         </button>
        
-      </div> */}
+      </div>
     </div>
   );
 };

@@ -187,6 +187,7 @@ class LabelsDatabase {
             await labelRef.set({
                 n: labelData.label_name,
                 c: labelData.label_color,
+                lc: currentUser.uid,
                 lu: new Date().toISOString(),
                 p: []
             });

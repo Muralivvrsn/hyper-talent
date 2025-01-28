@@ -227,30 +227,25 @@ const setupContentEditableHandlers = () => {
     };
 
     const insertTemplate = (template) => {
+        console.log(template)
         if (!currentElement) return;
     
         const pElement = currentElement.querySelector('p') || 
                         currentElement.querySelector('div[contenteditable="true"]');
+        const shiftElement = document.querySelector('msg-form__msg-content-container--scrollable');
         
         if (pElement) {
             const processedMessage = replacePlaceholders(template.message);
             
             pElement.innerHTML = processedMessage;
-    
-            // Minimal event dispatch
             const event = new Event('input', { bubbles: true });
             pElement.dispatchEvent(event);
-    
-            window.hideFloatingPanel();
-            // Simulate Shift+Enter 
             pElement.focus();
-            const shiftEnterEvent = new KeyboardEvent('keydown', {
-                key: 'Enter',
-                code: 'Enter',
-                shiftKey: true,
-                bubbles: true
-            });
-            pElement.dispatchEvent(shiftEnterEvent);
+    
+            
+            
+            window.hideFloatingPanel();
+            
             const range = document.createRange();
             const sel = window.getSelection();
             range.selectNodeContents(pElement);
@@ -337,7 +332,7 @@ const setupContentEditableHandlers = () => {
         searchTimeout = setTimeout(() => {
             selectedIndex = -1;
             renderTemplateList(event.target.value);
-        }, 150);
+        }, 50);
     };
 
     // Setup keyboard events

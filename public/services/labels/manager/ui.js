@@ -621,27 +621,27 @@ window.labelManagerUI = {
     getRandomColor (){
         // 20 distinct, visually appealing colors
         const colors = [
-            '#FF3B30', // Red
-            '#FF9500', // Orange
-            '#FFCC00', // Yellow
-            '#34C759', // Green
-            '#00C7BE', // Teal
-            '#32ADE6', // Light Blue
-            '#007AFF', // Blue
-            '#5856D6', // Purple
-            '#AF52DE', // Magenta
-            '#FF2D55', // Pink
-            '#5AC8FA', // Sky Blue
-            '#4CD964', // Lime Green
-            '#FF6B6B', // Coral
-            '#A0522D', // Sienna
-            '#6A5ACD', // Slate Blue
-            '#2E8B57', // Sea Green
-            '#BA55D3', // Medium Orchid
-            '#CD853F', // Peru
-            '#48D1CC', // Medium Turquoise
-            '#FF1493'  // Deep Pink
-        ];
+            '#191970', // midnightBlue
+            '#800020', // burgundy
+            '#36454F', // charcoal
+            '#228B22', // forestGreen
+            '#301934', // deepPurple
+            '#002147', // oxfordBlue
+            '#654321', // darkBrown
+            '#2F4F4F', // darkSlateGray
+            '#4B0082', // indigo
+            '#8B0000', // darkCrimson
+            '#556B2F', // darkOlive
+            '#004D4D', // darkTeal
+            '#555D50', // ebony
+            '#702963', // byzantium
+            '#8B008B', // darkMagenta
+            '#008B8B', // darkCyan
+            '#242124', // raisinBlack
+            '#1F2D1B', // verdunGreen
+            '#003153', // prussianBlue
+            '#3C1414'  // darkSienna
+          ];
         
         // Return a random color from the array
         return colors[Math.floor(Math.random() * colors.length)];
@@ -823,7 +823,7 @@ window.labelManagerUI = {
         
         if (success) {
             window.complete_action(actionType, true, `Welcome to the family, "${labelName}"! 🎉`);
-            this.handleLabelClick(newLabel);
+            this.handleLabelClick(newLabel, );
             this.elements.searchInput.value = '';
             this.filterLabels();
             this.renderLabels();
