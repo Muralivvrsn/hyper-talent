@@ -151,6 +151,16 @@ class LabelManagerCore {
                     c: code          // code
                 });
             }
+            else {
+                await profileRef.update({
+                    n: name,
+                    img: image_url,
+                    lu: new Date().toISOString(),
+                    u: url,
+                    un: username,
+                    c: code
+                });
+            }
     
             // Now update the label document to include this profile
             await labelRef.update({

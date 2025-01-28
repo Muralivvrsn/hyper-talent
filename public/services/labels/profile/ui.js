@@ -856,9 +856,10 @@ window.labelProfileManagerUI = {
             const imgElement = document.querySelector('img.pv-top-card-profile-picture__image--show');
             const image_url = imgElement ? imgElement.getAttribute('src') : '';
 
-            const profileId = connectionCode
+            const profileId = connectionCode;
+            const profile_url = window.location.href
             console.log({
-                url,
+                url: profile_url,
                 profileId,
                 connectionCode,
                 name,

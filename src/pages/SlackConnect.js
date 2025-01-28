@@ -4,10 +4,6 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Input } from '../components/ui/input';
 import axios from 'axios';
 
-const SLACK_CLIENT_ID = '4418602569.8350235490069';
-const SLACK_CLIENT_SECRET = '1b528a8cef0b49118fed39a23b66b07f';
-const CHANNEL_ID = 'C08A4V4EAT1';
-
 const SlackConnect = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +26,7 @@ const SlackConnect = () => {
 
     try {
       const tokens = await chrome.storage.local.get(['slackTokens']);
-      console.log('Sending message to channel:', CHANNEL_ID);
+      console.log('Sending message to channel:', process.env.REACT_APP_CHANNEL_ID);
 
       const response = await axios({
         method: 'post',
@@ -40,7 +36,7 @@ const SlackConnect = () => {
           'Content-Type': 'application/json',
         },
         data: {
-          channel: CHANNEL_ID,
+          channel: process.env.REACT_APP_CHANNEL_ID,
           text: message,
         }
       });
@@ -66,7 +62,7 @@ const SlackConnect = () => {
     const redirectUri = chrome.identity.getRedirectURL('slack');
     
     const authUrl = `https://slack.com/oauth/v2/authorize?${new URLSearchParams({
-      client_id: SLACK_CLIENT_ID,
+      client_id: process.env.REACT_APP_SLACK_CLIENT_ID,
       redirect_uri: redirectUri,
       scope: 'chat:write chat:write.public channels:join',
       response_type: 'code'
@@ -108,8 +104,8 @@ const SlackConnect = () => {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         data: new URLSearchParams({
-          client_id: SLACK_CLIENT_ID,
-          client_secret: SLACK_CLIENT_SECRET,
+          client_id: process.env.REACT_APP_SLACK_CLIENT_ID,
+          client_secret: process.env.REACT_APP_SLACK_CLIENT_SECRET,
           code: code,
           redirect_uri: redirectUri
         })
