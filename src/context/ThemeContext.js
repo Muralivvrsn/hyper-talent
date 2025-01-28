@@ -37,12 +37,12 @@ export const ThemeProvider = ({ children }) => {
     get: () => {
       try {
         return {
-          theme: localStorage.getItem('theme'),
-          lastUpdated: localStorage.getItem('themeLastUpdated')
+          th: localStorage.getItem('theme'),
+          ll: localStorage.getItem('themeLastUpdated')
         };
       } catch (err) {
         console.error('Error reading theme from localStorage:', err);
-        return { theme: null, lastUpdated: null };
+        return { theme: null, ll: null };
       }
     }
   };
@@ -53,15 +53,15 @@ export const ThemeProvider = ({ children }) => {
     try {
       const updatedSettings = {
         ...newSettings,
-        lastUpdated: new Date().toISOString()
+        ll: new Date().toISOString()
       };
       
-      const userSettingsRef = doc(db, 'settings', user.uid);
+      const userSettingsRef = doc(db, 'users', user.uid);
       await setDoc(userSettingsRef, updatedSettings);
       setSettings(updatedSettings);
       return updatedSettings;
     } catch (err) {
-      console.error('Error saving settings:', err);
+      console.error('Error saving users:', err);
       setError(err.message);
       throw err;
     }
@@ -75,7 +75,7 @@ export const ThemeProvider = ({ children }) => {
       try {
         const newSettings = {
           ...settings,
-          theme: newTheme
+          th: newTheme
         };
         await saveSettings(newSettings);
       } catch (err) {
@@ -96,12 +96,12 @@ export const ThemeProvider = ({ children }) => {
       setLoading(true);
       
       try {
-        const { theme: localTheme, lastUpdated } = handleLocalStorage.get();
+        const { th: localTheme, ll } = handleLocalStorage.get();
         const systemTheme = getSystemTheme();
         
-        // Always fetch initial settings if user is logged in
+        // Always fetch initial User Data if user is logged in
         if (user) {
-          const userSettingsRef = doc(db, 'settings', user.uid);
+          const userSettingsRef = doc(db, 'users', user.uid);
           const settingsSnap = await getDoc(userSettingsRef);
           
           if (settingsSnap.exists()) {
@@ -109,28 +109,42 @@ export const ThemeProvider = ({ children }) => {
             setSettings(dbSettings);
             
             // If local storage is more recent, prefer it
-            if (localTheme && lastUpdated && new Date(lastUpdated) > new Date(dbSettings.lastUpdated)) {
+            if (localTheme && ll && new Date(ll) > new Date(dbSettings.ll)) {
               setThemeState(localTheme);
               // Sync the local theme back to database
-              await saveSettings({ ...dbSettings, theme: localTheme });
+              await saveSettings({ ...dbSettings, th: localTheme });
             } else {
-              setThemeState(dbSettings.theme);
-              handleLocalStorage.save(dbSettings.theme);
+              setThemeState(dbSettings.th);
+              handleLocalStorage.save(dbSettings.th);
             }
           } else {
             // Create initial settings for new user
             const initialSettings = {
-              theme: localTheme || systemTheme,
-              name: user.displayName || '',
-              email: user.email || '',
-              createdAt: new Date().toISOString(),
-              lastUpdated: new Date().toISOString(),
-              notifications: true,
-              language: 'en'
+              av: "",
+              ca: new Date().toISOString(),
+              d: {
+                l: [],
+                n: [],
+                s: [],
+                sl: [],
+              },
+              e: user.email || '',
+              lg: 'en',
+              ll: new Date().toISOString(),
+              n: user.displayName || '',
+              ne: true,
+              p: "free",
+              pe: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+              sd: {
+                ca: "",
+                id: "",
+                ls: "",
+              },
+              th: localTheme || systemTheme,
             };
             await saveSettings(initialSettings);
-            setThemeState(initialSettings.theme);
-            handleLocalStorage.save(initialSettings.theme);
+            setThemeState(initialSettings.th);
+            handleLocalStorage.save(initialSettings.th);
           }
         } else {
           // For non-logged in users, use local storage or system theme

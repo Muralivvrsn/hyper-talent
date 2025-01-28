@@ -57,7 +57,7 @@ const MainLayout = ({ children }) => {
           />
         </div>
       </header>
-      <main className="mx-auto p-2 mt-[60px]">
+      <main className="mx-auto p-3 mt-[60px]">
         {renderPage()}
       </main>
     </div>

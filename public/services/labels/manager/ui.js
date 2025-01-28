@@ -780,6 +780,8 @@ window.labelManagerUI = {
     async handleAddLabel(labelName) {
         const actionType = `label_add_${labelName}`;
         labelName = labelName.trim().toUpperCase();
+        const profileInfo = window.labelManagerUtils.getProfileInfo()
+        
         
         if (labelName === '') {
             window.show_error('Label name cannot be empty', 3000);
@@ -823,7 +825,7 @@ window.labelManagerUI = {
         
         if (success) {
             window.complete_action(actionType, true, `Welcome to the family, "${labelName}"! 🎉`);
-            this.handleLabelClick(newLabel, );
+            this.handleLabelClick(newLabel,profileInfo);
             this.elements.searchInput.value = '';
             this.filterLabels();
             this.renderLabels();
@@ -878,8 +880,11 @@ window.labelManagerUI = {
         }
     },
 
-    handleLabelClick(label) {
-        const profile_info = window.labelManagerUtils.getProfileInfo();
+    handleLabelClick(label, profileInfo) {
+        let profile_info = profileInfo;
+        if (!profileInfo) {
+            profile_info = window.labelManagerUtils.getProfileInfo();
+        }
 
         if (window.labelManagerCore.applyLabel) {
             window.labelManagerCore.applyLabel(label.label_id, profile_info);

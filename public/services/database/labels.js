@@ -189,6 +189,7 @@ class LabelsDatabase {
                 c: labelData.label_color,
                 lc: currentUser.uid,
                 lu: new Date().toISOString(),
+                lc: currentUser.uid,
                 p: []
             });
     

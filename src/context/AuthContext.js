@@ -70,6 +70,7 @@ export const AuthProvider = ({ children }) => {
                 labelIds: data.d?.l || [],
                 noteIds: data.d?.n || [],
                 shortcutIds: data.d?.s || [],
+                sharedLabels: data.d?.sl || [],
                 spreadsheet: {
                   id: data.sd?.id || null,
                   createdAt: data.sd?.ca || null,

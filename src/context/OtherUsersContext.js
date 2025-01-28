@@ -68,10 +68,15 @@ export const OtherUsersProvider = ({ children }) => {
     }
   }, [user]);
 
+  const getUserById = (userId) => {
+    return otherUsers.find(user => user.id === userId) || null;
+  };
+
   const value = {
     otherUsers,
     loading,
-    error
+    error,
+    getUserById
   };
 
   return (
