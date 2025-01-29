@@ -45,8 +45,8 @@ const ShortcutCard = ({ shortcut }) => (
 );
 
 const ShortcutCategory = ({ title, shortcuts }) => (
-  <div className="space-y-4">
-    <h2 className="text-base font-semibold">{title}</h2>
+  <div>
+    <h2 className="text-base font-semibold pb-2">{title}</h2>
     <div className="grid gap-4 md:grid-cols-2">
       {shortcuts.map((shortcut, index) => (
         <ShortcutCard key={index} shortcut={shortcut} />
@@ -147,14 +147,14 @@ const Shortcuts = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="pb-6 space-y-4 sticky top-0 z-10">
-        <div className="flex items-center space-x-3">
-          <h1 className="text-lg font-bold">Keyboard Shortcuts</h1>
+      <div className="pb-3 space-y-3 sticky top-0 z-10">
+        <div className="flex items-center">
+          <h1 className="text-lg font-semibold">Keyboard Shortcuts</h1>
         </div>
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 text-sm" />
           <input
             id="shortcut-search"
             type="text"
@@ -166,7 +166,7 @@ const Shortcuts = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pb-6 space-y-8">
+      <div className="flex-1 overflow-auto pb-4 space-y-4">
         {Object.keys(filteredCategories).length > 0 ? (
           Object.entries(filteredCategories).map(([key, category]) => (
             <ShortcutCategory 

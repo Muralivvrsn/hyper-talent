@@ -15,15 +15,16 @@ import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
 import { useOtherUsers } from './context/OtherUsersContext';
+import SlackConnect from './pages/SlackConnect';
 const MainLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const { currentPage, setCurrentPage } = useProfileNote();
 
-  
+
 
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
-  
+
   const renderPage = () => {
     switch (currentPage) {
       case 'messages':
@@ -31,7 +32,12 @@ const MainLayout = ({ children }) => {
       case 'shortcuts':
         return <Shortcuts />;
       case 'sheet':
-        return <Sheet />;
+        return (
+          <>
+            <Sheet />
+            <SlackConnect />
+          </>
+        );
       case 'feedback':
         return <Feedback />;
       case 'profile':
@@ -47,9 +53,9 @@ const MainLayout = ({ children }) => {
   return (
     <div className="h-full overflow-hidden bg-background">
       <header className="border-b fixed top-0 w-full bg-background z-50">
-        <div className="h-16 flex items-center justify-between">
-          <Navigation 
-            setCurrentPage={setCurrentPage} 
+        <div className="flex items-center justify-between">
+          <Navigation
+            setCurrentPage={setCurrentPage}
             onLogout={logout}
             user={user}
             currentPage={currentPage}
@@ -74,7 +80,7 @@ const LoadingScreen = () => (
 );
 
 function AppContent() {
-  const { user, loading: authLoading, addUpdate} = useAuth();
+  const { user, loading: authLoading, addUpdate } = useAuth();
   const { loading: themeLoading } = useTheme();
   const { loading: dataLoading } = useData();
   const [initialLoad, setInitialLoad] = useState(true);
@@ -124,7 +130,7 @@ function AppContent() {
       {user ? (
         <>
           <MainLayout />
-          <UpdateModal 
+          <UpdateModal
             isOpen={showUpdateModal}
             onClose={handleCloseUpdateModal}
             currentVersion={updateVersions.current}

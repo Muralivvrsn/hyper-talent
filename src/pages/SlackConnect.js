@@ -60,7 +60,7 @@ const SlackConnect = () => {
   const connectToSlack = async () => {
     setLoading(true);
     const redirectUri = chrome.identity.getRedirectURL('slack');
-    
+
     const authUrl = `https://slack.com/oauth/v2/authorize?${new URLSearchParams({
       client_id: process.env.REACT_APP_SLACK_CLIENT_ID,
       redirect_uri: redirectUri,
@@ -95,7 +95,7 @@ const SlackConnect = () => {
 
   const exchangeCodeForTokens = async (code) => {
     const redirectUri = chrome.identity.getRedirectURL('slack');
-    
+
     try {
       const response = await axios({
         method: 'post',
@@ -131,13 +131,14 @@ const SlackConnect = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="pt-4">
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
+      <h1 className="text-lg font-semibold mb-2">Slack Manager</h1>
       <Button
         onClick={isConnected ? disconnectSlack : connectToSlack}
         disabled={loading}
@@ -154,7 +155,7 @@ const SlackConnect = () => {
             placeholder="Enter your message..."
             className="w-full"
           />
-          <Button 
+          <Button
             onClick={sendMessage}
             disabled={!message}
             className="w-full"

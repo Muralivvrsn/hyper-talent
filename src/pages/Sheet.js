@@ -1,32 +1,42 @@
 import React, { useState } from 'react';
-import { CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { ExternalLink, Loader2, FileSpreadsheet, RefreshCw, Upload, Database } from 'lucide-react';
+import { Upload, Database, FileSpreadsheet, Loader2, ExternalLink} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { fetchCollectionData, createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
 import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { useSheet } from '../context/SheetContext';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
 
 const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled }) => (
-  <div className="w-full">
-    <Button
-      className="w-full h-auto py-4 px-6 flex flex-col items-center gap-2"
-      onClick={onClick}
-      disabled={disabled || loading}
-      variant="outline"
-    >
-      {loading ? (
-        <Loader2 className="h-6 w-6 animate-spin" />
-      ) : (
-        <Icon className="h-6 w-6" />
-      )}
-      <span className="text-sm font-semibold">{label}</span>
-      <p className="text-sm text-muted-foreground text-center text-wrap">{description}</p>
-    </Button>
-  </div>
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          onClick={onClick}
+          disabled={disabled || loading}
+          className="h-auto p-3 flex gap-3 items-center w-full rounded-lg shadow-sm hover:shadow-md transition-all border text-sm"
+        >
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Icon className="h-5 w-5" />
+          )}
+          <span className="text-sm">{label}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p className="text-sm">{description}</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
 );
-
 const NoSheetView = ({ onCreateSheet, isLoading }) => (
   <div className="flex flex-col items-center justify-center space-y-6 p-8">
     <FileSpreadsheet className="h-16 w-16 text-muted-foreground" />
@@ -53,9 +63,9 @@ const formatDate = (date) => {
 };
 
 const SheetActions = ({ loadingStates, onSync, onUpload }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 ">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-3">
     <ActionButton
-      icon={RefreshCw}
+      icon={FileSpreadsheet}
       label="Update Sheet"
       description="Sync latest LinkedIn data to Google Sheet"
       onClick={() => onSync("Sheet")}
@@ -74,7 +84,6 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => (
       description="Process and update connection labels"
       onClick={onUpload}
       loading={loadingStates.updateLabels}
-      className="md:col-span-2"
     />
   </div>
 );
@@ -202,33 +211,28 @@ const SheetPage = () => {
 
   return (
     <div className="mx-auto max-w-4xl">
-        <h1 className="text-lg font-bold mb-4">Sheet Manager</h1>
-        <span className="text-sm">
-          Sync and manage your LinkedIn connections using Google Sheets
+        <h1 className="text-lg font-semibold mb-2">Sheet Manager</h1>
+        <span className="text-muted-foreground mb-2">
+        Sync and manage your LinkedIn connections using Google Sheets. <b>Last synced: {formatDate(sheetData.lastSync)}</b>
         </span>
-
-      <CardContent className="p-6">
+      <div>
         {!sheetData ? (
           <NoSheetView
             onCreateSheet={handleCreate}
             isLoading={loadingStates.create}
           />
         ) : (
-          <div className="space-y-6">
+          <div>
             <SheetActions
               loadingStates={loadingStates}
               onSync={handleSync}
               onUpload={handleUpload}
             />
-
-            <div className="flex flex-col items-center gap-4 pt-4 border-t">
-              <p className="text-xs text-muted-foreground">
-                Last synced: {formatDate(sheetData.lastSync)}
-              </p>
+            <div className="flex flex-col items-center gap-4 pb-4 border-b">
               <Button
                 variant="outline"
                 onClick={() => window.open(sheetData.sheetUrl, '_blank')}
-                className="w-full max-w-md"
+                className="w-full max-w-md p-6"
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Open Google Sheet
@@ -236,7 +240,7 @@ const SheetPage = () => {
             </div>
           </div>
         )}
-      </CardContent>
+      </div>
     </div>
   );
 };

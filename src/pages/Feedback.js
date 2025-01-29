@@ -251,7 +251,7 @@ const Feedback = () => {
 
   return (
     <div>
-      <h1 className="text-lg font-bold mb-4">Feedback</h1>
+      <h1 className="text-lg font-semibold mb-4">Feedback</h1>
       
       {/* Type Selector */}
       <div className="mb-4">
@@ -279,7 +279,7 @@ const Feedback = () => {
       >
         <div className="relative">
           <Textarea 
-            className="min-h-32 pr-12"
+            className="min-h-32 pr-12 text-sm"
             placeholder={feedbackTypes.find(t => t.value === selectedType)?.placeholder}
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}

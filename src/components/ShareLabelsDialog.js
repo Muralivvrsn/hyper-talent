@@ -149,12 +149,12 @@ const ShareLabelsDialog = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="relative flex-1">
-                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground text-sm" />
                 <Input
                   placeholder="Search labels..."
                   value={labelSearchTerm}
                   onChange={(e) => setLabelSearchTerm(e.target.value)}
-                  className="pl-8"
+                  className="pl-8 text-sm"
                 />
               </div>
             </div>
@@ -202,12 +202,12 @@ const ShareLabelsDialog = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="relative flex-1">
-                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground text-sm" />
                 <Input
                   placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+                  className="pl-8 text-sm"
                 />
               </div>
             </div>
