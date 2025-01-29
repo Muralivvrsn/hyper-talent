@@ -40,6 +40,7 @@
         "services/database/notes.js",
         "services/database/labels.js",
         "services/database/message_templates.js",
+        "services/database/actions.js",
         "services/utils/refresh.js",
         
         "label_search.js",
