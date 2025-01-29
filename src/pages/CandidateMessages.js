@@ -89,11 +89,11 @@ const CandidateMessages = () => {
   }
 
   return (
-    <div className="h-full bg-background py-2 sm:p-6">
+    <div className="h-full bg-background">
       <div className="max-w-4xl mx-auto space-y-4">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-sm font-semibold">Messages</h1>
+        <div className="flex align-top justify-between mb-4">
+          <h1 className="text-lg font-bold">Messages</h1>
           <Button onClick={() => setShowAddForm(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Message
@@ -140,19 +140,19 @@ const CandidateMessages = () => {
                   onChange={(e) => setNewMessage(prev => ({ ...prev, content: e.target.value }))}
                 />
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <div 
+                  <div
                     onClick={() => setNewMessage(prev => ({ ...prev, content: prev.content + '<<first_name>>' }))}
                     className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
                   >
                     {'<<first_name>>'}
                   </div>
-                  <div 
+                  <div
                     onClick={() => setNewMessage(prev => ({ ...prev, content: prev.content + '<<last_name>>' }))}
                     className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
                   >
                     {'<<last_name>>'}
                   </div>
-                  <div 
+                  <div
                     onClick={() => setNewMessage(prev => ({ ...prev, content: prev.content + '<<name>>' }))}
                     className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
                   >
@@ -162,9 +162,9 @@ const CandidateMessages = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button 
-                type="submit" 
-                onClick={handleAdd} 
+              <Button
+                type="submit"
+                onClick={handleAdd}
                 disabled={isSaving || !newMessage.title || !newMessage.content}
               >
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -210,19 +210,19 @@ const CandidateMessages = () => {
                   onChange={(e) => setEditForm(prev => ({ ...prev, content: e.target.value }))}
                 />
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <div 
+                  <div
                     onClick={() => setEditForm(prev => ({ ...prev, content: prev.content + '<<first_name>>' }))}
                     className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
                   >
                     {'<<first_name>>'}
                   </div>
-                  <div 
+                  <div
                     onClick={() => setEditForm(prev => ({ ...prev, content: prev.content + '<<last_name>>' }))}
                     className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
                   >
                     {'<<last_name>>'}
                   </div>
-                  <div 
+                  <div
                     onClick={() => setEditForm(prev => ({ ...prev, content: prev.content + '<<name>>' }))}
                     className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer"
                   >
@@ -232,9 +232,9 @@ const CandidateMessages = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button 
-                type="submit" 
-                onClick={handleEdit} 
+              <Button
+                type="submit"
+                onClick={handleEdit}
                 disabled={isSaving || !editForm.title || !editForm.content}
               >
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

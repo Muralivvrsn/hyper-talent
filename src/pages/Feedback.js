@@ -245,8 +245,8 @@ const Feedback = () => {
   };
 
   return (
-    <div className="py-4">
-      <h1 className="text-2xl font-bold mb-4">Feedback</h1>
+    <div>
+      <h1 className="text-lg font-bold mb-4">Feedback</h1>
       
       {/* Type Selector */}
       <div className="mb-4">

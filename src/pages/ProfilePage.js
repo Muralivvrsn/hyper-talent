@@ -169,7 +169,10 @@ export default function ProfilePage() {
   }));
 
   return (
-    <div className="py-6">
+    <div>
+      <div className="flex items-center space-x-3 pb-4">
+        <h1 className="text-lg font-bold">Profile Management</h1>
+      </div>
 
       <FilterBar
         ownedLabels={ownedLabelsList}
