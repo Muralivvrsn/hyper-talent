@@ -4,7 +4,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Separator } from './ui/separator';
-import { ChevronDown, Filter, X, Users } from 'lucide-react';
+import { ChevronDown, Filter, X, Users, Search } from 'lucide-react';
 import ShareLabelsDialog from './ShareLabelsDialog';
 
 const FilterBar = ({
@@ -15,6 +15,15 @@ const FilterBar = ({
   onSearchChange
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterSearch, setFilterSearch] = useState('');
+
+  const filterLabels = (labels) => {
+    if (!filterSearch) return labels;
+    return labels.filter(label =>
+      label.name.toLowerCase().includes(filterSearch.toLowerCase())
+    );
+  };
+
 
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -84,29 +93,44 @@ const FilterBar = ({
               <ChevronDown className="h-4 w-4 opacity-50" />
             </Button>
           </PopoverTrigger>
+
           <PopoverContent className="w-64 p-3" align="end">
-            <div className="space-y-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search labels..."
+                value={filterSearch}
+                onChange={(e) => setFilterSearch(e.target.value)}
+                className="pl-8 h-8"
+              />
+            </div>
+            <div className="max-h-[400px] bg-background overflow-y-auto px-2 pb-2 mt-2">
               {/* Owned Labels */}
-              {ownedLabels.length > 0 && (
+              {filterLabels(ownedLabels).length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium">My Labels</h4>
-                  {ownedLabels.map(renderLabelItem)}
+                  <h4 className="text-sm font-medium sticky top-0 bg-background py-1">My Labels</h4>
+                  {filterLabels(ownedLabels).map(renderLabelItem)}
                 </div>
               )}
 
               {/* Separator if both types exist */}
-              {ownedLabels.length > 0 && sharedLabels.length > 0 && (
+              {filterLabels(ownedLabels).length > 0 && filterLabels(sharedLabels).length > 0 && (
                 <Separator className="my-3" />
               )}
 
-              {/* Shared Labels */}
-              {sharedLabels.length > 0 && (
+              {filterLabels(sharedLabels).length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
+                  <h4 className="text-sm font-medium sticky top-0 bg-background py-1 flex items-center gap-2">
                     Shared Labels
                     <Users className="h-4 w-4 text-muted-foreground" />
                   </h4>
-                  {sharedLabels.map(renderLabelItem)}
+                  {filterLabels(sharedLabels).map(renderLabelItem)}
+                </div>
+              )}
+
+              {filterSearch && filterLabels([...ownedLabels, ...sharedLabels]).length === 0 && (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  No labels found
                 </div>
               )}
             </div>

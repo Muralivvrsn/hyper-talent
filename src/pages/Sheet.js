@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
+import { CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { ExternalLink, Loader2, FileSpreadsheet, RefreshCw, Upload, Database } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -201,8 +201,8 @@ const SheetPage = () => {
   }
 
   return (
-    <div className="mx-auto max-w-4xl my-8">
-        <h1 className="text-lg font-bold">Sheet Manager</h1>
+    <div className="mx-auto max-w-4xl">
+        <h1 className="text-lg font-bold mb-4">Sheet Manager</h1>
         <span className="text-sm">
           Sync and manage your LinkedIn connections using Google Sheets
         </span>

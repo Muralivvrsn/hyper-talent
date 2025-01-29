@@ -18,9 +18,10 @@ const ShareLabelsDialog = () => {
   const { labels } = useLabels();
   const { otherUsers } = useOtherUsers();
   const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState('labels'); // 'labels' or 'users'
+  const [step, setStep] = useState('labels');
   const [selectedLabels, setSelectedLabels] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [labelSearchTerm, setLabelSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isSharing, setIsSharing] = useState(false);
   const db = getFirestore();
@@ -39,6 +40,12 @@ const ShareLabelsDialog = () => {
       user.email?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     : [];
+
+  const filteredLabels = labelSearchTerm
+    ? labelsList.filter(label =>
+      label.name.toLowerCase().includes(labelSearchTerm.toLowerCase())
+    )
+    : labelsList;
 
   const handleLabelToggle = (labelId) => {
     setSelectedLabels(prev =>
@@ -67,7 +74,13 @@ const ShareLabelsDialog = () => {
     setStep('labels');
     setSearchTerm('');
   };
-
+  const handleCancel = () => {
+    setIsOpen(false);
+    setStep('labels');
+    setSelectedLabels([]);
+    setSelectedUsers([]);
+    setSearchTerm('');
+  };
   const handleShare = async () => {
     if (selectedLabels.length === 0 || selectedUsers.length === 0) {
       return;
@@ -103,7 +116,7 @@ const ShareLabelsDialog = () => {
           }
         }
       }));
-      
+
       setIsOpen(false);
       setStep('labels');
       setSelectedLabels([]);
@@ -117,7 +130,7 @@ const ShareLabelsDialog = () => {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen} >
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2">
           <Share className="h-4 w-4" />
@@ -134,8 +147,19 @@ const ShareLabelsDialog = () => {
         {step === 'labels' ? (
           // Labels Selection Step
           <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search labels..."
+                  value={labelSearchTerm}
+                  onChange={(e) => setLabelSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
             <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto">
-              {labelsList.map(label => (
+              {filteredLabels.map(label => (
                 <div
                   key={label.id}
                   className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md"
@@ -162,8 +186,7 @@ const ShareLabelsDialog = () => {
             <div className="flex justify-end space-x-2">
               <Button
                 variant="outline"
-                onClick={() => setIsOpen(false)}
-              >
+                onClick={handleCancel}>
                 Cancel
               </Button>
               <Button
@@ -178,13 +201,6 @@ const ShareLabelsDialog = () => {
           // Users Selection Step
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-              >
-                Back
-              </Button>
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -239,9 +255,14 @@ const ShareLabelsDialog = () => {
             <div className="flex justify-end space-x-2">
               <Button
                 variant="outline"
-                onClick={() => setIsOpen(false)}
-              >
+                onClick={handleCancel} >
                 Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleBack}
+              >
+                Back
               </Button>
               <Button
                 onClick={handleShare}
