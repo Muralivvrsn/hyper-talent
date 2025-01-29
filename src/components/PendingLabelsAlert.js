@@ -1,12 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useLabels } from '../context/LabelContext';
 import { useOtherUsers } from '../context/OtherUsersContext';
-import { 
-    Alert, 
-    AlertDescription, 
-    AlertTitle 
-} from './ui/alert';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
 import {
     Sheet,
     SheetContent,
@@ -23,13 +20,14 @@ const PendingLabelsAlert = () => {
     const { getUserById } = useOtherUsers();
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
-    const [processing, setProcessing] = useState('');
+    const [processing, setProcessing] = useState(false);
+    const [selectedLabels, setSelectedLabels] = useState([]);
     const db = getFirestore();
 
-    const handleLabelResponse = useCallback(async (labelId, accept) => {
-        if (!user?.uid || processing) return;
+    const handleLabelResponse = useCallback(async (accept) => {
+        if (!user?.uid || processing || selectedLabels.length === 0) return;
 
-        setProcessing(labelId);
+        setProcessing(true);
         try {
             await runTransaction(db, async (transaction) => {
                 const userRef = doc(db, 'users', user.uid);
@@ -42,28 +40,34 @@ const PendingLabelsAlert = () => {
                 const userData = userDoc.data();
                 const currentSharedLabels = userData.d?.sl || [];
                 
-                // Update the shared labels array
                 const updatedSharedLabels = currentSharedLabels.map(label => 
-                    label.l === labelId ? { ...label, a: accept } : label
+                    selectedLabels.includes(label.l) ? { ...label, a: accept } : label
                 );
 
-                // Update the document with the new array
                 transaction.update(userRef, {
                     'd.sl': updatedSharedLabels
                 });
             });
 
-            // Close sheet if no more pending labels will remain
-            const pendingCount = Object.keys(pendingSharedLabels).length;
-            if (pendingCount === 1) {
+            // Close sheet if all pending labels were processed
+            if (selectedLabels.length === Object.keys(pendingSharedLabels).length) {
                 setIsOpen(false);
             }
+            setSelectedLabels([]);
         } catch (error) {
             console.error('Error updating label status:', error);
         } finally {
-            setProcessing('');
+            setProcessing(false);
         }
-    }, [user, processing, db, pendingSharedLabels]);
+    }, [user, processing, db, pendingSharedLabels, selectedLabels]);
+
+    const toggleLabelSelection = (labelId) => {
+        setSelectedLabels(prev =>
+            prev.includes(labelId)
+                ? prev.filter(id => id !== labelId)
+                : [...prev, labelId]
+        );
+    };
 
     const getSharedByUser = useCallback((createdBy) => {
         if (!createdBy) return 'Unknown User';
@@ -73,7 +77,6 @@ const PendingLabelsAlert = () => {
 
     const pendingLabelsCount = Object.keys(pendingSharedLabels).length;
 
-    // Early return after all hooks are declared
     if (pendingLabelsCount === 0) {
         return null;
     }
@@ -91,61 +94,73 @@ const PendingLabelsAlert = () => {
                     </Alert>
                 </SheetTrigger>
                 
-                <SheetContent side="bottom" className="h-[400px]">
+                <SheetContent side="bottom" className="h-[400px] flex flex-col">
                     <SheetHeader>
                         <SheetTitle>Pending Label Invitations</SheetTitle>
                     </SheetHeader>
                     
-                    <div className="mt-4 space-y-4 overflow-auto max-h-[300px]">
-                        {Object.entries(pendingSharedLabels).map(([labelId, label]) => (
-                            <div 
-                                key={labelId}
-                                className="flex items-center justify-between p-3 bg-accent/50 rounded-lg"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span
-                                        className="w-3 h-3 rounded-full"
-                                        style={{ backgroundColor: label.color }}
-                                    />
-                                    <div>
-                                        <h4 className="font-medium">{label.name}</h4>
-                                        <p className="text-sm text-muted-foreground">
-                                            Shared by {getSharedByUser(label.createdBy)}
-                                        </p>
+                    <div className="flex-1 overflow-auto py-4">
+                        <div className="space-y-2">
+                            {Object.entries(pendingSharedLabels).map(([labelId, label]) => (
+                                <div 
+                                    key={labelId}
+                                    className={`p-3 rounded-lg border transition-colors ${
+                                        selectedLabels.includes(labelId)
+                                            ? 'bg-accent border-primary' 
+                                            : 'hover:bg-accent/50 border-transparent'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Checkbox
+                                            checked={selectedLabels.includes(labelId)}
+                                            onCheckedChange={() => toggleLabelSelection(labelId)}
+                                        />
+                                        <span
+                                            className="w-3 h-3 rounded-full"
+                                            style={{ backgroundColor: label.color }}
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-medium">{label.name}</h4>
+                                            <p className="text-sm text-muted-foreground">
+                                                Shared by {getSharedByUser(label.createdBy)}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="gap-1"
-                                        onClick={() => handleLabelResponse(labelId, false)}
-                                        disabled={processing === labelId}
-                                    >
-                                        {processing === labelId ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <X className="h-4 w-4" />
-                                        )}
-                                        Decline
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="gap-1"
-                                        onClick={() => handleLabelResponse(labelId, true)}
-                                        disabled={processing === labelId}
-                                    >
-                                        {processing === labelId ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Check className="h-4 w-4" />
-                                        )}
-                                        Accept
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="border-t pt-4 bg-background">
+                        <div className="flex gap-2 justify-end">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1"
+                                onClick={() => handleLabelResponse(false)}
+                                disabled={selectedLabels.length === 0 || processing}
+                            >
+                                {processing ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <X className="h-4 w-4" />
+                                )}
+                                Decline Selected
+                            </Button>
+                            <Button
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => handleLabelResponse(true)}
+                                disabled={selectedLabels.length === 0 || processing}
+                            >
+                                {processing ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Check className="h-4 w-4" />
+                                )}
+                                Accept Selected
+                            </Button>
+                        </div>
                     </div>
                 </SheetContent>
             </Sheet>
