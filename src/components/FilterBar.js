@@ -63,11 +63,12 @@ const FilterBar = ({
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-center ">
       <div className="w-full lg:max-w-sm relative">
+        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground text-sm" />
         <Input
           placeholder="Search profiles..."
           value={searchTerm}
           onChange={handleSearch}
-          className="pr-10"
+          className="pl-8 h-8 text-sm"
         />
         {searchTerm && (
           <Button
@@ -96,12 +97,12 @@ const FilterBar = ({
 
           <PopoverContent className="w-64 p-3" align="end">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground text-sm" />
               <Input
                 placeholder="Search labels..."
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
-                className="pl-8 h-8"
+                className="pl-8 h-8 text-sm"
               />
             </div>
             <div className="max-h-[400px] bg-background overflow-y-auto px-2 pb-2 mt-2">

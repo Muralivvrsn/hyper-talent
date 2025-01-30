@@ -133,9 +133,9 @@ const AdminPage = () => {
   };
 
   return (
-    <div className="container max-w-2xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Admin Update Manager</h1>
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-lg font-semibold mb-2">Admin Update Manager</h1>
         <p className="text-muted-foreground">
           Publish new version updates and changes
         </p>

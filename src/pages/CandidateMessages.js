@@ -92,8 +92,8 @@ const CandidateMessages = () => {
     <div className="h-full bg-background">
       <div className="max-w-4xl mx-auto space-y-4">
         {/* Header */}
-        <div className="flex align-top justify-between mb-4">
-          <h1 className="text-lg font-bold">Messages</h1>
+        <div className="flex align-top justify-between">
+          <h1 className="text-lg font-semibold">Messages</h1>
           <Button onClick={() => setShowAddForm(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Add Message
