@@ -635,10 +635,12 @@ window.labelProfileManagerUI = {
     
             if (success) {
                 window.complete_action(actionType, true, `Label "${label.label_name}" is now "${newName}" - looking fresh! ✨`);
+                window.userActionsDatabase.addAction("label_edited")
                 this.state.editingLabelId = null;
                 overlay.classList.remove('show');
             } else {
                 window.complete_action(actionType, false, `Oops! Couldn't update "${label.label_name}" - stage fright perhaps? 🎭`);
+                window.userActionsDatabase.addAction("label_edited_failed")
             }
         };
     
@@ -679,8 +681,10 @@ window.labelProfileManagerUI = {
             const success = await window.labelsDatabase.deleteLabel(labelId);
             if (success) {
                 window.complete_action(actionType, true, `"${label.label_name}" has left the building! See you next time! 🚪`);
+                window.userActionsDatabase.addAction("label_deleted")
             } else {
                 window.complete_action(actionType, false, `"${label.label_name}" is being stubborn and refuses to leave! 🤔`);
+                window.userActionsDatabase.addAction("label_deleted_failed")
             }
         });
     },
@@ -726,13 +730,16 @@ window.labelProfileManagerUI = {
     
         if (success) {
             window.complete_action(actionType, true, `Welcome to the family, "${labelName}"! 🎉`);
+            window.userActionsDatabase.addAction("label_added")
             this.handleLabelClick(newLabel);
             this.elements.searchInput.value = '';
             this.filterLabels();
             this.renderLabels();
         } else {
             window.complete_action(actionType, false, `"${labelName}" got shy and couldn't join us! Try again? 🙈`);
+            window.userActionsDatabase.addAction("label_added_failed")
         }
+        
     },
 
     getRandomColor() {

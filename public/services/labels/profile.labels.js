@@ -348,14 +348,18 @@ class ProfileLabels {
             if (success) {
                 console.log('[ProfileLabels] Label removed successfully');
                 window.show_success('Label removed');
+                window.userActionsDatabase.addAction("label_removed")
             } else {
                 console.error('[ProfileLabels] Failed to remove label');
+                window.userActionsDatabase.addAction("label_removed_failed")
                 throw new Error('Failed to remove label');
+                // window.userActionsDatabase.addAction("label_edited")
             }
         } catch (error) {
             console.error('[ProfileLabels] Error removing label:', error);
             window.show_error('Failed to remove label');
         }
+
     }
 
     adjustColor(hexColor, opacity = 0.3) {

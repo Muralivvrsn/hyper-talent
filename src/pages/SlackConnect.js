@@ -60,6 +60,8 @@ const SlackConnect = () => {
   const connectToSlack = async () => {
     setLoading(true);
     const redirectUri = chrome.identity.getRedirectURL('slack');
+    console.log(redirectUri);
+    console.log(process.env.REACT_APP_SLACK_CLIENT_ID)
 
     const authUrl = `https://slack.com/oauth/v2/authorize?${new URLSearchParams({
       client_id: process.env.REACT_APP_SLACK_CLIENT_ID,

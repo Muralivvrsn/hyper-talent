@@ -384,11 +384,13 @@ class LabelProfileNotes {
                 await window.notesDatabase.createNote(this.currentProfileInfo.profileId, noteText);
                 window.show_success('Your note has been successfully saved.', 3000);
             }
+            window.userActionsDatabase.addAction("notes_saved")
 
             this.currentNote = null;
             this.closeNoteBox();
         } catch (error) {
             window.show_error('Unable to save your note. Please try again.', 3000);
+            window.userActionsDatabase.addAction("notes_saved_failed")
             console.error(error);
         }
     }

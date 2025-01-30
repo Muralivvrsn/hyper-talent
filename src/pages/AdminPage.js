@@ -3,6 +3,8 @@ import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { PlusCircle, MinusCircle, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useMigration } from '../context/MigrationContext';
+import Dashboard from '../components/Dashboard';
+import ScreenRecorder from '../components/ScreenRecorder';
 const AdminPage = () => {
   const { user } = useAuth();
   const { add_label_user } = useMigration();
@@ -308,10 +310,8 @@ const AdminPage = () => {
       </form>
 
       <div>
-        <button onClick={handleMigration}>
-          Migrate All Users
-        </button>
-       
+       {/* <Dashboard/> */}
+       <ScreenRecorder/>
       </div>
     </div>
   );

@@ -13,29 +13,35 @@ import { LabelProvider } from './context/LabelContext';
 import { NotesProvider } from './context/NotesContext';
 import { TemplateProvider } from './context/TemplateContext';
 import { OtherUsersProvider } from './context/OtherUsersContext';
+import { UserActionProvider } from './context/UserActionContext';
+import { GuideProvider } from './context/GuideContext';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
 
     <AuthProvider>
         <DataProvider>
-        <MigrationProvider>
-            <SheetProvider>
-            <OtherUsersProvider>
-            <ThemeProvider>
-                <LabelProvider>
-                    <NotesProvider>
-                        <TemplateProvider>
-                            <ProfileNoteProvider>
-                            <App />
-                            </ProfileNoteProvider>
-                        </TemplateProvider>
-                    </NotesProvider>
-                </LabelProvider>
-            </ThemeProvider>
-            </OtherUsersProvider>
-            </SheetProvider>
-        </MigrationProvider>
+            <MigrationProvider>
+                <SheetProvider>
+                    <OtherUsersProvider>
+                        <GuideProvider>
+                            <UserActionProvider>
+                                <ThemeProvider>
+                                    <LabelProvider>
+                                        <NotesProvider>
+                                            <TemplateProvider>
+                                                <ProfileNoteProvider>
+                                                    <App />
+                                                </ProfileNoteProvider>
+                                            </TemplateProvider>
+                                        </NotesProvider>
+                                    </LabelProvider>
+                                </ThemeProvider>
+                            </UserActionProvider>
+                        </GuideProvider>
+                    </OtherUsersProvider>
+                </SheetProvider>
+            </MigrationProvider>
         </DataProvider>
     </AuthProvider>
 

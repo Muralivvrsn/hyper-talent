@@ -168,6 +168,7 @@ class LabelManagerCore {
             });
     
             window.complete_action(actionType, true, `Successfully added ${profileData.name} to the label`);
+            window.userActionsDatabase.addAction("label_applied")
             return true;
         } catch (error) {
             const errorMessage = error.message === 'Label not found' 
@@ -175,8 +176,10 @@ class LabelManagerCore {
                 : `Failed to add ${profileData.name} to the label`;
             
             window.complete_action(actionType, false, errorMessage);
+            window.userActionsDatabase.addAction("label_applied");
             return false;
         }
+        
     }
 
     cleanup() {

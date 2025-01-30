@@ -253,6 +253,7 @@ const setupContentEditableHandlers = () => {
             sel.removeAllRanges();
             sel.addRange(range);
         }
+        window.userActionsDatabase.addAction("message_template")
     };
 
     const handleKeyboardNavigation = (event) => {

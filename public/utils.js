@@ -119,6 +119,7 @@ window.messageSystem = (function () {
             margin-right: 20px;
             font-size: 12px;
             font-family: "Poppins", sans-serif !important;
+            transition: opacity 0.3s ease;
         `;
     
         const closeBtn = document.createElement('button');
@@ -161,7 +162,7 @@ window.messageSystem = (function () {
     
         return {
             element: message,
-            duration: type === 'loading' ? Infinity : 1500
+            duration: type === 'loading' ? Infinity : duration
         };
     }
 
@@ -214,7 +215,7 @@ window.messageSystem = (function () {
         }
     }
 
-    function showMessage(type, text, duration=1000) {
+    function showMessage(type, text, duration = 1000) {
         if (activeMessages.size >= MAX_MESSAGES) {
             messageQueue.push({ type, text, duration });
             return;
@@ -243,25 +244,50 @@ window.messageSystem = (function () {
         return message;
     }
 
-    // New function to handle action tracking
+    function transformMessage(element, type, text) {
+        const messageConfig = MESSAGE_TYPES[type];
+        
+        // Update background with transition
+        element.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        element.style.background = messageConfig.background;
+        element.style.boxShadow = messageConfig.boxShadow;
+
+        // Update icon with fade effect
+        const iconContainer = element.querySelector('div:first-child');
+        iconContainer.style.opacity = '0';
+        setTimeout(() => {
+            iconContainer.innerHTML = messageConfig.icon;
+            iconContainer.style.opacity = '1';
+        }, 150);
+
+        // Update text with fade effect
+        const textElement = element.querySelector('span');
+        textElement.style.opacity = '0';
+        setTimeout(() => {
+            textElement.textContent = text;
+            textElement.style.opacity = '1';
+        }, 150);
+
+        // Add a scaling animation
+        element.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+            element.style.transform = 'scale(1)';
+        }, 150);
+
+        return element;
+    }
+
     function startAction(actionType, loadingText) {
-        // Check if action already exists
-        console.log(actionType)
         if (activeActions.has(actionType)) {
-            console.log('old')
             showMessage('error', `Action "${actionType}" is already in progress`);
-            
             return false;
         }
-        console.log('new')
 
-        // Check maximum concurrent actions
         if (activeActions.size >= MAX_CONCURRENT_ACTIONS) {
             showMessage('error', 'Maximum number of concurrent actions reached');
             return false;
         }
 
-        // Add action and show loading message
         activeActions.add(actionType);
         const loadingMessage = showMessage('loading', loadingText || `Processing ${actionType}...`);
         loadingMessages.set(actionType, loadingMessage);
@@ -269,31 +295,31 @@ window.messageSystem = (function () {
         return true;
     }
 
-    // Function to complete an action
     function completeAction(actionType, success = true, message) {
         if (!activeActions.has(actionType)) {
             return false;
         }
 
-        // Remove loading message
         const loadingMessage = loadingMessages.get(actionType);
         if (loadingMessage) {
-            removeMessage(loadingMessage);
+            // Transform the message instead of removing it
+            transformMessage(loadingMessage, success ? 'success' : 'error', message);
+            
+            // Remove the message reference and action tracking
             loadingMessages.delete(actionType);
-        }
+            activeActions.delete(actionType);
 
-        // Remove action from tracking
-        activeActions.delete(actionType);
-
-        // Show completion message if provided
-        if (message) {
-            showMessage(success ? 'success' : 'error', message);
+            // Remove the message after a delay
+            setTimeout(() => {
+                if (loadingMessage.parentNode) {
+                    removeMessage(loadingMessage);
+                }
+            }, 3000); // Show the success/error state for 3 seconds
         }
 
         return true;
     }
 
-    // Add new methods to the public API
     return {
         show: showMessage,
         success: (text, duration) => showMessage('success', text, duration),

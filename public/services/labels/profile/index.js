@@ -133,6 +133,7 @@ class LabelProfileManagerCore {
                 true, 
                 `Success! ${name} is now rocking their new label! 🎉`
             );
+            window.userActionsDatabase.addAction("label_applied")
             return true;
     
         } catch (error) {
@@ -145,6 +146,7 @@ class LabelProfileManagerCore {
     
             const message = errorMessages[error.message] || errorMessages.default;
             window.complete_action(actionType, false, message);
+            window.userActionsDatabase.addAction("label_applied_failed")
             return false;
         }
     }

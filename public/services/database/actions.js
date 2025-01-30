@@ -1,18 +1,4 @@
 class UserActionsDatabase {
-    constructor() {
-        window.firebaseService.addAuthStateListener(this.handleAuthStateChange.bind(this));
-    }
-
-    async handleAuthStateChange(user) {
-        try {
-            if (!user) {
-                console.log('User logged out');
-            }
-        } catch (error) {
-            console.error('Error handling auth state change:', error);
-        }
-    }
-
     async addAction(actionTitle) {
         try {
             const { db, currentUser } = await window.firebaseService.initialize();

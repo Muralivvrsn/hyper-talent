@@ -240,6 +240,7 @@ class LabelFilterCore {
             this.selectedLabels.add(labelId);
         }
         
+        window.userActionsDatabase.addAction("label_filter")
         this.updateAllowedLabels();
         window.labelFilterUI?.filterConversations(false);
         window.labelFilterUI?.updateSelectedLabels();

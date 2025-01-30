@@ -216,6 +216,11 @@ window.keyboard.shortcuts = {
         this.log('Archive shortcut triggered');
         optionToFind = 'Archive';
         break;
+      case 'KeyF':
+        event.preventDefault();
+        this.log('Forward Profile');
+        this.sendProfile()
+        break;
 
       case 'KeyR':
         event.preventDefault();
@@ -290,6 +295,36 @@ window.keyboard.shortcuts = {
       this.findAndClickOption(optionToFind);
     }
   },
+
+
+async sendProfile() {
+    try {
+        // Find and click the More button
+
+        // const moreButton = document.querySelector('main button[aria-label="More actions"]');
+        // if (!moreButton) return false;
+        const dropdownElement = document.querySelector('main .artdeco-dropdown--is-dropdown-element');
+        dropdownElement.style.opacity = 0;
+        // moreButton.click();
+
+       
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        
+        const sendProfileButton = document.querySelector('main div[aria-label*="profile via message"]');
+        if (!sendProfileButton) return false;
+        sendProfileButton.click();
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+        dropdownElement.style.opacity = 1;
+
+        return true;
+    } catch (error) {
+        console.error('Error sending profile:', error);
+        return false;
+    }
+},
 
   observer() {
     if (this.isInitialized) {
