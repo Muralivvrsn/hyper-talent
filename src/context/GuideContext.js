@@ -318,17 +318,17 @@ const MainGuide = ({
             <X className="h-4 w-4" />
           </button>
           
-          <CardHeader className="border-b border-gray-100 dark:border-gray-700">
-            <CardTitle className="text-2xl font-bold">
+          <CardHeader className="border-b border-gray-100 dark:border-gray-700 p-4">
+            <CardTitle className="text-lg font-semibold pr-4">
               {currentContent.title}
             </CardTitle>
-            <CardDescription className="mt-2 text-base">
+            <CardDescription className="mt-2 text-sm">
               {currentContent.description}
             </CardDescription>
           </CardHeader>
   
-          <CardContent className="flex-1 overflow-y-auto">
-            <div className="space-y-6">
+          <CardContent className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
               {/* GIF Display */}
               <div className="relative w-full h-64 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
                 <img 
@@ -340,14 +340,14 @@ const MainGuide = ({
   
               {/* Top Content */}
               {currentContent.topContent && (
-                <div className="px-1 text-gray-600 dark:text-gray-300 text-base leading-relaxed">
+                <div className="px-1 text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
                   {currentContent.topContent}
                 </div>
               )}
   
               {/* Steps Section */}
               {currentContent.steps && currentContent.steps.length > 0 && (
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-4">
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg px-4 py-1 space-y-3">
                   {currentContent.steps.map((step, index) => (
                     <div 
                       key={index} 
@@ -371,7 +371,7 @@ const MainGuide = ({
               {/* Footer Content */}
               {currentContent.footerContent && (
                 <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                  <p className="text-blue-800 dark:text-blue-200 text-sm">
+                  <p className="text-blue-800 dark:text-blue-200 text-xm">
                     {currentContent.footerContent}
                   </p>
                 </div>
@@ -379,8 +379,8 @@ const MainGuide = ({
             </div>
           </CardContent>
   
-          <CardFooter className="border-t border-gray-100 dark:border-gray-700 mt-auto">
-            <div className="w-full flex justify-between items-center">
+          <CardFooter className="border-t border-gray-100 dark:border-gray-700 mt-auto p-4">
+            <div className="w-full flex justify-between flex-col sm:flex-row space-y-3 items-center">
               {/* Progress Indicators */}
               <div className="flex items-center space-x-2">
                 {Array.from({ length: GuideContent.length }).map((_, index) => (
@@ -396,12 +396,11 @@ const MainGuide = ({
               </div>
               
               {/* Navigation Buttons */}
-              <div className="flex space-x-2">
+              <div className="flex space-x-4">
                 {currentStep > 0 && (
                   <Button
-                    variant="outline"
                     onClick={previousStep}
-                    className="px-4"
+                    className="px-4 bg-background hover:bg-background text-black dark:text-white"
                   >
                     Previous
                   </Button>
@@ -446,21 +445,21 @@ const SearchDialog = ({
             </DialogHeader>
             <div className="space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-[10px] h-4 w-4 text-sm text-gray-400" />
                 <Input
                   placeholder="Search for features or help..."
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm"
                 />
               </div>
               <div className="max-h-96 overflow-y-auto space-y-4">
                 {searchResults.map((result, index) => (
                   <Card key={index} className="p-4">
-                    <h3 className="font-semibold">
+                    <h3 className="font-semibold text-sm">
                       {result.title || result.question}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
                       {result.content || result.answer}
                     </p>
                   </Card>
@@ -591,7 +590,7 @@ export const GuideProvider = ({ children }) => {
       
       <button
         onClick={toggleSearch}
-        className="fixed bottom-5 right-5 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-shadow z-[9999]"
+        className="fixed bottom-5 right-5 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-shadow z-[9998]"
       >
         <HelpCircle className="h-6 w-6" />
       </button>
