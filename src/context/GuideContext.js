@@ -309,7 +309,7 @@ const MainGuide = ({
     const currentContent = GuideContent[currentStep];
   
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <Card className="w-[90%] max-w-2xl bg-white dark:bg-gray-800 relative max-h-[90vh] flex flex-col">
           <button 
             onClick={() => setIsGuideOpen(false)}
@@ -590,7 +590,7 @@ export const GuideProvider = ({ children }) => {
       
       <button
         onClick={toggleSearch}
-        className="fixed bottom-5 right-5 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-shadow z-[9998]"
+        className="fixed bottom-5 right-5 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-shadow z-40"
       >
         <HelpCircle className="h-6 w-6" />
       </button>
