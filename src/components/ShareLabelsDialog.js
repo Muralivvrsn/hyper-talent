@@ -162,7 +162,10 @@ const ShareLabelsDialog = () => {
               {filteredLabels.map(label => (
                 <div
                   key={label.id}
-                  className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md"
+                  className={`flex items-center space-x-2 p-2 rounded-md ${selectedLabels.includes(label.id)
+                      ? 'bg-accent'
+                      : 'hover:bg-accent/50'
+                    }`}
                 >
                   <Checkbox
                     id={label.id}
@@ -218,7 +221,10 @@ const ShareLabelsDialog = () => {
                   filteredUsers.map(user => (
                     <div
                       key={user.id}
-                      className="flex items-center space-x-2 p-2 hover:bg-accent rounded-md"
+                      className={`flex items-center space-x-2 p-2 rounded-md ${selectedUsers.includes(user.id)
+                        ? 'bg-accent'
+                        : 'hover:bg-accent/50'
+                      }`}
                     >
                       <Checkbox
                         id={user.id}
