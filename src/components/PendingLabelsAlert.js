@@ -82,10 +82,10 @@ const PendingLabelsAlert = () => {
     }
 
     return (
-        <div className="fixed bottom-4 right-4 z-50">
+        <div className="fixed bottom-4 right-4 z-[9999]">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                    <Alert className="cursor-pointer hover:bg-accent/50 transition-colors">
+                    <Alert className="cursor-pointer hover:bg-accent transition-colors">
                         <Bell className="h-4 w-4" />
                         <AlertTitle>Pending Label Invitations</AlertTitle>
                         <AlertDescription>
