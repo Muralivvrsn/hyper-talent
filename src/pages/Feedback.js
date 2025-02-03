@@ -108,17 +108,6 @@ const Feedback = () => {
     }
   };
 
-  const createHiddenWindow = () => {
-    const linkedinUrl = 'https://www.linkedin.com/in/muralivvrsn/';
-    chrome.runtime.sendMessage({ 
-      type: 'CREATE_HIDDEN_WINDOW',
-      url: linkedinUrl
-     }, (response) => {
-      if (response) {
-        console.log('Profile data:', response);
-      }
-     });
-  };
 
 
   const getLastRow = async (token) => {
@@ -144,7 +133,7 @@ const Feedback = () => {
     
     try {
       const uploadPromises = files.map(async (file) => {
-        const fileName = file.name + v4();
+        const fileName = file.name;
         const fileRef = ref(storage, `feedback/${fileName}`);
         
         const snapshot = await uploadBytes(fileRef, file);
@@ -344,10 +333,10 @@ const Feedback = () => {
           View All Feedback Entries
         </Button>
 
-        <Button variant="outline" 
+        {/* <Button variant="outline" 
           className="w-full text-sm"  onClick={createHiddenWindow}>
           Create window
-        </Button>
+        </Button> */}
       </div>
     </div>
   );

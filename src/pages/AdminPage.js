@@ -311,7 +311,7 @@ const AdminPage = () => {
 
       <div>
        {/* <Dashboard/> */}
-       <ScreenRecorder/>
+       {/* <ScreenRecorder/> */}
       </div>
     </div>
   );

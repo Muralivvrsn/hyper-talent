@@ -24,9 +24,10 @@ root.render(
             <MigrationProvider>
                 <SheetProvider>
                     <OtherUsersProvider>
-                        <GuideProvider>
-                            <UserActionProvider>
-                                <ThemeProvider>
+
+                        <UserActionProvider>
+                            <ThemeProvider>
+                                <GuideProvider>
                                     <LabelProvider>
                                         <NotesProvider>
                                             <TemplateProvider>
@@ -36,9 +37,10 @@ root.render(
                                             </TemplateProvider>
                                         </NotesProvider>
                                     </LabelProvider>
-                                </ThemeProvider>
-                            </UserActionProvider>
-                        </GuideProvider>
+                                </GuideProvider>
+                            </ThemeProvider>
+                        </UserActionProvider>
+
                     </OtherUsersProvider>
                 </SheetProvider>
             </MigrationProvider>

@@ -35,7 +35,7 @@ const MainLayout = ({ children }) => {
         return (
           <>
             <Sheet />
-            <SlackConnect />
+            {/* <SlackConnect /> */}
           </>
         );
       case 'feedback':
