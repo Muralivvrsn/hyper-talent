@@ -33,9 +33,6 @@ const ProfileCard = ({ profile, labels, note }) => {
                 <h3 className="text-base font-medium leading-none truncate mb-1">
                   {profile.name || 'Unknown User'}
                 </h3>
-                {profile.username && (
-                  <p className="text-xs text-muted-foreground">@{profile.username}</p>
-                )}
               </div>
               
               {profile.url && (

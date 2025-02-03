@@ -85,7 +85,7 @@ const PendingLabelsAlert = () => {
         <div className="fixed bottom-4 right-4 z-50">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                    <Alert className="cursor-pointer hover:bg-accent/50 transition-colors">
+                    <Alert className="cursor-pointer hover:bg-accent transition-colors">
                         <Bell className="h-4 w-4" />
                         <AlertTitle>Pending Label Invitations</AlertTitle>
                         <AlertDescription>
@@ -104,16 +104,21 @@ const PendingLabelsAlert = () => {
                             {Object.entries(pendingSharedLabels).map(([labelId, label]) => (
                                 <div 
                                     key={labelId}
-                                    className={`p-3 rounded-lg border transition-colors ${
+                                    onClick={() => toggleLabelSelection(labelId)}
+                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
                                         selectedLabels.includes(labelId)
-                                            ? 'bg-accent border-primary' 
-                                            : 'hover:bg-accent/50 border-transparent'
+                                            ? 'bg-accent' 
+                                            : 'hover:bg-accent/50'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Checkbox
                                             checked={selectedLabels.includes(labelId)}
-                                            onCheckedChange={() => toggleLabelSelection(labelId)}
+                                            onCheckedChange={(e) => {
+                                                e?.stopPropagation?.();
+                                                toggleLabelSelection(labelId);
+                                            }}
+                                            // onCheckedChange={() => toggleLabelSelection(labelId)}
                                         />
                                         <span
                                             className="w-3 h-3 rounded-full"
