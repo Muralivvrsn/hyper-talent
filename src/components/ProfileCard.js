@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { ChevronDown, ChevronUp, Link as LinkIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, Link as LinkIcon, Users } from 'lucide-react';
 
 const ProfileCard = ({ profile, labels, note }) => {
   const [expanded, setExpanded] = useState(false);
@@ -26,15 +26,18 @@ const ProfileCard = ({ profile, labels, note }) => {
             <AvatarImage src={profile.image} alt={profile.name} className="object-cover" />
             <AvatarFallback className="text-sm font-medium">{initials}</AvatarFallback>
           </Avatar>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="min-w-0">
-                <h3 className="text-base font-medium leading-none truncate mb-1">
+                <h3 className="text-base font-medium leading-none truncate mb-1 flex items-center gap-1">
                   {profile.name || 'Unknown User'}
+                  {labels?.some(label => label.isShared) && (
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </h3>
               </div>
-              
+
               {profile.url && (
                 <a
                   href={profile.url}
@@ -72,13 +75,12 @@ const ProfileCard = ({ profile, labels, note }) => {
           <div className="relative">
             <p
               ref={contentRef}
-              className={`text-sm text-muted-foreground leading-relaxed ${
-                expanded ? '' : 'line-clamp-2'
-              }`}
+              className={`text-sm text-muted-foreground leading-relaxed ${expanded ? '' : 'line-clamp-2'
+                }`}
             >
               {note.content}
             </p>
-            
+
             {isOverflowing && (
               <button
                 onClick={() => setExpanded(!expanded)}

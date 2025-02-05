@@ -6,6 +6,8 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Separator } from './ui/separator';
 import { ChevronDown, Filter, X, Users, Search, Check, Trash2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import ShareLabelsDialog from './ShareLabelsDialog';
+import CreateLabelDialog from './CreateLabelDialog';
+import { createLabel } from '../utils/labelUtils';
 import { getFirestore, doc, runTransaction } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +21,7 @@ const FilterBar = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
   const [deletingLabels, setDeletingLabels] = useState(new Set());
+  const [isCreatingFromSearch, setIsCreatingFromSearch] = useState(false);
   const { user } = useAuth();
   const db = getFirestore();
 
@@ -38,6 +41,21 @@ const FilterBar = ({
   const clearSearch = () => {
     setSearchTerm('');
     onSearchChange('');
+  };
+
+  const handleFilterKeyDown = async (e) => {
+    if (e.key === 'Enter' && filterSearch.trim() &&
+      !filterLabels([...ownedLabels, ...sharedLabels]).length) {
+      setIsCreatingFromSearch(true);
+      try {
+        const result = await createLabel(filterSearch, user?.uid, db);
+        if (result || !result === null) {
+          setFilterSearch('');
+        }
+      } finally {
+        setIsCreatingFromSearch(false);
+      }
+    }
   };
 
   const handleDeleteSharedLabel = async (labelId, e) => {
@@ -70,7 +88,7 @@ const FilterBar = ({
         onLabelToggle(labelId);
       }
     } catch (error) {
-      console.error('Error deleting shared label:', error);
+      console.error('Error updating shared label:', error);
     } finally {
       setDeletingLabels(prev => {
         const newSet = new Set(prev);
@@ -164,7 +182,8 @@ const FilterBar = ({
       </div>
 
       <div className="flex gap-4 items-center">
-        <div>
+        <div className="flex gap-2">
+          {/* <CreateLabelDialog /> */}
           <ShareLabelsDialog />
         </div>
 
@@ -184,6 +203,7 @@ const FilterBar = ({
                 placeholder="Search labels..."
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
+                onKeyDown={handleFilterKeyDown}
                 className="pl-8 h-8 text-sm"
               />
             </div>
@@ -210,8 +230,18 @@ const FilterBar = ({
               )}
 
               {filterSearch && filterLabels([...ownedLabels, ...sharedLabels]).length === 0 && (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  No labels found
+                <div className="py-6 text-center text-sm">
+                  <p className="text-muted-foreground">No labels found</p>
+                  <p className="text-primary mt-1">
+                    {isCreatingFromSearch ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Creating...
+                      </span>
+                    ) : (
+                      <>Press Enter to create "{filterSearch}"</>
+                    )}
+                  </p>
                 </div>
               )}
             </div>

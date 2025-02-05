@@ -283,11 +283,13 @@ const MainGuide = ({
                     <div className="space-y-4">
                         {/* GIF Display */}
                         <div className="relative w-full bg-gray-100 dark:bg-gray-700 max-w-[300px] m-auto rounded-lg overflow-hidden">
-                            <img
-                                src={currentContent.gifUrl}
-                                alt="Feature demonstration"
-                                className="w-full h-full"
-                            />
+                            <div className="relative w-full bg-gray-100 dark:bg-gray-700 max-w-[300px] m-auto rounded-lg overflow-hidden aspect-[9/16]">
+                                <img
+                                    src={currentContent.gifUrl}
+                                    alt="Feature demonstration"
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
                         </div>
 
                         {/* Top Content */}
@@ -338,8 +340,8 @@ const MainGuide = ({
                                 <div
                                     key={index}
                                     className={`h-2 w-2 rounded-full transition-colors duration-200 ${index === currentStep
-                                            ? 'bg-blue-500'
-                                            : 'bg-gray-200 dark:bg-gray-600'
+                                        ? 'bg-blue-500'
+                                        : 'bg-gray-200 dark:bg-gray-600'
                                         }`}
                                 />
                             ))}
@@ -429,8 +431,8 @@ export const GuideProvider = ({ children }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [hasSeenGuide, setHasSeenGuide] = useState(false);
     const { loading: dataLoading } = useData();
-    const {loading: authLoading} = useAuth();
-    const {loading: themeLoading} = useTheme();
+    const { loading: authLoading } = useAuth();
+    const { loading: themeLoading } = useTheme();
 
     useEffect(() => {
         const hasSeenGuideStorage = localStorage.getItem('hasSeenGuide');

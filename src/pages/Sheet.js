@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from "../components/ui/button";
-import { Upload, Database, FileSpreadsheet, Loader2, ExternalLink} from 'lucide-react';
+import { Upload, Database, FileSpreadsheet, Loader2, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { fetchCollectionData, createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
-import { doc, setDoc, getFirestore } from 'firebase/firestore';
+import { createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
+import { doc, setDoc, getFirestore, updateDoc } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { useSheet } from '../context/SheetContext';
 import {
@@ -12,6 +12,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../components/ui/tooltip";
+import { useLabels } from '../context/LabelContext';
+import { useNotes } from '../context/NotesContext';
+import { useTemplates } from '../context/TemplateContext';
 
 const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled }) => (
   <TooltipProvider>
@@ -37,6 +40,7 @@ const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabl
     </Tooltip>
   </TooltipProvider>
 );
+
 const NoSheetView = ({ onCreateSheet, isLoading }) => (
   <div className="flex flex-col items-center justify-center space-y-6 p-8">
     <FileSpreadsheet className="h-16 w-16 text-muted-foreground" />
@@ -98,26 +102,38 @@ const SheetPage = () => {
     updateLabels: false
   });
 
+  const { labels } = useLabels();
+  const { notes } = useNotes();
+  const { templates } = useTemplates();
+
   const handleCreate = async () => {
     try {
       setLoadingStates(prev => ({ ...prev, create: true }));
       const token = await getGoogleToken();
       const firstName = user.displayName.split(' ')[0];
-      const data = await fetchCollectionData(user.uid);
+      const data = {
+        labels: { labels },
+        notes,
+        shortcuts: templates
+      };
 
       const sheet = await createSheet(token, `${firstName} - LinkedIn Manager`);
       await syncSheet(sheet.spreadsheetId, token, data);
 
+      const currentTime = new Date().toISOString();
+
       const newSheetData = {
-        sheetUrl: `https://docs.google.com/spreadsheets/d/${sheet.spreadsheetId}`,
-        spreadsheetId: sheet.spreadsheetId,
-        createdAt: new Date().toISOString(),
-        lastSync: new Date().toISOString()
+        sd: {
+          id: sheet.spreadsheetId,
+          ca: currentTime,
+          ls: currentTime
+        }
       };
 
-      await setDoc(doc(getFirestore(), 'sheets', user.uid), newSheetData);
-      setSheetData(newSheetData);
-      window.open(newSheetData.sheetUrl, '_blank');
+      await updateDoc(doc(getFirestore(), 'users', user.uid), newSheetData);
+      setSheetData(newSheetData.sd);
+
+      window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.sd.id}`, '_blank');
     } catch (error) {
       console.error('Error creating sheet:', error);
     } finally {
@@ -126,24 +142,34 @@ const SheetPage = () => {
   };
 
   const handleSync = async (syncType) => {
-    if (!sheetData?.spreadsheetId) return;
+    if (!sheetData?.id) return;
     const loadingKey = syncType === "Sheet" ? "syncSheet" : "syncDB";
+
     try {
       setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
       const token = await getGoogleToken();
-      const data = await fetchCollectionData(user.uid);
 
+      const data = {
+        labels: { labels },
+        notes,
+        shortcuts: templates
+      };
+      console.log("Sheet Data: ", data)
       if (syncType === "Sheet") {
-        await syncSheet(sheetData.spreadsheetId, token, data);
+        await syncSheet(sheetData?.id, token, data);
       } else {
-        await syncDatabase(sheetData.spreadsheetId, token, data, user.uid);
+        await syncDatabase(sheetData?.id, token, data, user.uid);
       }
 
       const updatedSheetData = {
         ...sheetData,
-        lastSync: new Date().toISOString()
+        ls: new Date().toISOString()
       };
-      await setDoc(doc(getFirestore(), 'sheets', user.uid), updatedSheetData);
+
+      await updateDoc(doc(getFirestore(), 'users', user.uid), {
+        sd: updatedSheetData
+      });
+
       setSheetData(updatedSheetData);
     } catch (error) {
       console.error(error);
@@ -153,13 +179,13 @@ const SheetPage = () => {
   };
 
   const handleUpload = async () => {
-    if (!sheetData?.spreadsheetId) return;
+    if (!sheetData?.id) return;
     try {
       setLoadingStates(prev => ({ ...prev, updateLabels: true }));
       const token = await getGoogleToken();
 
       const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${sheetData.spreadsheetId}/values/Profile Data`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${sheetData.id}/values/Profile Data`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -180,14 +206,14 @@ const SheetPage = () => {
         sheetRows,
         headerIndices,
         user.uid,
-        sheetData.spreadsheetId,
+        sheetData.id,
         token
       );
 
       if (updatedRowCount > 0) {
         const updatedSheetData = {
           ...sheetData,
-          lastSync: new Date().toISOString()
+          ls: new Date().toISOString()
         };
 
         await setDoc(doc(getFirestore(), 'sheets', user.uid), updatedSheetData);
@@ -211,10 +237,10 @@ const SheetPage = () => {
 
   return (
     <div className="mx-auto max-w-4xl">
-        <h1 className="text-lg font-semibold mb-2">Sheet Manager</h1>
-        <span className="text-muted-foreground mb-2">
-        Sync and manage your LinkedIn connections using Google Sheets. <b>Last synced: {sheetData?.lastSync ? formatDate(sheetData?.lastSync) : ""}</b>
-        </span>
+      <h1 className="text-lg font-semibold mb-2">Sheet Manager</h1>
+      <span className="text-muted-foreground mb-2">
+        Sync and manage your LinkedIn connections using Google Sheets. {sheetData && <b>Last synced: {formatDate(sheetData.ls)}</b> }
+      </span>
       <div>
         {!sheetData ? (
           <NoSheetView
@@ -228,10 +254,10 @@ const SheetPage = () => {
               onSync={handleSync}
               onUpload={handleUpload}
             />
-            <div className="flex flex-col items-center gap-4 pb-4 border-b">
+            <div className="flex flex-col items-center gap-4 pb-4">
               <Button
                 variant="outline"
-                onClick={() => window.open(sheetData.sheetUrl, '_blank')}
+                onClick={() => window.open(`https://docs.google.com/spreadsheets/d/${sheetData?.id}`, '_blank')}
                 className="w-full max-w-md p-6"
               >
                 <ExternalLink className="mr-2 h-4 w-4" />

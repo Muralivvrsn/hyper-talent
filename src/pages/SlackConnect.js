@@ -133,7 +133,7 @@ const SlackConnect = () => {
   };
 
   return (
-    <div className="pt-4">
+    <div className="pt-4 border-t">
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>

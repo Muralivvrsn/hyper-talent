@@ -17,8 +17,15 @@ export const SheetProvider = ({ children }) => {
   const initializeSheetData = async () => {
     try {
       const db = getFirestore();
-      const snap = await getDoc(doc(db, 'sheets', user.uid));
-      if (snap.exists()) setSheetData(snap.data());
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (snap.exists()) {
+        const userData = snap.data();
+        if (userData?.sd?.id) {
+          setSheetData(userData.sd);
+        } else {
+          setSheetData(null);
+        }
+      }
     } catch (error) {
       console.error('Error fetching sheet data:', error);
     } finally {
