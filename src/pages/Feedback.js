@@ -1,9 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
-import { useAuth } from '../context/AuthContext';
-import { Loader2, ExternalLink, PaperclipIcon, X, Image as ImageIcon, FileText, File } from "lucide-react";
+import { Loader2, PaperclipIcon, X, FileText, File, LinkIcon } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -11,12 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { storage } from '../context/AuthContext';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { v4 } from 'uuid';
-
-const SHEET_ID = '1IqkRZed_a9gFC4ZvAarpZjeRc1Buoi0ivZJ5KUY68f0';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}`;
+import { Badge } from "../components/ui/badge";
+import { ScrollArea } from "../components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
+import { formatDistanceToNow } from 'date-fns';
+import { useFeedback } from '../context/FeedbackContext';
+import toast from 'react-hot-toast';
 
 const feedbackTypes = [
   { value: "Bug", label: "Bug Report", placeholder: "Describe the bug you encountered..." },
@@ -24,19 +27,134 @@ const feedbackTypes = [
   { value: "Suggestion", label: "Suggestion", placeholder: "Share your suggestion..." }
 ];
 
+const statusConfig = {
+  'ns': {
+    label: 'New',
+    style: 'bg-gray-100 text-gray-800 hover:none',
+    description: "🌱 Fresh as a daisy - waiting to bloom!"
+  },
+  'ip': {
+    label: 'In Progress',
+    style: 'bg-blue-100 text-blue-800',
+    description: "🏃 We're on it like a superhero on a mission!"
+  },
+  'ur': {
+    label: 'Under Review',
+    style: 'bg-purple-100 text-purple-800',
+    description: "🔍 Our experts are examining it with their finest monocles"
+  },
+  'it': {
+    label: 'In Testing',
+    style: 'bg-yellow-100 text-yellow-800',
+    description: "🧪 Being poked and prodded (gently, we promise)"
+  },
+  'rs': {
+    label: 'Resolved',
+    style: 'bg-green-100 text-green-800',
+    description: "✨ Fixed and polished until it sparkles!"
+  },
+  'dc': {
+    label: 'Declined',
+    style: 'bg-red-100 text-red-800',
+    description: "🤔 Not this time - but we appreciate the thought!"
+  },
+  'df': {
+    label: 'Deferred',
+    style: 'bg-orange-100 text-orange-800',
+    description: "⏳ On the back burner, but not forgotten"
+  },
+  'cp': {
+    label: 'Completed',
+    style: 'bg-emerald-100 text-emerald-800',
+    description: "🎉 Done and dusted - high fives all around!"
+  }
+};
 
+const getStatusBadge = (status) => {
+  console.log(status)
+  return statusConfig[status]?.style || statusConfig.ns.style;
+};
 
+const StatusBadge = ({ status }) => {
+  const statusInfo = statusConfig[status] || statusConfig.ns;
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <Badge 
+            className={`${getStatusBadge(status)} hover:bg-background-800`}
+          >
+            {statusInfo.label}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{statusInfo.description}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+const FeedbackItem = ({ data, id }) => {
+  const statusMap = {
+    'b': 'Bug',
+    'f': 'Feature',
+    's': 'Suggestion'
+  };
+
+  return (
+    <div className="p-4 border rounded-lg mb-4 bg-card">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <span className="font-semibold text-sm">
+            {statusMap[data.t] || 'Unknown'}
+          </span>
+          <span className="text-xs text-muted-foreground ml-2">
+            {formatDistanceToNow(new Date(data.ca), { addSuffix: true })}
+          </span>
+        </div>
+        <StatusBadge status={data.s || 'ns'} />
+      </div>
+      
+      <p className="text-sm text-card-foreground mb-2">{data.d}</p>
+      
+      {data.u && data.u.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {data.u.map((url, index) => (
+            <a
+              key={index}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-xs text-blue-600 hover:text-blue-800"
+            >
+              <LinkIcon className="h-3 w-3 mr-1" />
+              Attachment {index + 1}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// FilePreview component remains the same
 const FilePreview = ({ file, onRemove }) => {
   const isImage = file.type.startsWith('image/');
   const [preview, setPreview] = useState('');
 
   React.useEffect(() => {
     if (isImage) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error creating file preview:', error);
+      }
     }
     return () => {
       if (preview) {
@@ -44,9 +162,6 @@ const FilePreview = ({ file, onRemove }) => {
       }
     };
   }, [file, isImage]);
-
-
-
 
   return (
     <div className="relative flex items-center p-2 bg-background rounded-md border border-gray-200">
@@ -85,125 +200,38 @@ const FilePreview = ({ file, onRemove }) => {
   );
 };
 
+// Main Feedback component remains largely the same
 const Feedback = () => {
   const [feedback, setFeedback] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('');
   const [selectedType, setSelectedType] = useState('Bug');
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const { user } = useAuth();
-  const chrome = window.chrome;
-
-  const getGoogleToken = async () => {
-    try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
-      if (response.success) {
-        return response.token;
-      }
-      throw new Error('Failed to get token');
-    } catch (error) {
-      console.error('Error getting token:', error);
-      throw error;
-    }
-  };
-
-
-
-  const getLastRow = async (token) => {
-    try {
-      const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Feedback!A:Z`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await response.json();
-      return data.values ? data.values.length + 1 : 1;
-    } catch (error) {
-      console.error('Error getting last row:', error);
-      throw error;
-    }
-  };
-
-  const uploadFiles = async (files) => {
-    if (!files.length) return [];
-    
-    try {
-      const uploadPromises = files.map(async (file) => {
-        const fileName = file.name;
-        const fileRef = ref(storage, `feedback/${fileName}`);
-        
-        const snapshot = await uploadBytes(fileRef, file);
-        const url = await getDownloadURL(snapshot.ref);
-        return { url, name: file.name };
-      });
-      
-      return await Promise.all(uploadPromises);
-    } catch (error) {
-      console.error('Error uploading files:', error);
-      throw error;
-    }
-  };
-
-  const appendToSheet = async (token, values, rowNumber) => {
-    try {
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Feedback!B${rowNumber}:F${rowNumber}?valueInputOption=USER_ENTERED`,
-        {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            range: `Feedback!B${rowNumber}:F${rowNumber}`,
-            values: [values],
-          }),
-        }
-      );
-    } catch (error) {
-      console.error('Error appending to sheet:', error);
-      throw error;
-    }
-  };
+  
+  const { 
+    feedbackItems, 
+    isLoading, 
+    submitFeedback, 
+    validateFile, 
+    ALLOWED_FILE_TYPES 
+  } = useFeedback();
 
   const handleSubmit = async () => {
-    if (!feedback.trim()) return;
+    if (!feedback.trim()) {
+      toast.error('Please enter your feedback');
+      return;
+    }
 
     setIsSubmitting(true);
-    setSubmitStatus('');
+    
     try {
-      const fileUploads = await uploadFiles(files);
-
-      // Create hyperlinks for sheets
-      const fileLinks = fileUploads.map(({ url, name }) => 
-        `=HYPERLINK("${url}","${name}")`
-      );
-
-      // Combine feedback text with file URLs if present
-      let combinedFeedback = feedback;
-      if (fileLinks.length > 0) {
-        combinedFeedback += '\n\nAttached files:\n' + fileLinks.join('\n');
-      }
-
-      const token = await getGoogleToken();
-      const lastRow = await getLastRow(token);
-      const values = [user.displayName, user.email, selectedType, combinedFeedback];
-      await appendToSheet(token, values, lastRow);
-
+      await submitFeedback(selectedType, feedback, files);
       setFeedback('');
       setFiles([]);
-      setSubmitStatus('Submitted successfully');
-      
-      setTimeout(() => {
-        setSubmitStatus('');
-      }, 2000);
+      toast.success('Feedback submitted successfully');
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      setSubmitStatus('Error submitting');
+      toast.error(error.message || 'Error submitting feedback');
     } finally {
       setIsSubmitting(false);
     }
@@ -224,14 +252,24 @@ const Feedback = () => {
     e.stopPropagation();
     setIsDragging(false);
     
-    const newFiles = Array.from(e.dataTransfer.files);
-    setFiles(prevFiles => [...prevFiles, ...newFiles]);
-  }, []);
+    try {
+      const newFiles = Array.from(e.dataTransfer.files);
+      newFiles.forEach(file => validateFile(file));
+      setFiles(prevFiles => [...prevFiles, ...newFiles]);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }, [validateFile]);
 
   const handleFileChange = (e) => {
-    const newFiles = Array.from(e.target.files);
-    setFiles(prevFiles => [...prevFiles, ...newFiles]);
-    e.target.value = ''; // Reset input
+    try {
+      const newFiles = Array.from(e.target.files);
+      newFiles.forEach(file => validateFile(file));
+      setFiles(prevFiles => [...prevFiles, ...newFiles]);
+      e.target.value = '';
+    } catch (error) {
+      toast.error(error.message);
+    }
   };
 
   const removeFile = (fileToRemove) => {
@@ -242,7 +280,6 @@ const Feedback = () => {
     <div>
       <h1 className="text-lg font-semibold mb-4">Feedback</h1>
       
-      {/* Type Selector */}
       <div className="mb-4">
         <Select value={selectedType} onValueChange={setSelectedType}>
           <SelectTrigger className="w-full">
@@ -258,7 +295,6 @@ const Feedback = () => {
         </Select>
       </div>
 
-      {/* Description Input with Drag & Drop */}
       <div 
         className={`relative space-y-4 ${isDragging ? 'after:absolute after:inset-0 after:bg-blue-50 after:bg-opacity-50 after:border-2 after:border-dashed after:border-blue-300 after:rounded-lg' : ''}`}
         onDragEnter={handleDrag}
@@ -283,17 +319,15 @@ const Feedback = () => {
         </div>
       </div>
 
-      {/* Hidden File Input */}
       <input
         id="file-input"
         type="file"
         className="hidden"
         onChange={handleFileChange}
-        accept="*"
+        accept={ALLOWED_FILE_TYPES.join(',')}
         multiple
       />
 
-      {/* File Previews */}
       {files.length > 0 && (
         <div className="mt-2 space-y-2">
           {files.map((file, index) => (
@@ -306,8 +340,7 @@ const Feedback = () => {
         </div>
       )}
 
-      {/* Submit Buttons */}
-      <div className="mt-4 space-y-2">
+      <div className="mt-4">
         <Button 
           className="w-full" 
           onClick={handleSubmit}
@@ -318,25 +351,36 @@ const Feedback = () => {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Submitting...
             </>
-          ) : submitStatus ? (
-            submitStatus
           ) : (
             `Submit ${feedbackTypes.find(t => t.value === selectedType)?.label}`
           )}
         </Button>
-        <Button 
-          variant="outline" 
-          className="w-full text-sm" 
-          onClick={() => window.open(SHEET_URL, '_blank')}
-        >
-          <ExternalLink className="mr-2 h-4 w-4" />
-          View All Feedback Entries
-        </Button>
+      </div>
 
-        {/* <Button variant="outline" 
-          className="w-full text-sm"  onClick={createHiddenWindow}>
-          Create window
-        </Button> */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold mb-4">Your Feedback History</h2>
+        
+        <ScrollArea className="h-[400px] rounded-md border p-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : feedbackItems.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              No feedback submitted yet
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {feedbackItems.map((item) => (
+                <FeedbackItem 
+                  key={item.id} 
+                  data={item} 
+                  id={item.id}
+                />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
       </div>
     </div>
   );
