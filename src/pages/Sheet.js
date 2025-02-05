@@ -213,7 +213,7 @@ const SheetPage = () => {
     <div className="mx-auto max-w-4xl">
         <h1 className="text-lg font-semibold mb-2">Sheet Manager</h1>
         <span className="text-muted-foreground mb-2">
-        Sync and manage your LinkedIn connections using Google Sheets. <b>Last synced: {formatDate(sheetData.lastSync)}</b>
+        Sync and manage your LinkedIn connections using Google Sheets. <b>Last synced: {sheetData?.lastSync ? formatDate(sheetData?.lastSync) : ""}</b>
         </span>
       <div>
         {!sheetData ? (
