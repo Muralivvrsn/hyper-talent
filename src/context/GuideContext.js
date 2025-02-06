@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { HelpCircle, X, Search } from 'lucide-react';
 import welcomeDarkGif from '../asessts/welcome-dark.gif'
-import message_template_creation from '../asessts/message_template_creation.gif'
+import message_template_add from '../asessts/message_template_add.gif'
 import message_template_usecase from '../asessts/message_template_usecase.gif'
+import label_creation_deletion from '../asessts/label_creation_deletion.gif'
+import feedback from '../asessts/feedback.gif'
 import {
     Card,
     CardContent,
@@ -49,7 +51,7 @@ const GuideContent = [
             "Click the 'Save' button to keep your message"
         ],
         footerContent: "Try using <<first_name>> to make your message friendly - like writing 'Hi <<first_name>>!' at the start!",
-        gifUrl: message_template_creation,
+        gifUrl: message_template_add,
         keywords: ["message", "template", "name", "save", "quick", "easy", "write", "magic", "personal"]
     },
     {
@@ -84,7 +86,7 @@ const GuideContent = [
             "That's it - profile tagged!"
         ],
         footerContent: "Remember: Just press 'l' anywhere (except text boxes) to start tagging. It's that simple!",
-        gifUrl: "/api/placeholder/400/250",
+        gifUrl: label_creation_deletion,
         keywords: ["label", "tag", "quick", "shortcut", "organize", "profile", "instant", "keyboard", "easy"]
     },
     {
@@ -102,7 +104,7 @@ const GuideContent = [
             "Click on any profile to jump to LinkedIn"
         ],
         footerContent: "The extension is your command center - much easier than searching through LinkedIn messages!",
-        gifUrl: "/api/placeholder/400/250",
+        gifUrl: false,
         keywords: ["filter", "sort", "find", "search", "organize", "extension", "profiles", "tags", "quick"]
     },
     {
@@ -115,7 +117,7 @@ const GuideContent = [
             "Discover all quick commands there!",
         ],
         footerContent: "Check the Shortcuts page anytime to discover more time-savers!",
-        gifUrl: "/api/placeholder/400/250",
+        gifUrl: false,
         keywords: ["shortcuts", "customize", "theme", "quick", "easy", "settings", "look", "dark", "light"]
     },
     {
@@ -132,7 +134,7 @@ const GuideContent = [
             "Pick what you want to share"
         ],
         footerContent: "Your data, your way! Change these settings anytime in the Integrations tab.",
-        gifUrl: "/api/placeholder/400/250",
+        gifUrl: false,
         keywords: ["sheets", "slack", "save", "share", "team", "connect", "export", "sync", "automatic"]
     },
     {
@@ -150,7 +152,7 @@ const GuideContent = [
             "Look for shared tags in your Profiles tab"
         ],
         footerContent: "Keep your team in sync - share important contacts with just a few clicks!",
-        gifUrl: "/api/placeholder/400/250",
+        gifUrl: false,
         keywords: ["share", "team", "tags", "profiles", "collaborate", "quick", "easy", "send", "group"]
     },
     {
@@ -168,7 +170,7 @@ const GuideContent = [
             "Hit Submit - we'll check it out!"
         ],
         footerContent: "Your feedback shapes what we build next - don't be shy, share your thoughts!",
-        gifUrl: "/api/placeholder/400/250",
+        gifUrl: feedback,
         keywords: ["feedback", "idea", "bug", "suggest", "help", "improve", "share", "report", "feature"]
     }
 ];
@@ -264,7 +266,11 @@ const MainGuide = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <Card className="w-[90%] max-w-2xl bg-white dark:bg-gray-800 relative max-h-[90vh] flex flex-col">
                 <button
-                    onClick={() => setIsGuideOpen(false)}
+                    onClick={() => {
+                        setIsGuideOpen(false);
+                        handleGuideComplete();
+
+                    }}
                     className="absolute right-4 top-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
                 >
                     <X className="h-4 w-4" />
@@ -282,15 +288,17 @@ const MainGuide = ({
                 <CardContent className="flex-1 overflow-y-auto p-4">
                     <div className="space-y-4">
                         {/* GIF Display */}
-                        <div className="relative w-full bg-gray-100 dark:bg-gray-700 max-w-[300px] m-auto rounded-lg overflow-hidden">
-                            <div className="relative w-full bg-gray-100 dark:bg-gray-700 max-w-[300px] m-auto rounded-lg overflow-hidden aspect-[9/16]">
-                                <img
-                                    src={currentContent.gifUrl}
-                                    alt="Feature demonstration"
-                                    className="w-full h-full object-contain"
-                                />
+                        {
+                            currentContent.gifUrl && <div className="relative w-full bg-gray-100 dark:bg-gray-700 m-auto rounded-lg overflow-hidden">
+                                <div className="relative w-full bg-gray-100 dark:bg-gray-700 m-auto rounded-lg overflow-hidden">
+                                    <img
+                                        src={currentContent.gifUrl}
+                                        alt="Feature demonstration"
+                                        className="w-full h-full"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        }
 
                         {/* Top Content */}
                         {currentContent.topContent && (
@@ -431,7 +439,7 @@ export const GuideProvider = ({ children }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [hasSeenGuide, setHasSeenGuide] = useState(false);
     const { loading: dataLoading } = useData();
-    const { loading: authLoading } = useAuth();
+    const { loading: authLoading, user } = useAuth();
     const { loading: themeLoading } = useTheme();
 
     useEffect(() => {
@@ -526,7 +534,7 @@ export const GuideProvider = ({ children }) => {
         <GuideContext.Provider value={value}>
             {children}
             {
-                !themeLoading && !dataLoading && !authLoading && <>
+                !themeLoading && !dataLoading && !authLoading && user && <>
                     <MainGuide
                         currentStep={currentStep}
                         isGuideOpen={isGuideOpen}

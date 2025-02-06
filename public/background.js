@@ -98,8 +98,25 @@ chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
 // Message handlers
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_GOOGLE_TOKEN') {
-    chrome.identity.getAuthToken({ interactive: false }, (token) => {
+    // We need to handle this asynchronously
+    chrome.identity.getAuthToken({ interactive: false }, function(token) {
+      if (chrome.runtime.lastError) {
+        sendResponse({ token: null, success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
       sendResponse({ token, success: true });
+    });
+    // This is crucial - return true to indicate we will send response asynchronously
+    return true;
+  }
+
+  if (message.type === 'STORE_TOKEN') {
+    chrome.storage.local.set({ 'googleToken': message.token }, () => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ success: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      sendResponse({ success: true });
     });
     return true;
   }
@@ -141,8 +158,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       }
     });
-}
-
+  }
 });
 
 
@@ -216,126 +232,4 @@ chrome.runtime.onStartup.addListener(() => {
 
 
 
-function scrapeProfile() {
-  const getData = () => {
-    // Basic Info
-    const basicInfo = {
-      name: document.querySelector('h1')?.innerText || '',
-      role: document.querySelector('.text-body-medium')?.innerText || '',
-      location: document.querySelector('.text-body-small.inline')?.innerText || ''
-    };
 
-    // Experience
-    const experienceSection = document.querySelector('#experience');
-    const experienceItems = experienceSection?.closest('section').querySelectorAll('.artdeco-list__item');
-    const experience = Array.from(experienceItems || []).map(item => {
-      const roleElement = item.querySelector('.t-bold');
-      const companyElement = item.querySelector('.t-14.t-normal:not(.t-black--light)');
-      const dateElement = item.querySelector('.t-14.t-normal.t-black--light');
-      const locationElement = item.querySelector('.t-14.t-normal.t-black--light:last-child');
-      const descriptionElement = item.querySelector('.pvs-list__outer-container .pvs-list');
-
-      return {
-        role: roleElement?.innerText || '',
-        company: companyElement?.innerText || '',
-        duration: dateElement?.innerText || '',
-        location: locationElement?.innerText || '',
-        description: descriptionElement?.innerText || ''
-      };
-    });
-
-    // Education
-    const educationSection = document.querySelector('#education');
-    const educationItems = educationSection?.closest('section').querySelectorAll('.artdeco-list__item');
-    const education = Array.from(educationItems || []).map(item => {
-      const schoolElement = item.querySelector('.t-bold');
-      const degreeElement = item.querySelector('.t-14.t-normal');
-      const dateElement = item.querySelector('.t-14.t-normal.t-black--light');
-
-      return {
-        school: schoolElement?.innerText || '',
-        degree: degreeElement?.innerText || '',
-        date: dateElement?.innerText || ''
-      };
-    });
-
-    // Skills
-    const skillsSection = document.querySelector('#skills');
-    const skillItems = skillsSection?.closest('section').querySelectorAll('.artdeco-list__item');
-    const skills = Array.from(skillItems || []).map(item => 
-      item.querySelector('.t-bold')?.innerText || ''
-    );
-
-    // Certifications
-    const certSection = document.querySelector('#licenses_and_certifications');
-    const certItems = certSection?.closest('section').querySelectorAll('.artdeco-list__item');
-    const certifications = Array.from(certItems || []).map(item => {
-      const nameElement = item.querySelector('.t-bold');
-      const issuerElement = item.querySelector('.t-14.t-normal');
-      const dateElement = item.querySelector('.t-14.t-normal.t-black--light');
-
-      return {
-        name: nameElement?.innerText || '',
-        issuer: issuerElement?.innerText || '',
-        date: dateElement?.innerText || ''
-      };
-    });
-
-    // Projects
-    const projectSection = document.querySelector('#projects');
-    const projectItems = projectSection?.closest('section').querySelectorAll('.artdeco-list__item');
-    const projects = Array.from(projectItems || []).map(item => {
-      const titleElement = item.querySelector('.t-bold');
-      const descriptionElement = item.querySelector('.inline-show-more-text');
-      const linkElement = item.querySelector('a[href*="Show project"]');
-
-      return {
-        title: titleElement?.innerText || '',
-        description: descriptionElement?.innerText || '',
-        link: linkElement?.href || ''
-      };
-    });
-
-    return {
-      basicInfo,
-      experience,
-      education,
-      skills,
-      certifications,
-      projects
-    };
-  };
-
-  return getData();
-}
-
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'CREATE_HIDDEN_WINDOW') {
-    chrome.windows.create({
-      url: request.url,
-      width: 1,
-      height: 1,
-      left: -10000,
-      top: -10000,
-      focused: false,
-      type: 'popup'
-    }, (window) => {
-      chrome.windows.update(window.id, { state: 'minimized' });
-      
-      // setTimeout(() => {
-        chrome.scripting.executeScript({
-          target: { tabId: window.tabs[0].id },
-          function: scrapeProfile
-        }, (results) => {
-          if (results && results[0]) {
-            console.log(results)
-            sendResponse(results[0].result);
-            chrome.windows.remove(window.id);
-          }
-        });
-      // }, 5000);
-    });
-    return true;
-  }
-});

@@ -6,6 +6,7 @@ import { useMigration } from '../context/MigrationContext';
 import Dashboard from '../components/Dashboard';
 import ScreenRecorder from '../components/ScreenRecorder';
 import { useFeedback } from '../context/FeedbackContext';
+import FeedbackDashboard from '../components/FeedbackDashboard';
 const AdminPage = () => {
   const { user } = useAuth();
   const { add_label_user } = useMigration();
@@ -317,6 +318,7 @@ const AdminPage = () => {
       <div>
        {/* <Dashboard/> */}
        {/* <ScreenRecorder/> */}
+       <FeedbackDashboard/>
       </div>
     </div>
   );
