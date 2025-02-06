@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   getFirestore, 
-  collection, 
-  getDocs,
+  collection,
   onSnapshot 
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
@@ -26,13 +25,11 @@ export const OtherUsersProvider = ({ children }) => {
 
   useEffect(() => {
     if (!user?.uid) {
-      console.log('not users')
       setOtherUsers([]);
       setLoading(false);
       return;
     }
 
-    console.log('users')
     try {
       const usersRef = collection(db, 'users');
 
@@ -50,7 +47,6 @@ export const OtherUsersProvider = ({ children }) => {
             name: doc.data().n
           }));
 
-        console.log(usersList);
         setOtherUsers(usersList);
         setLoading(false);
       }, (err) => {

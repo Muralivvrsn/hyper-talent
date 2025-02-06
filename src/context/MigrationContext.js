@@ -1,13 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
 import { 
   getFirestore, 
-  doc, 
-  getDoc, 
+  doc,
   writeBatch,
   collection,
   getDocs
 } from 'firebase/firestore';
-import { useAuth } from './AuthContext';
 
 const MigrationContext = createContext(null);
 
@@ -18,7 +16,6 @@ export const useMigration = () => {
 };
 
 export const MigrationProvider = ({ children }) => {
-  const { user } = useAuth();
   const [error, setError] = useState(null);
   const db = getFirestore();
 
@@ -32,7 +29,6 @@ export const MigrationProvider = ({ children }) => {
       
       for (const userDoc of usersSnapshot.docs) {
         const userId = userDoc.id;
-        console.log(userId)
         const labelIds = userDoc.data().d?.l || [];
         
         for (const labelId of labelIds) {

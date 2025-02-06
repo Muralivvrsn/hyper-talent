@@ -5,8 +5,6 @@ import {
   getDoc, 
   setDoc, 
   updateDoc,
-  collection,
-  getDocs,
   deleteDoc
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
@@ -56,7 +54,6 @@ export const DataProvider = ({ children }) => {
                 
                 if (templateDocSnap.exists()) {
                   const templateData = templateDocSnap.data();
-                  console.log(templateData)
                   return {
                     id: templateId,
                     title: templateData.t,

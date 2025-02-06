@@ -128,8 +128,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === 'hypertalent-keyPressed') {
     // Get the current tab to verify URL or perform actions
-    console.log('create pressed')
-    console.log(message.data)
+    // console.log('create pressed')
+    // console.log(message.data)
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       chrome.storage.local.set({ 'profileData': message.data }, function () {
         // Send message after storage is complete
@@ -164,7 +164,7 @@ function compareVersions(v1, v2) {
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'update') {
     const currentVersion = chrome.runtime.getManifest().version;
-    console.log(details)
+    // console.log(details)
     const previousVersion = details.previousVersion;
     
     // Only show update if current version is higher than previous version
@@ -329,7 +329,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           function: scrapeProfile
         }, (results) => {
           if (results && results[0]) {
-            console.log(results)
+            // console.log(results)
             sendResponse(results[0].result);
             chrome.windows.remove(window.id);
           }

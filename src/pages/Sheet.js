@@ -84,7 +84,7 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => (
     />
     <ActionButton
       icon={Upload}
-      label="Update Labels"
+      label="Upload Labels"
       description="Process and update connection labels"
       onClick={onUpload}
       loading={loadingStates.updateLabels}
@@ -102,8 +102,8 @@ const SheetPage = () => {
     updateLabels: false
   });
 
-  const { labels } = useLabels();
-  const { notes } = useNotes();
+  const { labels, activeSharedLabels, getLabelProfiles } = useLabels();
+  const { notes, getNoteWithProfile } = useNotes();
   const { templates } = useTemplates();
 
   const handleCreate = async () => {
@@ -151,14 +151,15 @@ const SheetPage = () => {
 
       const data = {
         labels: { labels },
+        sharedLabels: activeSharedLabels,
         notes,
         shortcuts: templates
       };
-      console.log("Sheet Data: ", data)
+
       if (syncType === "Sheet") {
-        await syncSheet(sheetData?.id, token, data);
+        await syncSheet(sheetData?.id, token, { ...data, getLabelProfiles, getNoteWithProfile });
       } else {
-        await syncDatabase(sheetData?.id, token, data, user.uid);
+        await syncDatabase(sheetData?.id, token, user.uid, data);
       }
 
       const updatedSheetData = {
@@ -192,10 +193,7 @@ const SheetPage = () => {
       const sheetResponse = await response.json();
       const sheetRows = sheetResponse.values || [];
 
-      if (sheetRows.length === 0) {
-        console.log('No data found in sheet');
-        return;
-      }
+      if (sheetRows.length === 0) return
 
       const headerIndices = {};
       sheetRows[0].forEach((header, index) => {

@@ -15,7 +15,6 @@ import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
 import { useOtherUsers } from './context/OtherUsersContext';
-import SlackConnect from './pages/SlackConnect';
 const MainLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const { currentPage, setCurrentPage } = useProfileNote();
@@ -80,14 +79,13 @@ const LoadingScreen = () => (
 );
 
 function AppContent() {
-  const { user, loading: authLoading, addUpdate } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { loading: themeLoading } = useTheme();
   const { loading: dataLoading } = useData();
   const [initialLoad, setInitialLoad] = useState(true);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateVersions, setUpdateVersions] = useState({ current: '', previous: '' });
   const chrome = window.chrome;
-  const { otherUsers, loading, error } = useOtherUsers();
 
   useEffect(() => {
     // Check for updates
@@ -101,7 +99,6 @@ function AppContent() {
       }
     });
 
-    console.log(otherUsers)
   }, []);
 
   const handleCloseUpdateModal = () => {
