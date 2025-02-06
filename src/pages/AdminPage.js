@@ -5,16 +5,20 @@ import { useAuth } from '../context/AuthContext';
 import { useMigration } from '../context/MigrationContext';
 import Dashboard from '../components/Dashboard';
 import ScreenRecorder from '../components/ScreenRecorder';
+import { useFeedback } from '../context/FeedbackContext';
+import FeedbackDashboard from '../components/FeedbackDashboard';
 const AdminPage = () => {
   const { user } = useAuth();
   const { add_label_user } = useMigration();
+  const {updateSheetToDatabase} = useFeedback()
 
-  const handleMigration = async () => {
-    const result = await add_label_user();
-    if (result.success) {
-      // console.log(`Migrated ${result.usersProcessed} users`);
-    }
-  };
+  // const handleMigration = async () => {
+  //   // const result = await updateSheetToDatabase(sheetData);
+
+  //   // if (result.success) {
+  //     // console.log(`Migrated ${result.usersProcessed} users`);
+  //   }
+  // };
 
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
@@ -308,10 +312,13 @@ const AdminPage = () => {
           )}
         </button>
       </form>
-
+      {/* <div onClick={()=>handleMigration()}>
+        Migrate feedack
+      </div> */}
       <div>
        {/* <Dashboard/> */}
        {/* <ScreenRecorder/> */}
+       <FeedbackDashboard/>
       </div>
     </div>
   );

@@ -123,7 +123,7 @@ function AppContent() {
 
   return (
     <>
-      <Toaster />
+      <Toaster position='bottom-center' />
       {user ? (
         <>
           <MainLayout />

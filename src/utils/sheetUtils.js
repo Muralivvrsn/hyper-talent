@@ -475,7 +475,6 @@ export const syncDatabase = async (spreadsheetId, token, userId, data) => {
     throw error;
   }
 };
-
 async function syncProfileData(row, headerIndices, userId, labels, notes) {
   const db = getFirestore();
   const profileId = row[headerIndices['Profile ID']]?.trim();
