@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { Plus, Trash2, MessageSquarePlus, Loader2 } from 'lucide-react';
 import { Button } from "../components/ui/button";
-import { Card } from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +25,6 @@ import { formatDistanceToNow } from 'date-fns';
 
 const CandidateMessages = () => {
   const { templates, loading, error, addTemplate, editTemplate, deleteTemplate } = useData();
-  console.log(templates)
   const [editingMessage, setEditingMessage] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', content: '' });
   const [showAddForm, setShowAddForm] = useState(false);
@@ -76,7 +74,6 @@ const CandidateMessages = () => {
   };
 
   const formatDate = (date) => {
-    console.log(date)
     return formatDistanceToNow(new Date(date), { addSuffix: true });
   };
 
