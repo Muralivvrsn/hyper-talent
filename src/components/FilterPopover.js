@@ -149,7 +149,7 @@ const FilterPopover = ({
                 </div>
                 {/* Filter Mode */}
                 {tempSelectedLabels.length > 0 && (
-                    <div className="p-2 border-b">
+                    <div className="p-2 border-t">
                         <div className="grid grid-cols-2 gap-2">
                             <Button
                                 variant={filterMode === FilterMode.ANY ? "secondary" : "ghost"}
