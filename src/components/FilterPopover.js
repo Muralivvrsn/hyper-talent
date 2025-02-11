@@ -22,6 +22,8 @@ const FilterPopover = ({
     selectedLabels,
     tempSelectedLabels,
     setTempSelectedLabels,
+    hasNotesFilter,
+    setHasNotesFilter,
     onApplyFilters,
     onClearFilters,
     onClose
@@ -30,7 +32,7 @@ const FilterPopover = ({
     const [filterSearch, setFilterSearch] = useState('');
     const [filterMode, setFilterMode] = useState(FilterMode.ANY);
 
-    const hasActiveFilters = selectedLabels.length > 0;
+    const hasActiveFilters = selectedLabels.length > 0 || hasNotesFilter;
 
     const filterLabels = (labels) => {
         if (!filterSearch) return labels;
@@ -40,13 +42,14 @@ const FilterPopover = ({
     };
 
     const handleApplyFilters = () => {
-        onApplyFilters(tempSelectedLabels, filterMode);
+        onApplyFilters(tempSelectedLabels, filterMode, hasNotesFilter);
         onClose?.();
     };
 
     const handleClearFilters = () => {
         setTempSelectedLabels([]);
         onClearFilters();
+        setHasNotesFilter(false);
         onClose?.();
     };
 
@@ -139,8 +142,29 @@ const FilterPopover = ({
                 <div className="flex-1 overflow-y-auto">
                     <div className="space-y-1 p-2">
                         {activeFilter === FilterType.NOTES ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                                Filter profiles with notes
+                            <div>
+                                <label
+                                    className={cn(
+                                        "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-accent/50",
+                                        hasNotesFilter && "bg-accent"
+                                    )}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={hasNotesFilter}
+                                        onChange={() => setHasNotesFilter(!hasNotesFilter)}
+                                    />
+                                    <div className="flex-1 flex items-center gap-2">
+                                        <span className="text-sm">Show profiles with notes</span>
+                                    </div>
+                                    {hasNotesFilter && (
+                                        <Check className="h-4 w-4 text-primary" />
+                                    )}
+                                </label>
+                                <p className="mt-2 text-xs text-muted-foreground px-2">
+                                    Filter profiles that have any notes added to them
+                                </p>
                             </div>
                         ) : (
                             renderLabels()

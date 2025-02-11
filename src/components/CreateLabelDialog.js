@@ -80,7 +80,7 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: label.color }}
                 />
-                <span className="flex-1 truncate">
+                <span className="flex-1 truncate text-xs">
                     {label.name}
                 </span>
                 {isDeleting ? (
@@ -102,14 +102,14 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
                     <Tag className="h-4 w-4" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-3">
+            <PopoverContent className="w-72 p-3">
                 <div className="space-y-4">
                     <h4 className="font-medium text-sm">Create New Label</h4>
 
                     <div className="relative">
                         <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search or create label..."
+                            placeholder="create label..."
                             value={searchTerm}
                             onChange={handleSearchChange}
                             onKeyDown={handleKeyDown}
@@ -140,14 +140,16 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
                         <div className="space-y-2">
                             {ownedLabels.length > 0 && (
                                 <>
-                                    <h5 className="text-sm font-semibold">Your Labels ({ownedLabels.length})</h5>
+                                    {sharedLabels.length > 0 &&
+                                        <div className="text-sm">Your Labels <small>({ownedLabels.length})</small></div>
+                                    }
                                     {renderLabelList(ownedLabels, false)}
                                 </>
                             )}
 
                             {sharedLabels.length > 0 && (
                                 <>
-                                    <h5 className="text-sm font-semibold mt-4">Shared Labels ({sharedLabels.length})</h5>
+                                    <div className="text-sm mt-4">Shared Labels <small>({sharedLabels.length})</small></div>
                                     {renderLabelList(sharedLabels, true)}
                                 </>
                             )}

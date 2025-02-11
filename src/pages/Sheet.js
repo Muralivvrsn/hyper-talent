@@ -111,15 +111,8 @@ const SheetPage = () => {
       setLoadingStates(prev => ({ ...prev, create: true }));
       const token = await getGoogleToken();
       const firstName = user.displayName.split(' ')[0];
-      const data = {
-        labels: { labels },
-        notes,
-        shortcuts: templates
-      };
 
       const sheet = await createSheet(token, `${firstName} - LinkedIn Manager`);
-      await syncSheet(sheet.spreadsheetId, token, data);
-
       const currentTime = new Date().toISOString();
 
       const newSheetData = {
