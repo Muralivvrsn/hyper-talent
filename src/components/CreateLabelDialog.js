@@ -38,9 +38,8 @@ const CreateLabelDialog = () => {
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Create Label
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-3">

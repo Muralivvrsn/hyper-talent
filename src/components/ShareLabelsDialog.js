@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './ui/dialog';
-import { Share, Search, Users, Loader2 } from 'lucide-react';
+import { Share, Search, Users, Loader2, Send } from 'lucide-react';
 import { getFirestore, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 
 const ShareLabelsDialog = () => {
@@ -26,14 +26,12 @@ const ShareLabelsDialog = () => {
   const [isSharing, setIsSharing] = useState(false);
   const db = getFirestore();
 
-  // Convert labels object to array for easier rendering
   const labelsList = Object.entries(labels).map(([id, label]) => ({
     id,
     name: label.name,
     color: label.color
   }));
 
-  // Filter users based on search term
   const filteredUsers = searchTerm
     ? otherUsers.filter(user =>
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,7 +86,6 @@ const ShareLabelsDialog = () => {
 
     setIsSharing(true);
     try {
-      // Update each selected user's document
       await Promise.all(selectedUsers.map(async (userId) => {
         const userRef = doc(db, 'users', userId);
         const userDoc = await getDoc(userRef);
@@ -97,19 +94,16 @@ const ShareLabelsDialog = () => {
           const userData = userDoc.data();
           const existingSharedLabels = userData.d?.sl || [];
 
-          // Filter out labels that are already shared with this user
           const newLabelsToShare = selectedLabels.filter(labelId =>
             !existingSharedLabels.some(shared => shared.l === labelId)
           );
 
           if (newLabelsToShare.length > 0) {
-            // Create shared label objects for new labels only
             const sharedLabelObjects = newLabelsToShare.map(labelId => ({
               l: labelId,
               a: null
             }));
 
-            // Update user's sharedLabels array with only new labels
             await updateDoc(userRef, {
               'd.sl': arrayUnion(...sharedLabelObjects)
             });
@@ -133,8 +127,8 @@ const ShareLabelsDialog = () => {
     <Dialog open={isOpen} onOpenChange={setIsOpen} >
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2">
-          <Share className="h-4 w-4" />
-          Share Labels
+          <Send className="h-4 w-4" />
+          {/* Share Labels */}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -145,7 +139,6 @@ const ShareLabelsDialog = () => {
         </DialogHeader>
 
         {step === 'labels' ? (
-          // Labels Selection Step
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="relative flex-1">
@@ -201,7 +194,6 @@ const ShareLabelsDialog = () => {
             </div>
           </div>
         ) : (
-          // Users Selection Step
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="relative flex-1">

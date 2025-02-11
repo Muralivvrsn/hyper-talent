@@ -14,20 +14,17 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
-import { useOtherUsers } from './context/OtherUsersContext';
 const MainLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const { currentPage, setCurrentPage } = useProfileNote();
-
-
-
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
 
   const renderPage = () => {
     switch (currentPage) {
       case 'messages':
-        return <CandidateMessages />;
+        // return <CandidateMessages />;
+        return <ProfilePage />;
       case 'shortcuts':
         return <Shortcuts />;
       case 'sheet':
