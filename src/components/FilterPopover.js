@@ -29,7 +29,6 @@ const FilterPopover = ({
     const [activeFilter, setActiveFilter] = useState(FilterType.MY_LABELS);
     const [filterSearch, setFilterSearch] = useState('');
     const [filterMode, setFilterMode] = useState(FilterMode.ANY);
-    // const [tempSelectedLabels, setTempSelectedLabels] = useState(selectedLabels);
 
     const hasActiveFilters = selectedLabels.length > 0;
 

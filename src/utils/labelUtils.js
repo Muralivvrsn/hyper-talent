@@ -103,6 +103,48 @@ export const addLabelToProfile = async (labelId, profileId, userId, db) => {
   }
 };
 
+export const deleteLabel = async (labelId, userId, db) => {
+  if (!labelId || !userId) return false;
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const labelRef = doc(db, 'profile_labels', labelId);
+      const labelDoc = await transaction.get(labelRef);
+
+      if (!labelDoc.exists()) {
+        throw new Error('Label not found');
+      }
+
+      const labelData = labelDoc.data();
+      
+      if (labelData.lc !== userId) {
+        throw new Error('Unauthorized to delete label');
+      }
+
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await transaction.get(userRef);
+      
+      if (!userDoc.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const userData = userDoc.data();
+      const userLabelIds = userData.d?.l || [];
+
+      transaction.update(userRef, {
+        'd.l': userLabelIds.filter(id => id !== labelId)
+      });
+
+      transaction.delete(labelRef);
+
+      return true;
+    });
+  } catch (error) {
+    console.error('Error deleting label:', error);
+    return false;
+  }
+};
+
 export const removeLabelFromProfile = async (labelId, profileId, userId, db) => {
   if (!labelId || !profileId || !userId) return false;
 

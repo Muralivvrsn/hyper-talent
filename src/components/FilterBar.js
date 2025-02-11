@@ -92,8 +92,11 @@ const FilterBar = ({
         </Popover>
 
         <div className="flex gap-2">
-          <CreateLabelDialog />
-          <ShareLabelsDialog />
+          <CreateLabelDialog
+            ownedLabels={ownedLabels}
+            sharedLabels={sharedLabels}
+          />
+          <ShareLabelsDialog ownedLabels={ownedLabels}/>
         </div>
       </div>
 
