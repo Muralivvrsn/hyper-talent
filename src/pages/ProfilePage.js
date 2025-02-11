@@ -1,4 +1,3 @@
-// ProfilePage.jsx
 import React, { useState, useMemo } from 'react';
 import { useLabels } from '../context/LabelContext';
 import { useNotes } from '../context/NotesContext';
@@ -16,11 +15,11 @@ export default function ProfilePage() {
   const { notes, getNoteWithProfile, loading: notesLoading } = useNotes();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLabels, setSelectedLabels] = useState([]);
+  const [filterMode, setFilterMode] = useState('any');
 
   const profilesData = useMemo(() => {
     const profileMap = new Map();
 
-    // Add profiles from owned labels
     Object.entries(labels).forEach(([labelId, label]) => {
       const labelProfiles = getLabelProfiles(labelId, false) || [];
       labelProfiles.forEach(profile => {
@@ -56,7 +55,6 @@ export default function ProfilePage() {
       });
     });
 
-    // Add profiles from active shared labels
     Object.entries(activeSharedLabels).forEach(([labelId, label]) => {
       const labelProfiles = getLabelProfiles(labelId, true) || [];
       labelProfiles.forEach(profile => {
@@ -92,7 +90,6 @@ export default function ProfilePage() {
       });
     });
 
-    // Add notes to existing profiles or create new entries
     Object.entries(notes).forEach(([noteId, noteData]) => {
       if (noteData.profileId) {
         const noteWithProfile = getNoteWithProfile(noteId);
@@ -127,18 +124,24 @@ export default function ProfilePage() {
     return Array.from(profileMap.values());
   }, [labels, activeSharedLabels, notes, getLabelProfiles, getNoteWithProfile]);
 
-  // Filter profiles based on search and selected labels
   const filteredProfiles = useMemo(() => {
     return profilesData.filter(({ profile, labels }) => {
       const matchesSearch = !searchTerm ||
         profile.name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesLabels = !selectedLabels.length ||
-        labels.some(label => selectedLabels.includes(label.id));
+      const matchesLabels = !selectedLabels.length || (
+        filterMode === 'all'
+          ? selectedLabels.every(selectedId =>
+            labels.some(label => label.id === selectedId)
+          )
+          : labels.some(label =>
+            selectedLabels.includes(label.id)
+          )
+      );
 
       return matchesSearch && matchesLabels;
     });
-  }, [profilesData, searchTerm, selectedLabels]);
+  }, [profilesData, searchTerm, selectedLabels, filterMode]);
 
   const handleLabelToggle = (labelId) => {
     setSelectedLabels(prev =>
@@ -148,11 +151,14 @@ export default function ProfilePage() {
     );
   };
 
+  const handleFilterModeChange = (mode) => {
+    setFilterMode(mode);
+  };
+
   if (labelsLoading || notesLoading) {
     return <div>Loading...</div>;
   }
 
-  // Prepare labels for filter bar
   const ownedLabelsList = Object.entries(labels).map(([id, label]) => ({
     id,
     name: label.name,
@@ -180,9 +186,11 @@ export default function ProfilePage() {
         selectedLabels={selectedLabels}
         onLabelToggle={handleLabelToggle}
         onSearchChange={setSearchTerm}
+        filterMode={filterMode}
+        onFilterModeChange={handleFilterModeChange}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3">
         {filteredProfiles.map(({ profile, labels, note }) => (
           <ProfileCard
             key={profile.id}
