@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useLabels } from '../context/LabelContext';
 import { useOtherUsers } from '../context/OtherUsersContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -11,11 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './ui/dialog';
-import { Share, Search, Users, Loader2, Send } from 'lucide-react';
+import { Search, Users, Loader2, Send } from 'lucide-react';
 import { getFirestore, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 
-const ShareLabelsDialog = () => {
-  const { labels } = useLabels();
+const ShareLabelsDialog = ({ownedLabels}) => {
   const { otherUsers } = useOtherUsers();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState('labels');
@@ -26,7 +24,7 @@ const ShareLabelsDialog = () => {
   const [isSharing, setIsSharing] = useState(false);
   const db = getFirestore();
 
-  const labelsList = Object.entries(labels).map(([id, label]) => ({
+  const labelsList = Object.entries(ownedLabels).map(([id, label]) => ({
     id,
     name: label.name,
     color: label.color
