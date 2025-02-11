@@ -9,6 +9,10 @@ chrome.tabs.onActivated.addListener(function (activeInfo) {
   windowId = activeInfo.windowId;
 });
 
+
+const REFRESH_BUFFER = 10 * 60 * 1000; // 10 minutes buffer before token expiry
+const REFRESH_INTERVAL = 50 * 60 * 1000; // Refresh every 50 minutes
+
 // Tab update listener
 // Helper function to check if URL is a LinkedIn URL
 function isLinkedInUrl(url) {
@@ -95,82 +99,14 @@ chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
   }
 });
 
-// Message handlers
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'GET_GOOGLE_TOKEN') {
-    // We need to handle this asynchronously
-    chrome.identity.getAuthToken({ interactive: false }, function(token) {
-      if (chrome.runtime.lastError) {
-        sendResponse({ token: null, success: false, error: chrome.runtime.lastError.message });
-        return;
-      }
-      sendResponse({ token, success: true });
-    });
-    // This is crucial - return true to indicate we will send response asynchronously
-    return true;
-  }
-
-  if (message.type === 'STORE_TOKEN') {
-    chrome.storage.local.set({ 'googleToken': message.token }, () => {
-      if (chrome.runtime.lastError) {
-        sendResponse({ success: false, error: chrome.runtime.lastError.message });
-        return;
-      }
-      sendResponse({ success: true });
-    });
-    return true;
-  }
-
-  if (message.type === 'CLEAR_TOKEN') {
-    chrome.identity.getAuthToken({ interactive: false }, function(token) {
-      if (token) {
-        fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`)
-          .then(() => {
-            chrome.identity.removeCachedAuthToken({ token }, () => {
-              chrome.identity.clearAllCachedAuthTokens(() => {
-                sendResponse({ success: true });
-              });
-            });
-          })
-          .catch(error => {
-            console.error('Error revoking token:', error);
-            sendResponse({ success: false, error: error.message });
-          });
-      } else {
-        sendResponse({ success: false, error: 'No token found' });
-      }
-    });
-    return true;
-  }
-
-  if (message.action === 'hypertalent-keyPressed') {
-    // Get the current tab to verify URL or perform actions
-    // console.log('create pressed')
-    // console.log(message.data)
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      chrome.storage.local.set({ 'profileData': message.data }, function () {
-        // Send message after storage is complete
-        chrome.runtime.sendMessage({ action: 'ProfileNotesTriggered', page: message.key });
-      });
-      if(message.key){
-        chrome.sidePanel.open({
-          windowId: windowId,
-        });
-      }
-    });
-  }
-});
-
-
-
 function compareVersions(v1, v2) {
   const parts1 = v1.split('.').map(Number);
   const parts2 = v2.split('.').map(Number);
-  
+
   for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
     const part1 = parts1[i] || 0;
     const part2 = parts2[i] || 0;
-    
+
     if (part1 > part2) return 1;
     if (part1 < part2) return -1;
   }
@@ -182,7 +118,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     const currentVersion = chrome.runtime.getManifest().version;
     // console.log(details)
     const previousVersion = details.previousVersion;
-    
+
     // Only show update if current version is higher than previous version
     if (compareVersions(currentVersion, previousVersion) > 0) {
       // Store the versions and set update flag
@@ -196,7 +132,7 @@ chrome.runtime.onInstalled.addListener((details) => {
       chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
       chrome.action.setBadgeText({ text: 'New' });
     }
-    else{
+    else {
       chrome.storage.local.set({
         currentVersion,
         previousVersion,
@@ -210,7 +146,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.action.onClicked.addListener(() => {
   // Clear the badge when they open the extension
   chrome.action.setBadgeText({ text: '' });
-  
+
   // Mark update as seen
   chrome.storage.local.set({
     hasUnseenUpdate: false
@@ -220,13 +156,114 @@ chrome.action.onClicked.addListener(() => {
 // Optional: Restore badge if browser is restarted and update hasn't been seen
 chrome.runtime.onStartup.addListener(() => {
   chrome.storage.local.get(['hasUnseenUpdate', 'currentVersion', 'previousVersion'], (result) => {
-    if (result.hasUnseenUpdate && 
-        result.currentVersion && 
-        result.previousVersion && 
-        compareVersions(result.currentVersion, result.previousVersion) > 0) {
+    if (result.hasUnseenUpdate &&
+      result.currentVersion &&
+      result.previousVersion &&
+      compareVersions(result.currentVersion, result.previousVersion) > 0) {
       chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
       chrome.action.setBadgeText({ text: 'New' });
     }
   });
 });
+
+
+
+
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'GET_GOOGLE_TOKEN') {
+    handleAsyncMessage(async () => {
+      try {
+        const { accessToken, tokenExpiration } = await chrome.storage.local.get(['accessToken', 'tokenExpiration']);
+        const currentTime = Date.now();
+        
+        // Check if token exists and is not near expiration (50 minutes threshold)
+        if (accessToken && tokenExpiration && currentTime < tokenExpiration - 50 * 60 * 1000) {
+          return { token: accessToken, success: true };
+        }
+        
+        // Token is expired or near expiration, try to refresh
+        const newToken = await refreshToken();
+        return { token: newToken, success: true };
+      } catch (error) {
+        return { token: null, success: false, error: error.message };
+      }
+    }, sendResponse);
+    return true;
+  }
+
+  if (message.type === 'STORE_TOKEN') {
+    handleAsyncMessage(async () => {
+      try {
+        const expirationTime = Date.now() + message.expiresIn * 1000;
+        await chrome.storage.local.set({
+          accessToken: message.token,
+          refreshToken: message.refreshToken,
+          tokenExpiration: expirationTime
+        });
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    }, sendResponse);
+    return true;
+  }
+
+  if (message.type === 'CLEAR_TOKEN') {
+    handleAsyncMessage(async () => {
+      try {
+        await chrome.storage.local.remove(['accessToken', 'refreshToken', 'tokenExpiration']);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    }, sendResponse);
+    return true;
+  }
+});
+
+const handleAsyncMessage = (asyncFn, sendResponse) => {
+  asyncFn().then(sendResponse);
+};
+
+const refreshToken = async () => {
+  try {
+    const { refreshToken, clientId, clientSecret } = await chrome.storage.local.get([
+      'refreshToken',
+      'clientId',
+      'clientSecret'
+    ]);
+    
+    if (!refreshToken || !clientId || !clientSecret) {
+      throw new Error('Missing required credentials');
+    }
+
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh token');
+    }
+
+    const data = await response.json();
+    const expirationTime = Date.now() + data.expires_in * 1000;
+    
+    await chrome.storage.local.set({
+      accessToken: data.access_token,
+      tokenExpiration: expirationTime
+    });
+
+    return data.access_token;
+  } catch (error) {
+    throw error;
+  }
+};
 

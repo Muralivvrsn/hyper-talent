@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HyperTalent",
   "short_name": "HyperTalent",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "An ATS Chrome Extension",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6Yn0Jgl1gLe4x5lfoj6/9Hmh7p3RxVMTLQNtTrzbwJ/aQ5B8RcjGv0twV2jhrhdpCJkWeBGo6Dov+lUMg0APQ301HsvGLLrgU9wL5Cc5uEUpLaJqhEyLeGg3IsCyNOn9a4bzYpUcPHXiHBlczSPa11CS1EVGCVGVyQ5J6Eao5BNmzK1Hv6lgjAy/O5hPWABkQmPOvWCFr9xkURDm1f7HNJwuRkVXlCzBKbirdwpdy9v0qFCVTTuQR2ZDWGwfavdlWQnb5RPckspf/4a1EAQ0EwIkHj5oI0s5/yj2XMkPXJtVRYfcnKuaSBkTK6MG0Jby/BR+4Fi7t/7jna07Px9yQIDAQAB",
   "icons": {
@@ -31,47 +31,25 @@
       ],
       "js": [
         "firebase-app.js",
+        "firebase-database.js",
         "firebase-auth.js",
         "firebase-firestore.js",
-        "firebase-database.js",
-        "services/firebase.js",
-        
-        "services/database/index.js",
-        "services/database/notes.js",
-        "services/database/labels.js",
-        "services/database/message_templates.js",
-        "services/database/actions.js",
-        "services/utils/refresh.js",
-        
-        "label_search.js",
-        "styles/filter.label.js",
-        "services/labels/observer/index.js",
-        "services/labels/profile.labels.js",
-        "profile_monitor.js",
-        "label_observer.js",
-        "utils.js",
-        "test1.js",
-        "test.js",
-        
-
-        "services/labels/filter/ui.js",
-        "services/labels/filter/utility.js",
-        "services/labels/filter/index.js",
+        "database/index.js",
+        "database/tags.js",
+        "database/message_templates.js",
+        "database/persionalized_notes.js",
+        "database/user_actions.js",
+        "services/tags/show.js",
+        "services/tags/observer.js",
 
 
-        "services/labels/profile/ui.js",
-        "services/labels/profile/index.js",
+        "utils/alert.js",
+        "utils/notification.js",
 
-        "services/labels/manager/ui.js",
-        "services/labels/manager/utility.js",
-        "services/labels/manager/index.js",
-        
-        "services/labels/profile.labels.js",
-        "services/shortcut.services.js",
-        "services/labels/labels.observer.service.js",
-        "services/keyboard.shortcuts.js",
-        "services/notes/notes.profile.service.js",
-        "content.js"
+
+        "services/templates/index.js",
+        "services/keyboard/index.js",
+        "services/notes/index.js"
       ],
       "run_at": "document_end"
     }
@@ -103,7 +81,7 @@
     "extension_pages": "script-src 'self'; object-src 'self';"
   },
   "oauth2": {
-    "client_id": "940298574245-cm1h4f9vl20rq9rsbaqu3029ectdo81c.apps.googleusercontent.com",
+    "client_id": "940298574245-4e36k85u3iv6qppt4pp3d7rf9cloirh3.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/userinfo.email",
       "https://www.googleapis.com/auth/userinfo.profile",
@@ -112,6 +90,7 @@
   },
   "host_permissions": [
     "https://www.linkedin.com/*",
+    "*://*.googleapis.com/*",
     "*://*.firebasestorage.googleapis.com/*",
     "https://*.slack.com/*"
   ]

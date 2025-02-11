@@ -95,7 +95,6 @@ const StatusBadge = ({ status }) => {
     </TooltipProvider>
   );
 };
-
 const FeedbackItem = ({ data, id }) => {
   const statusMap = {
     'b': 'Bug',
@@ -104,23 +103,23 @@ const FeedbackItem = ({ data, id }) => {
   };
 
   return (
-    <div className="p-4 border rounded-lg mb-4 bg-card">
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <span className="font-semibold text-sm">
+    <div className="px-4 py-3 border-b hover:bg-accent/5 transition-colors">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm">
             {statusMap[data.t] || 'Unknown'}
           </span>
-          <span className="text-xs text-muted-foreground ml-2">
+          <span className="text-xs text-muted-foreground">
             {formatDistanceToNow(new Date(data.ca), { addSuffix: true })}
           </span>
         </div>
         <StatusBadge status={data.s || 'ns'} />
       </div>
       
-      <p className="text-sm text-card-foreground mb-2">{data.d}</p>
+      <p className="text-sm text-foreground">{data.d}</p>
       
       {data.u && data.u.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-2">
           {data.u.map((url, index) => (
             <a
               key={index}
@@ -138,6 +137,7 @@ const FeedbackItem = ({ data, id }) => {
     </div>
   );
 };
+
 
 // FilePreview component remains the same
 const FilePreview = ({ file, onRemove }) => {
@@ -358,30 +358,30 @@ const Feedback = () => {
       </div>
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">Your Feedback History</h2>
-        
-        <ScrollArea className="h-[400px] rounded-md border p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : feedbackItems.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              No feedback submitted yet
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {feedbackItems.map((item) => (
-                <FeedbackItem 
-                  key={item.id} 
-                  data={item} 
-                  id={item.id}
-                />
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </div>
+    <h2 className="text-base font-medium pr-4 mb-4">Your Feedback History</h2>
+    
+    <ScrollArea className="h-[calc(100vh-12rem)]">
+      {isLoading ? (
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : feedbackItems.length === 0 ? (
+        <div className="text-sm text-muted-foreground py-4 px-4">
+          No feedback submitted yet
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {feedbackItems.map((item) => (
+            <FeedbackItem 
+              key={item.id} 
+              data={item} 
+              id={item.id}
+            />
+          ))}
+        </div>
+      )}
+    </ScrollArea>
+  </div>
     </div>
   );
 };

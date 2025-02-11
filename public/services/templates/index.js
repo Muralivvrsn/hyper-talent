@@ -227,33 +227,65 @@ const setupContentEditableHandlers = () => {
     };
 
     const insertTemplate = (template) => {
-        console.log(template)
-        if (!currentElement) return;
+        if (window.isTemplateInserting) return;
+        window.isTemplateInserting = true;
+        
+        console.log(template);
+        if (!currentElement) {
+            window.isTemplateInserting = false;
+            return;
+        }
     
         const pElement = currentElement.querySelector('p') || 
                         currentElement.querySelector('div[contenteditable="true"]');
-        const shiftElement = document.querySelector('msg-form__msg-content-container--scrollable');
+        const shiftElement = document.querySelector('.msg-form__contenteditable');
         
-        if (pElement) {
-            const processedMessage = replacePlaceholders(template.message);
-            
-            pElement.innerHTML = processedMessage;
-            const event = new Event('input', { bubbles: true });
-            pElement.dispatchEvent(event);
-            pElement.focus();
+        try {
+            if (pElement) {
+                const processedMessage = replacePlaceholders(template.message);
+                pElement.innerHTML = processedMessage;
+                
+                setTimeout(() => {
+                    pElement.dispatchEvent(new Event('input', { bubbles: true }));
     
-            
-            
-            window.hideFloatingPanel();
-            
-            const range = document.createRange();
-            const sel = window.getSelection();
-            range.selectNodeContents(pElement);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
+                    if (shiftElement) {
+                        // Set cursor position first
+                        const range = document.createRange();
+                        const sel = window.getSelection();
+                        const targetElement = shiftElement.lastElementChild || shiftElement;
+                        range.selectNodeContents(targetElement);
+                        range.collapse(false);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+    
+                        // Then dispatch event
+                        shiftElement.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            shiftKey: true,
+                            bubbles: true,
+                            cancelable: true
+                        }));
+    
+                        // Add a small delay for focus and scroll
+                        setTimeout(() => {
+                            const lastChild = shiftElement.lastElementChild || shiftElement;
+                            lastChild.focus();
+                            lastChild.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                        }, 50);
+                    }
+    
+                    window.hideFloatingPanel();
+                    window.userActionsDatabase.addAction("message_template");
+                    window.isTemplateInserting = false;
+                }, 0);
+            }
+        } catch (error) {
+            console.error('Error inserting template:', error);
+            window.isTemplateInserting = false;
         }
-        window.userActionsDatabase.addAction("message_template")
     };
 
     const handleKeyboardNavigation = (event) => {

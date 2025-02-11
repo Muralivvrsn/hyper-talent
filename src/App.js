@@ -6,7 +6,7 @@ import { useTheme } from './context/ThemeContext';
 import { useData } from './context/DataContext';
 import LoginPage from './pages/LoginPage';
 import Navigation from './components/Navigation';
-import CandidateMessages from './pages/CandidateMessages';
+import CandidateMessages from './pages/StandardizedReplies';
 import Shortcuts from './pages/Shortcuts';
 import Sheet from './pages/Sheet';
 import Feedback from './pages/Feedback';
@@ -14,17 +14,20 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
+import { useOtherUsers } from './context/OtherUsersContext';
 const MainLayout = ({ children }) => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const { currentPage, setCurrentPage } = useProfileNote();
+
+
+
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
 
   const renderPage = () => {
     switch (currentPage) {
       case 'messages':
-        // return <CandidateMessages />;
-        return <ProfilePage />;
+        return <CandidateMessages />;
       case 'shortcuts':
         return <Shortcuts />;
       case 'sheet':
@@ -47,19 +50,19 @@ const MainLayout = ({ children }) => {
 
 
   return (
-    <div className="h-full overflow-hidden bg-background">
+    <div className="bg-background">
       <header className="border-b fixed top-0 w-full bg-background z-50">
         <div className="flex items-center justify-between">
           <Navigation
             setCurrentPage={setCurrentPage}
-            onLogout={logout}
+            onLogout={signOut}
             user={user}
             currentPage={currentPage}
             isAdmin={ADMIN_EMAILS.includes(user?.email)}
           />
         </div>
       </header>
-      <main className="mx-auto p-3 mt-[60px]">
+      <main className="mx-auto p-3 mt-[60px] relative h-[100vh] overflow-hidden">
         {renderPage()}
       </main>
     </div>
@@ -76,7 +79,7 @@ const LoadingScreen = () => (
 );
 
 function AppContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { loading: themeLoading } = useTheme();
   const { loading: dataLoading } = useData();
   const [initialLoad, setInitialLoad] = useState(true);

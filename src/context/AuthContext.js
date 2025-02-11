@@ -19,16 +19,16 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-export const storage = getStorage(app);
-const db = getFirestore(app);
-
-const REQUIRED_SCOPES = [
+const OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
   'https://www.googleapis.com/auth/drive.file'
 ];
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+export const storage = getStorage(app);
+const db = getFirestore(app);
 
 const AuthContext = createContext(null);
 
@@ -40,299 +40,261 @@ export const useAuth = () => {
   return context;
 };
 
+const formatUserProfile = (profileData) => ({
+  name: profileData.n || '',
+  email: profileData.e || '',
+  avatar: profileData.av || '',
+  createdAt: profileData.ca || null,
+  lastLogin: profileData.ll || null,
+  theme: profileData.th || 'light',
+  language: profileData.lg || 'en',
+  notifications: profileData.ne || false,
+  plan: profileData.p || 'free',
+  planExpiry: profileData.pe || null,
+  data: {
+    labelIds: profileData.d?.l || [],
+    noteIds: profileData.d?.n || [],
+    shortcutIds: profileData.d?.s || [],
+    sharedLabels: profileData.d?.sl || []
+  },
+  spreadsheet: {
+    id: profileData.sd?.id || null,
+    createdAt: profileData.sd?.ca || null,
+    lastSynced: profileData.sd?.ls || null
+  }
+});
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [authenticating, setAuthenticating] = useState(false);
+  const [authState, setAuthState] = useState({
+    user: null,
+    userProfile: null,
+    isLoading: true,
+    error: null,
+    isAuthenticating: false
+  });
+
   const chrome = window.chrome;
 
-  const verifyTokenScopes = async (token) => {
-    try {
-      console.log('Verifying token scopes...');
-      const response = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?access_token=${token}`
-      );
-      console.log(response)
-      if (!response.ok) {
-        console.error('Token verification failed:', response.status);
-        return false;
-      }
-
-
-
-      const data = await response.json();
-      // console.log(data)
-      console.log('Token info:', data);
-
-      if (!data.scope) {
-        console.error('No scopes found in token');
-        return false;
-      }
-
-      const grantedScopes = data.scope.split(' ');
-      console.log('Granted scopes:', grantedScopes);
-      console.log('Required scopes:', REQUIRED_SCOPES);
-
-      const hasAllScopes = REQUIRED_SCOPES.every(scope => grantedScopes.includes(scope));
-      console.log('Has all required scopes:', hasAllScopes);
-      
-      return hasAllScopes;
-    } catch (error) {
-      console.error('Token verification error:', error);
-      return false;
-    }
-  };
-
-  // Force interactive auth
-  const getAuthToken = async (interactive = true) => {
+  const fetchAuthToken = async () => {
     return new Promise((resolve, reject) => {
-      chrome.identity.getAuthToken({ 
-        interactive: interactive,
-        scopes: REQUIRED_SCOPES
-      }, async (token) => {
+      chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' }, (response) => {
         if (chrome.runtime.lastError) {
-          console.error('getAuthToken error:', chrome.runtime.lastError);
-          reject(chrome.runtime.lastError);
+          reject(new Error(chrome.runtime.lastError.message));
           return;
         }
-        console.log('Got auth token:', token ? 'token-exists' : 'no-token');
-        resolve(token);
+        
+        if (response.success && response.token) {
+          resolve(response.token);
+        } else {
+          reject(new Error(response.error || 'Token fetch failed'));
+        }
       });
     });
   };
 
-  const refreshToken = async (oldToken) => {
-    console.log('Refreshing token...');
-    try {
-      // Remove the old token
-      if (oldToken) {
-        console.log('Removing old token...');
-        await chrome.identity.removeCachedAuthToken({ token: oldToken });
-        
-        // Revoke old token
-        await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${oldToken}`);
-      }
-
-      // Clear all cached tokens to be sure
-      await new Promise(resolve => chrome.identity.clearAllCachedAuthTokens(resolve));
-      
-      // Get new token with interactive auth
-      console.log('Getting new token...');
-      const newToken = await getAuthToken(true);
-      
-      if (!newToken) {
-        throw new Error('Failed to get new token');
-      }
-
-      // Verify new token
-      const hasValidScopes = await verifyTokenScopes(newToken);
-      if (!hasValidScopes) {
-        throw new Error('New token does not have required scopes');
-      }
-
-      return newToken;
-    } catch (error) {
-      console.error('Token refresh failed:', error);
-      throw error;
+  const updateUserProfile = (snapshot) => {
+    if (snapshot.exists()) {
+      const formattedProfile = formatUserProfile(snapshot.data());
+      setAuthState(prev => ({ 
+        ...prev, 
+        userProfile: formattedProfile,
+        isLoading: false 
+      }));
+    } else {
+      setAuthState(prev => ({ 
+        ...prev, 
+        userProfile: null,
+        isLoading: false 
+      }));
     }
   };
 
   useEffect(() => {
-    let unsubscribeUser = null;
+    let profileUnsubscribe = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log('Auth state changed:', firebaseUser ? 'user-exists' : 'no-user');
-      
-      if (firebaseUser) {
-        try {
-          const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
-          console.log('GET_GOOGLE_TOKEN response:', response);
-
-          if (!response.token) {
-            console.log('No token found, getting new token...');
-            try {
-              const newToken = await getAuthToken(true);
-              if (newToken) {
-                await chrome.runtime.sendMessage({ type: 'STORE_TOKEN', token: newToken });
-              }
-            } catch (error) {
-              console.error('Failed to get new token:', error);
-              await logout();
-              return;
-            }
-          } else {
-            // Verify existing token
-            const hasValidScopes = await verifyTokenScopes(response.token);
-            if (!hasValidScopes) {
-              console.log('Token missing required scopes, refreshing...');
-              try {
-                const newToken = await refreshToken(response.token);
-                await chrome.runtime.sendMessage({ type: 'STORE_TOKEN', token: newToken });
-              } catch (error) {
-                console.error('Token refresh failed:', error);
-                await logout();
-                setError('Please login again to grant necessary permissions');
-                return;
-              }
-            }
+    const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      try {
+        if (firebaseUser) {
+          try {
+            await fetchAuthToken();
+          } catch (error) {
+            await handleSignOut();
+            return;
           }
 
-          setUser(firebaseUser);
-          
-          // Subscribe to user data
-          unsubscribeUser = onSnapshot(
+          setAuthState(prev => ({ 
+            ...prev, 
+            user: firebaseUser,
+            error: null
+          }));
+
+          profileUnsubscribe = onSnapshot(
             doc(db, 'users', firebaseUser.uid),
-            (doc) => {
-              if (doc.exists()) {
-                const data = doc.data();
-                setUserData({
-                  name: data.n || '',
-                  email: data.e || '',
-                  avatar: data.av || '',
-                  createdAt: data.ca || null,
-                  lastLogin: data.ll || null,
-                  theme: data.th || 'light',
-                  language: data.lg || 'en',
-                  notifications: data.ne || false,
-                  plan: data.p || 'free',
-                  planExpiry: data.pe || null,
-                  labelIds: data.d?.l || [],
-                  noteIds: data.d?.n || [],
-                  shortcutIds: data.d?.s || [],
-                  sharedLabels: data.d?.sl || [],
-                  spreadsheet: {
-                    id: data.sd?.id || null,
-                    createdAt: data.sd?.ca || null,
-                    lastSynced: data.sd?.ls || null
-                  }
-                });
-              }
-            },
-            (error) => {
-              console.error('Error fetching user data:', error);
-              setError(error.message);
-            }
+            updateUserProfile,
+            () => handleSignOut()
           );
-        } catch (error) {
-          console.error('Auth state change error:', error);
-          await logout();
-          return;
+        } else {
+          setAuthState(prev => ({ 
+            ...prev,
+            user: null,
+            userProfile: null,
+            isLoading: false,
+            error: null
+          }));
         }
-      } else {
-        setUser(null);
-        setUserData(null);
+      } catch {
+        await handleSignOut();
       }
-      
-      setLoading(false);
     });
 
     return () => {
-      unsubscribeAuth();
-      if (unsubscribeUser) {
-        unsubscribeUser();
+      authUnsubscribe();
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
       }
     };
   }, []);
 
-  const login = async () => {
-    console.log('Starting login process...');
-    setAuthenticating(true);
-    setError(null);
-    
+  const handleSignIn = async () => {
+    setAuthState(prev => ({ 
+      ...prev, 
+      isAuthenticating: true, 
+      isLoading: true,
+      error: null 
+    }));
+
     try {
-      // Always force interactive auth
-      const token = await getAuthToken(true);
-      console.log('Login: Got token');
+      const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET;
+      const redirectUri = chrome.identity.getRedirectURL();
+      
+      const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+      authUrl.searchParams.append('client_id', clientId);
+      authUrl.searchParams.append('redirect_uri', redirectUri);
+      authUrl.searchParams.append('response_type', 'code');
+      authUrl.searchParams.append('scope', OAUTH_SCOPES.join(' '));
+      authUrl.searchParams.append('access_type', 'offline');
+      authUrl.searchParams.append('prompt', 'consent');
 
-      // Verify token has correct scopes
-      const hasValidScopes = await verifyTokenScopes(token);
-      if (!hasValidScopes) {
-        console.log('Login: Token missing scopes, refreshing...');
-        const newToken = await refreshToken(token);
-        token = newToken;
+      const authCode = await new Promise((resolve, reject) => {
+        chrome.identity.launchWebAuthFlow({
+          url: authUrl.toString(),
+          interactive: true
+        }, (redirectUrl) => {
+          if (chrome.runtime.lastError || !redirectUrl) {
+            reject(new Error(chrome.runtime.lastError?.message || 'Authorization failed'));
+            return;
+          }
+          const code = new URL(redirectUrl).searchParams.get('code');
+          if (!code) {
+            reject(new Error('No authorization code received'));
+            return;
+          }
+          resolve(code);
+        });
+      });
+
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: authCode,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code'
+        })
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error('Token exchange failed');
       }
 
-      // Store token
-      console.log('Login: Storing token...');
-      await chrome.runtime.sendMessage({ type: 'STORE_TOKEN', token });
+      const { access_token, refresh_token, expires_in } = await tokenResponse.json();
 
-      // Sign in with Firebase
-      console.log('Login: Signing in to Firebase...');
-      const credential = GoogleAuthProvider.credential(null, token);
-      const userCredential = await signInWithCredential(auth, credential);
-      setUser(userCredential.user);
-      
-      console.log('Login completed successfully');
+      await Promise.all([
+        chrome.storage.local.set({
+          clientId,
+          clientSecret
+        }),
+        chrome.runtime.sendMessage({ 
+          type: 'STORE_TOKEN', 
+          token: access_token,
+          refreshToken: refresh_token,
+          expiresIn: expires_in 
+        })
+      ]);
+
+      const credential = GoogleAuthProvider.credential(null, access_token);
+      await signInWithCredential(auth, credential);
+
     } catch (error) {
-      console.error('Login error:', error);
-      setError(error.message);
-      setUser(null);
-      
-      // Clean up on error
-      try {
-        await logout();
-      } catch (logoutError) {
-        console.error('Logout error during cleanup:', logoutError);
-      }
+      setAuthState(prev => ({ 
+        ...prev, 
+        error: 'Authentication failed',
+        isAuthenticating: false ,
+        isLoading: false,
+      }));
+      await handleSignOut();
     } finally {
-      setAuthenticating(false);
+      setAuthState(prev => ({ 
+        ...prev, 
+        isAuthenticating: false ,
+        isLoading: false,
+      }));
     }
   };
 
-  const logout = async () => {
-    console.log('Starting logout process...');
+  const handleSignOut = async () => {
+    setAuthState(prev => ({ 
+      ...prev, 
+      isAuthenticating: true,
+      error: null 
+    }));
+
     try {
-      setAuthenticating(true);
-      
-      const response = await chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' });
-      if (response.token) {
-        // Remove token from Chrome's cache
-        await chrome.identity.removeCachedAuthToken({ token: response.token });
-        
-        // Revoke token
-        await fetch(`https://accounts.google.com/o/oauth2/revoke?token=${response.token}`);
-      }
-      
-      // Clear cached tokens
-      await new Promise(resolve => chrome.identity.clearAllCachedAuthTokens(resolve));
-      
-      // Clear token from background script
-      await chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' });
-      
-      // Sign out from Firebase
-      await signOut(auth);
-      
-      // Clear states
-      setUser(null);
-      setUserData(null);
-      
-      // Clear storage
-      await chrome.storage.local.clear();
-      
-      console.log('Logout completed successfully');
-    } catch (error) {
-      console.error('Logout error:', error);
-      setError(error.message);
-    } finally {
-      setAuthenticating(false);
+      await Promise.all([
+        chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' }),
+        signOut(auth),
+        chrome.storage.local.clear(),
+        new Promise(resolve => {
+          localStorage.clear();
+          sessionStorage.clear();
+          resolve();
+        })
+      ]);
+
+      setAuthState({
+        user: null,
+        userProfile: null,
+        isLoading: false,
+        error: null,
+        isAuthenticating: false
+      });
+    } catch {
+      setAuthState(prev => ({ 
+        ...prev, 
+        error: 'Sign out failed',
+        isAuthenticating: false 
+      }));
     }
   };
 
-  const value = {
-    user,
-    userData,
-    loading,
-    error,
-    authenticating,
-    login,
-    logout
+  const contextValue = {
+    user: authState.user,
+    userProfile: authState.userProfile,
+    isLoading: authState.isLoading,
+    error: authState.error,
+    isAuthenticating: authState.isAuthenticating,
+    signIn: handleSignIn,
+    signOut: handleSignOut
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+export default AuthProvider;
