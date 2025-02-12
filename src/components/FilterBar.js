@@ -23,7 +23,8 @@ const FilterBar = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [tempSelectedLabels, setTempSelectedLabels] = useState(selectedLabels);
-  const [hasNotesFilter, setHasNotesFilter] = useState(false); 
+  const [hasNotesFilter, setHasNotesFilter] = useState(false);
+
 
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -77,9 +78,9 @@ const FilterBar = ({
             <Button variant="outline" className="gap-2">
               <Filter className="h-4 w-4" />
               Filters
-              {selectedLabels.length > 0 && (
+              {(selectedLabels.length > 0 || hasNotesFilter) && (
                 <Badge variant="secondary" className="ml-2">
-                  {selectedLabels.length}
+                  {selectedLabels.length + (hasNotesFilter ? 1 : 0)}
                 </Badge>
               )}
             </Button>
@@ -174,7 +175,10 @@ const FilterBar = ({
                   variant="ghost"
                   size="sm"
                   className="h-5 w-5 p-0 hover:bg-transparent"
-                  onClick={() => handleClearFilters()}
+                  onClick={() => {
+                    onNotesFilterChange(false);
+                    setHasNotesFilter(false);
+                  }}
                 >
                   <X className="h-3 w-3" />
                 </Button>

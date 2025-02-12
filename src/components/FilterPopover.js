@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PopoverContent } from './ui/popover';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, Users, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
-
+import { Checkbox } from './ui/checkbox';
 const FilterType = {
     MY_LABELS: 'my_labels',
     SHARED_LABELS: 'shared_labels',
@@ -31,6 +31,11 @@ const FilterPopover = ({
     const [activeFilter, setActiveFilter] = useState(FilterType.MY_LABELS);
     const [filterSearch, setFilterSearch] = useState('');
     const [filterMode, setFilterMode] = useState(FilterMode.ANY);
+    const [tempHasNotesFilter, setTempHasNotesFilter] = useState(hasNotesFilter);
+
+    useEffect(() => {
+        setTempHasNotesFilter(hasNotesFilter);
+    }, [hasNotesFilter]);
 
     const hasActiveFilters = selectedLabels.length > 0 || hasNotesFilter;
 
@@ -42,15 +47,21 @@ const FilterPopover = ({
     };
 
     const handleApplyFilters = () => {
-        onApplyFilters(tempSelectedLabels, filterMode, hasNotesFilter);
+        onApplyFilters(tempSelectedLabels, filterMode, tempHasNotesFilter);
         onClose?.();
     };
 
     const handleClearFilters = () => {
         setTempSelectedLabels([]);
+        setTempHasNotesFilter(false);
         onClearFilters();
-        setHasNotesFilter(false);
         onClose?.();
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && (tempSelectedLabels.length > 0 || tempHasNotesFilter)) {
+            handleApplyFilters();
+        }
     };
 
     const toggleLabel = (labelId) => {
@@ -98,6 +109,7 @@ const FilterPopover = ({
             className="w-[280px] p-0 sm:w-[320px]"
             align="start"
             side="bottom"
+            onKeyDown={handleKeyDown}
         >
             <div className="flex flex-col h-[400px]">
                 {/* Search */}
@@ -108,6 +120,7 @@ const FilterPopover = ({
                             placeholder="Search labels..."
                             value={filterSearch}
                             onChange={(e) => setFilterSearch(e.target.value)}
+                            onKeyDown={handleKeyDown}
                             className="pl-8 h-8 text-sm"
                         />
                     </div>
@@ -142,30 +155,26 @@ const FilterPopover = ({
                 <div className="flex-1 overflow-y-auto">
                     <div className="space-y-1 p-2">
                         {activeFilter === FilterType.NOTES ? (
-                            <div>
+                            <>
                                 <label
                                     className={cn(
                                         "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-accent/50",
-                                        hasNotesFilter && "bg-accent"
+                                        tempHasNotesFilter && "bg-accent"
                                     )}
                                 >
-                                    <input
-                                        type="checkbox"
-                                        className="hidden"
-                                        checked={hasNotesFilter}
-                                        onChange={() => setHasNotesFilter(!hasNotesFilter)}
+                                    <Checkbox
+                                        checked={tempHasNotesFilter}
+                                        onCheckedChange={() => setTempHasNotesFilter(!tempHasNotesFilter)}
+                                        className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                                     />
                                     <div className="flex-1 flex items-center gap-2">
                                         <span className="text-sm">Show profiles with notes</span>
                                     </div>
-                                    {hasNotesFilter && (
-                                        <Check className="h-4 w-4 text-primary" />
-                                    )}
                                 </label>
                                 <p className="mt-2 text-xs text-muted-foreground px-2">
                                     Filter profiles that have any notes added to them
                                 </p>
-                            </div>
+                            </>
                         ) : (
                             renderLabels()
                         )}

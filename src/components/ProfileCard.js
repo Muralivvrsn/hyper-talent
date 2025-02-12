@@ -8,6 +8,8 @@ import { X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getFirestore } from 'firebase/firestore';
 import { removeLabelFromProfile } from '../utils/labelUtils';
+import { toast } from 'react-hot-toast';
+import { useTheme } from '../context/ThemeContext';
 
 const ProfileCard = ({ profile, labels, note }) => {
   const [expanded, setExpanded] = useState(false);
@@ -15,6 +17,7 @@ const ProfileCard = ({ profile, labels, note }) => {
   const initials = profile.name?.slice(0, 2).toUpperCase() || '??';
   const [removingLabels, setRemovingLabels] = useState(false);
   const { user } = useAuth();
+  const { theme } = useTheme();
   const db = getFirestore();
 
   const handleAction = (type) => {
@@ -27,10 +30,18 @@ const ProfileCard = ({ profile, labels, note }) => {
 
   const handleRemoveLabel = async (labelId, e) => {
     e.stopPropagation();
+    const label = labels.find(l => l.id === labelId);
     setRemovingLabels(prev => ({ ...prev, [labelId]: true }));
 
     try {
-      await removeLabelFromProfile(labelId, profile.id, user?.uid, db);
+      const success = await removeLabelFromProfile(labelId, profile.id, user?.uid, db);
+      if (success) {
+        toast.success(`Removed "${label.name}" from profile`);
+      } else {
+        toast.error('Failed to remove label');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to remove label');
     } finally {
       setRemovingLabels(prev => ({ ...prev, [labelId]: false }));
     }
@@ -99,10 +110,13 @@ const ProfileCard = ({ profile, labels, note }) => {
             {labels.map((label) => (
               <div
                 key={label.id}
-                className="group/label relative inline-flex items-center text-[10px] px-3 py-0.5 rounded-full transition-all duration-200"
+                className="group/label relative inline-flex items-center text-[10px] px-3 py-0.5 rounded-full transition-all duration-200 font-semibold"
                 style={{
-                  backgroundColor: `${label.color}15`,
-                  color: label.color
+                  backgroundColor: theme === "dark" ? `${label.color}60` : `${label.color}20`,
+                  borderWidth: theme === "dark" ? "1px" : "0px",
+                  borderStyle: "solid",
+                  borderColor: theme === "dark" ? label.color : "transparent",
+                  color: theme === "dark" ? "#FFFFFF" : label.color,
                 }}
               >
                 <span className="truncate">{label.name}</span>
