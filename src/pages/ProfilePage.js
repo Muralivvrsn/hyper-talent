@@ -17,7 +17,6 @@ export default function ProfilePage() {
   const [selectedLabels, setSelectedLabels] = useState([]);
   const [filterMode, setFilterMode] = useState('any');
   const [hasNotesFilter, setHasNotesFilter] = useState(false);
-  console.log("labels: ", labels)
 
   const profilesData = useMemo(() => {
     const profileMap = new Map();

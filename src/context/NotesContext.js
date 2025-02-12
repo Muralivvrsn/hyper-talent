@@ -13,7 +13,7 @@ export const useNotes = () => {
 };
 
 export const NotesProvider = ({ children }) => {
-    const { userData } = useAuth();
+    const { userProfile } = useAuth();
     const [notes, setNotes] = useState({});
     const [noteProfiles, setNoteProfiles] = useState({});
     const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ export const NotesProvider = ({ children }) => {
     const db = getFirestore();
 
     useEffect(() => {
-        if (!userData?.noteIds?.length) {
+        if (!userProfile?.data?.noteIds?.length) {
             setNotes({});
             setLoading(false);
             return;
@@ -32,7 +32,7 @@ export const NotesProvider = ({ children }) => {
         const profileUnsubscribers = new Map();
 
         // Subscribe to notes
-        userData.noteIds.forEach(noteId => {
+        userProfile?.data.noteIds.forEach(noteId => {
             const unsubscribe = onSnapshot(
                 doc(db, 'profile_notes', noteId),
                 (docSnapshot) => {
@@ -91,7 +91,7 @@ export const NotesProvider = ({ children }) => {
             unsubscribers.forEach(unsub => unsub());
             profileUnsubscribers.forEach(unsub => unsub());
         };
-    }, [userData?.noteIds]);
+    }, [userProfile?.data?.noteIds]);
 
     const getNoteWithProfile = (noteId) => {
         const note = notes[noteId];

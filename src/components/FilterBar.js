@@ -25,8 +25,6 @@ const FilterBar = ({
   const [tempSelectedLabels, setTempSelectedLabels] = useState(selectedLabels);
   const [hasNotesFilter, setHasNotesFilter] = useState(false);
 
-  console.log("ownedLabels: ", ownedLabels)
-
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);

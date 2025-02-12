@@ -13,15 +13,15 @@ export const useTemplates = () => {
 };
 
 export const TemplateProvider = ({ children }) => {
-  const { userData } = useAuth();
+  const { userProfile } = useAuth();
   const [templates, setTemplates] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const db = getFirestore();
 
-  // Fetch and subscribe to templates when userData changes
+  // Fetch and subscribe to templates when userProfile?.data changes
   useEffect(() => {
-    if (!userData?.shortcutIds?.length) {
+    if (!userProfile?.data?.shortcutIds?.length) {
       setTemplates({});
       setLoading(false);
       return;
@@ -31,7 +31,7 @@ export const TemplateProvider = ({ children }) => {
     const unsubscribers = [];
 
     // Subscribe to each template
-    userData.shortcutIds.forEach(templateId => {
+    userProfile?.data.shortcutIds.forEach(templateId => {
       const unsubscribe = onSnapshot(
         doc(db, 'message_templates', templateId),
         (doc) => {
@@ -62,7 +62,7 @@ export const TemplateProvider = ({ children }) => {
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
-  }, [userData?.shortcutIds]);
+  }, [userProfile?.data?.shortcutIds]);
 
   const getTemplateById = (templateId) => {
     const template = templates[templateId];
