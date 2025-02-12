@@ -23,8 +23,8 @@ const MainLayout = ({ children }) => {
   const renderPage = () => {
     switch (currentPage) {
       case 'messages':
-        return <CandidateMessages />;
-        // return <ProfilePage />;
+        // return <CandidateMessages />;
+        return <ProfilePage />;
       case 'shortcuts':
         return <Shortcuts />;
       case 'sheet':

@@ -74,7 +74,7 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
         labels.map(label => (
             <div
                 key={label.id}
-                className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-gray-100 relative group"
+                className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent/50 relative group"
             >
                 <span
                     className="w-2 h-2 rounded-full"
