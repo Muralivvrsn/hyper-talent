@@ -91,7 +91,7 @@ const stylish = {
 
 class LinkedInLabelsManager {
     constructor() {
-        console.log('Initializing LinkedInLabelsManager');
+        // console.log('Initializing LinkedInLabelsManager');
         this.initialized = false;
         this.labelsData = { owned: [], shared: [] };
         this.observer = null;
@@ -104,22 +104,22 @@ class LinkedInLabelsManager {
 
     initialize() {
         if (this.initialized) {
-            console.log('Already initialized');
+            // console.log('Already initialized');
             return;
         }
 
         if (!this.isValidPage()) {
-            console.log('Not a valid page for initialization');
+            // console.log('Not a valid page for initialization');
             return;
         }
 
-        console.log('Starting initialization');
+        // console.log('Starting initialization');
         this.injectStyles();
         this.setupDatabaseListener();
         this.setupUrlChangeListener();
         this.initializeCurrentPage();
         this.initialized = true;
-        console.log('Initialization complete');
+        // console.log('Initialization complete');
     }
 
     isValidPage() {
@@ -127,30 +127,30 @@ class LinkedInLabelsManager {
     }
 
     async waitForElement(selector, timeout = 5000) {
-        console.log(`Waiting for element: ${selector}`);
+        // console.log(`Waiting for element: ${selector}`);
         const start = Date.now();
 
         while (Date.now() - start < timeout) {
             const element = document.querySelector(selector);
             if (element) {
-                console.log('Element found');
+                // console.log('Element found');
                 return element;
             }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
 
-        console.log('Element not found within timeout');
+        // console.log('Element not found within timeout');
         return null;
     }
 
     injectStyles() {
-        console.log('Injecting styles');
+        // console.log('Injecting styles');
         if (!document.getElementById(stylish.styleId)) {
             const styleSheet = document.createElement('style');
             styleSheet.id = stylish.styleId;
             styleSheet.textContent = stylish.css;
             document.head.appendChild(styleSheet);
-            console.log('Styles injected successfully');
+            // console.log('Styles injected successfully');
         }
     }
 
@@ -163,15 +163,15 @@ class LinkedInLabelsManager {
     }
 
     setupDatabaseListener() {
-        console.log('Setting up database listener');
+        // console.log('Setting up database listener');
         if (window.labelsDatabase) {
             window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
-            console.log('Database listener setup complete');
+            // console.log('Database listener setup complete');
         }
     }
 
     handleLabelsUpdate({ labels }) {
-        console.log('Labels updated:', labels);
+        // console.log('Labels updated:', labels);
         this.labelsData = labels;
         this.updateCurrentPage();
     }
@@ -185,7 +185,7 @@ class LinkedInLabelsManager {
     }
 
     setupUrlChangeListener() {
-        console.log('Setting up URL and UI change listener');
+        // console.log('Setting up URL and UI change listener');
         let lastUrl = location.href;
         let lastPath = location.pathname;
         
@@ -196,7 +196,7 @@ class LinkedInLabelsManager {
             const currentPath = location.pathname;
             
             if (currentUrl !== lastUrl || currentPath !== lastPath) {
-                console.log('URL changed:', { from: lastUrl, to: currentUrl });
+                // console.log('URL changed:', { from: lastUrl, to: currentUrl });
                 lastUrl = currentUrl;
                 lastPath = currentPath;
                 if (this.isValidPage()) {
@@ -236,10 +236,10 @@ class LinkedInLabelsManager {
 
     async initializeCurrentPage() {
         if (this.isMessagingPage()) {
-            console.log('Initializing messaging page');
+            // console.log('Initializing messaging page');
             this.processConversationsList();
         } else if (this.isProfilePage()) {
-            console.log('Initializing profile page');
+            // console.log('Initializing profile page');
             await this.processProfilePage();
         }
     }
@@ -248,25 +248,25 @@ class LinkedInLabelsManager {
         if (!url) return null;
         const match = url.match(/image\/[^/]+\/([^/]+)/);
         const imageId = match ? match[1] : null;
-        console.log('Extracted image ID:', { url, imageId });
+        // console.log('Extracted image ID:', { url, imageId });
         return imageId;
     }
 
 
     extractConnectionCode(url) {
-        console.log('[ProfileLabels] Extracting connection code from:', url);
+        // console.log('[ProfileLabels] Extracting connection code from:', url);
         const connectionMatch = url.match(/connectionOf=%5B%22(.*?)%22%5D/) || 
                               url.match(/connectionOf=\["([^"]+)"\]/);
         const mutualMatch = url.match(/facetConnectionOf=%22(.*?)%22/) || 
                            url.match(/facetConnectionOf="([^"]+)"/);
         const code = (connectionMatch || mutualMatch)?.[1] || null;
-        console.log('[ProfileLabels] Extracted connection code:', code);
+        // console.log('[ProfileLabels] Extracted connection code:', code);
         return code;
     }
 
 
     async getProfileInfo() {
-        console.log('Getting profile info');
+        // console.log('Getting profile info');
         try {
             const connectionLink = document.querySelector('a[href*="/search/results/people"]');
             const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
@@ -288,10 +288,10 @@ class LinkedInLabelsManager {
                 addedAt: new Date().toISOString()
             };
 
-            console.log('Profile info collected:', profileInfo);
+            // console.log('Profile info collected:', profileInfo);
             return profileInfo;
         } catch (error) {
-            console.error('Error getting profile info:', error);
+            // console.error('Error getting profile info:', error);
             return null;
         }
     }
@@ -306,7 +306,7 @@ class LinkedInLabelsManager {
     }
 
     findMatchingLabels(name, imageUrl) {
-        console.log('Finding matching labels for:', { name, imageUrl });
+        // console.log('Finding matching labels for:', { name, imageUrl });
         const imageId = this.extractImageId(imageUrl);
         const allLabels = [...this.labelsData.owned, ...this.labelsData.shared];
 
@@ -318,10 +318,10 @@ class LinkedInLabelsManager {
             if (matchingProfile) {
                 const profileImageId = this.extractImageId(matchingProfile.image_url);
                 matchingProfile.isVerified = imageId === profileImageId;
-                console.log('Found matching profile:', {
-                    labelName: label.label_name,
-                    isVerified: matchingProfile.isVerified
-                });
+                // console.log('Found matching profile:', {
+                //     labelName: label.label_name,
+                //     isVerified: matchingProfile.isVerified
+                // });
                 return true;
             }
             return false;
@@ -329,7 +329,7 @@ class LinkedInLabelsManager {
     }
 
     createLabel(labelId, labelName, labelColor, matchingProfile, isShared = false, sharedBy = '') {
-        console.log('Creating label:', { labelId, labelName, isShared });
+        // console.log('Creating label:', { labelId, labelName, isShared });
 
         const label = document.createElement('div');
         label.className = `profile-label ${matchingProfile.isVerified ? '' : 'unverified'}`;
@@ -353,9 +353,9 @@ class LinkedInLabelsManager {
                     labelId,
                     matchingProfile.profile_id
                 );
-                console.log('Profile removed from label');
+                // console.log('Profile removed from label');
             } catch (error) {
-                console.error('Failed to remove profile from label:', error);
+                // console.error('Failed to remove profile from label:', error);
             }
         });
 
@@ -363,7 +363,7 @@ class LinkedInLabelsManager {
     }
 
     async processProfilePage() {
-        console.log('Processing profile page');
+        // console.log('Processing profile page');
         const profileInfo = await this.getProfileInfo();
         if (!profileInfo) return;
 
@@ -473,7 +473,7 @@ class LinkedInLabelsManager {
     }
 
     processConversationsList() {
-        console.log('Processing conversations list');
+        // console.log('Processing conversations list');
         const conversationsList = document.querySelector('ul.msg-conversations-container__conversations-list');
         if (!conversationsList) return;
     
@@ -521,7 +521,7 @@ class LinkedInLabelsManager {
     }
 
     destroy() {
-        console.log('Destroying LinkedInLabelsManager');
+        // console.log('Destroying LinkedInLabelsManager');
         if (this.observer) {
             this.observer.disconnect();
         }
@@ -546,21 +546,21 @@ class LinkedInLabelsManager {
             this.labelContainerRef = null;
         }
         this.initialized = false;
-        console.log('Cleanup complete');
+        // console.log('Cleanup complete');
     }
 }
 
 // Initialize only on LinkedIn
 (function() {
     if (!window.location.hostname.includes('linkedin.com')) {
-        console.log('Not on LinkedIn, skipping initialization');
+        // console.log('Not on LinkedIn, skipping initialization');
         return;
     }
     if (window.linkedInLabelsManager) {
-        console.log('Manager already exists, skipping initialization');
+        // console.log('Manager already exists, skipping initialization');
         return;
     }
     
-    console.log('Creating new LinkedInLabelsManager instance');
+    // console.log('Creating new LinkedInLabelsManager instance');
     window.linkedInLabelsManager = new LinkedInLabelsManager();
 })();

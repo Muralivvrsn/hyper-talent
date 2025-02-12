@@ -34,17 +34,19 @@
         "firebase-database.js",
         "firebase-auth.js",
         "firebase-firestore.js",
+        "utils/alert.js",
+        "utils/notification.js",
+        "utils/profileInfo.js",
         "database/index.js",
         "database/tags.js",
         "database/message_templates.js",
         "database/persionalized_notes.js",
         "database/user_actions.js",
-        "services/tags/show.js",
+        "services/tags/show/index.js",
         "services/tags/observer.js",
 
 
-        "utils/alert.js",
-        "utils/notification.js",
+        
 
 
         "services/templates/index.js",

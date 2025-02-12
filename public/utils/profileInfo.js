@@ -22,12 +22,19 @@ window.labelManagerUtils = {
                 const img = activeConvo?.querySelector('img')?.src || null;
     
                 // Extract profile ID from URL
-                const profile_id = extractProfileId(profileUrl);
+                const profile_id = this.extractProfileId(profileUrl);
     
                 // Only return if we have all required information
                 if (!name || !profileUrl || !img || !profile_id) {
                     return null;
                 }
+                console.log({
+                    profile_id,
+                    name,
+                    url: profileUrl,
+                    image_url: img,
+                    username: null // Using name as username since it's not separately available
+                })
                 return {
                     profile_id,
                     name,
@@ -38,7 +45,7 @@ window.labelManagerUtils = {
             } 
             // Handle profile page
             else {
-                await waitForElement('a[aria-label]');
+                await this.waitForElement('a[aria-label]');
                 let name = null;
                 const nameElement = document.querySelector('a[aria-label] h1');
                 if (nameElement) {
@@ -62,18 +69,27 @@ window.labelManagerUtils = {
                 for (const anchor of potentialAnchors) {
                     const href = anchor?.getAttribute('href');
                     if (href) {
-                        connectionCode = extractConnectionCode(href);
+                        connectionCode = this.extractConnectionCode(href);
                         if (connectionCode) {
                             break;
                         }
                     }
                 }
+                let username = this.extractUsername(url)
     
+                console.log({
+                    url,
+                    profile_id: connectionCode,
+                    name,
+                    username,
+                    image_url:imageUrl
+                })
                 return {
                     url,
-                    connectionCode,
+                    profile_id: connectionCode,
                     name,
-                    imageUrl
+                    username,
+                    image_url: imageUrl
                 };
             }
         } catch (error) {
@@ -88,9 +104,18 @@ window.labelManagerUtils = {
         return match ? match[0] : null;
     },
 
+    extractUsername(url) {
+        const match = url.match(/\/in\/([^\/]+)/);
+        return match ? match[1] : null;
+    },
     // Helper function to extract connection code
     extractConnectionCode(href) {
-        const connectionMatch = href.match(/(?:connectionOf|followerOf|miniProfileUrn|profileUrn|fsd_profilePosition)=([^&]+)/);
+        // First, try matching with original regex pattern
+        let connectionMatch = href.match(/(?:connectionOf|followerOf|miniProfileUrn|profileUrn|fsd_profilePosition)=([^&]+)/);
+        if (connectionMatch) {
+            connectionMatch = connectionMatch[1].match(/%22([^%]+)%22/);
+        }
+        
         return connectionMatch ? connectionMatch[1] : null;
     },
 

@@ -76,7 +76,7 @@
                 }
 
                 const userDoc = await db.collection('users').doc(userId).get();
-                const userName = userDoc.data()?.d?.n || 'Unknown User';
+                const userName = userDoc.data()?.n || 'Unknown User';
                 
                 this.state.userDataCache.set(userId, userName);
                 return userName;
@@ -89,6 +89,8 @@
         async setupRealtimeSync() {
             try {
                 const { db, currentUser } = await window.firebaseService.initialize();
+                console.log(db);
+                console.log(currentUser)
                 if (!db || !currentUser) return;
 
                 this.cleanupSubscriptions();
@@ -99,12 +101,30 @@
                 const userUnsubscribe = userRef.onSnapshot(async (userDoc) => {
                     try {
                         this.updateLoading(true);
+                        console.log(userDoc.exists)
                         if (!userDoc.exists) return;
 
                         const userData = userDoc.data()?.d || {};
+
+                        console.log(userData)
+                        
+                        // Handle owned labels (array of strings)
+                        const ownedLabelIds = userData.l || [];
+
+                        console.log(ownedLabelIds)
+                        
+                        // Handle shared labels (array of objects with {l: labelId, a: acceptanceStatus})
+                        const sharedLabels = userData.sl || [];
+                        console.log(sharedLabels)
+                        // Filter only accepted shared labels
+                        const acceptedSharedLabelIds = sharedLabels
+                            .filter(label => label.a === true)
+                            .map(label => label.l);
+
+                        console.log(acceptedSharedLabelIds)
                         await Promise.all([
-                            this.setupLabelListeners(userData.l || [], 'owned', currentUser.uid),
-                            this.setupLabelListeners(userData.sl || [], 'shared', currentUser.uid)
+                            this.setupLabelListeners(ownedLabelIds, 'owned', currentUser.uid),
+                            this.setupLabelListeners(acceptedSharedLabelIds, 'shared', currentUser.uid)
                         ]);
                     } finally {
                         this.updateLoading(false);
@@ -129,7 +149,24 @@
                 this.cleanupLabelListeners(type);
                 this.updateLoading(true);
 
+                // Guard against non-array or empty labelIds
+                if (!Array.isArray(labelIds) || labelIds.length === 0) {
+                    this.state.labels[type] = [];
+                    this.notifyListeners();
+                    return;
+                }
+
+                console.log(type);
+                console.log(labelIds)
+
                 const labelListeners = labelIds.map(labelId => {
+                    console.log(labelId)
+                    if (!labelId) {
+                        console.error('[LinkedInLabels] Invalid label ID:', labelId);
+                        return null;
+                    }
+
+
                     const labelRef = db.collection('profile_labels').doc(labelId);
                     return {
                         id: labelId,
@@ -163,7 +200,7 @@
                             this.updateLoading(false);
                         })
                     };
-                });
+                }).filter(Boolean); // Remove any null entries from invalid labelIds
 
                 labelListeners.forEach(({ id, unsubscribe }) => {
                     this.state.subscriptions.set(`${type}_${id}`, unsubscribe);
