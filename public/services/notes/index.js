@@ -40,6 +40,17 @@ class ProfileNotes {
                 const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
                 const url = connectionLink?.href || mutualConnectionLink?.href || currentUrl;
                 const username = this.extractUsername(currentUrl);
+
+                let name = null;
+                const nameElement = document.querySelector('a[aria-label] h1');
+                if (nameElement) {
+                    name = nameElement.textContent.trim();
+                }
+                let imageUrl = null;
+                const profileImage = document.querySelector('img.pv-top-card-profile-picture__image--show');
+                if (profileImage) {
+                    imageUrl = profileImage.getAttribute('src');
+                }
                 let connectionCode = this.extractConnectionCode(url);
 
                 if (!connectionCode) {
@@ -50,13 +61,16 @@ class ProfileNotes {
                     connectionCode = username;
                 }
 
-                return { profileId: connectionCode, username };
+                return { profileId: connectionCode, username, name, url:currentUrl, imageUrl };
             }
             
             // Check if it's a messaging thread
             if (currentUrl.includes('messaging/thread')) {
                 const profileLink = document.querySelector('.msg-thread__link-to-profile');
+                const name = document.querySelector('#thread-detail-jump-target').textContent.trim();
                 if (!profileLink) return null;
+                const activeConvo = document.querySelector('.msg-conversations-container__convo-item-link--active');
+                const img = activeConvo?.querySelector('img')?.src || null;
                 
                 const url = profileLink.href;
                 if (!url) return null;
@@ -66,7 +80,10 @@ class ProfileNotes {
                 // console.log(id)
                 return { 
                     profileId: id,
-                    username: null
+                    url: url,
+                    name,
+                    username: null,
+                    imageUrl:img,
                 };
             }
             
@@ -80,9 +97,6 @@ class ProfileNotes {
     }
 }
 
-// [Previous ProfileNotes class remains the same]
-
-// [Previous ProfileNotes class remains the same]
 
 class LabelProfileNotes {
     constructor() {
@@ -378,10 +392,10 @@ class LabelProfileNotes {
 
         try {
             if (this.currentNote) {
-                await window.notesDatabase.updateNote(this.currentNote.id, noteText);
+                await window.notesDatabase.updateNote(this.currentNote.id, noteText, this.currentProfileInfo.profileId, this.currentProfileInfo);
                 window.show_success('Your note has been successfully updated.', 3000);
             } else {
-                await window.notesDatabase.createNote(this.currentProfileInfo.profileId, noteText);
+                await window.notesDatabase.createNote(this.currentProfileInfo.profileId, noteText, this.currentProfileInfo);
                 window.show_success('Your note has been successfully saved.', 3000);
             }
             window.userActionsDatabase.addAction("notes_saved")

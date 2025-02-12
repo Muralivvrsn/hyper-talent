@@ -71,7 +71,7 @@ const statusConfig = {
 };
 
 const getStatusBadge = (status) => {
-  console.log(status)
+  // console.log(status)
   return statusConfig[status]?.style || statusConfig.ns.style;
 };
 

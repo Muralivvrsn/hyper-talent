@@ -6,6 +6,7 @@ class LabelManager {
         this.uiElements = new Map();
         this.isDropdownOpen = false;
         this.selectedIndex = -1;
+        this.labels = {}
 
         this.handleLabelsUpdate = this.handleLabelsUpdate.bind(this);
 
@@ -33,6 +34,7 @@ class LabelManager {
     }
 
     handleLabelsUpdate({ labels }) {
+        this.labels = labels
         this.updateUI(labels);
         if (this.isDropdownOpen) {
             this.updateDropdown(labels);
@@ -45,10 +47,10 @@ class LabelManager {
                 e.preventDefault();
                 // Check if we're on either valid page
                 if (this.isMessagingPage() || this.isProfilePage()) {
-                    console.log("this.toggledropdown")
+                    // console.log("this.toggledropdown")
                     this.toggleDropdown();
                     const searchInput = this.uiElements.get('searchInput');
-                    console.log('search input')
+                    // console.log('search input')
                     if (searchInput) {
                         searchInput.focus();
                     }
@@ -235,7 +237,7 @@ class LabelManager {
 
 
         const labelText = document.createElement('span');
-        labelText.textContent = 'Tags';
+        labelText.textContent = 'Labels';
         labelText.style.marginRight = '4px';
 
         const countBadge = document.createElement('span');
@@ -324,22 +326,28 @@ class LabelManager {
                 case 'Enter':
                     e.preventDefault();
                     if (this.selectedIndex >= 0 && visibleLabels[this.selectedIndex]) {
-                        console.log('Label clicked:', visibleLabels[this.selectedIndex].getAttribute('data-label-id'));
-                        window.labelManagerUtils.getProfileInfo();
+                        // console.log('Label clicked:', visibleLabels[this.selectedIndex].getAttribute('data-label-id'));
+                        this.applyLabel(visibleLabels[this.selectedIndex].getAttribute('data-label-id'))
+                        const searchInput = this.uiElements.get('searchInput');
+                        if (searchInput) {
+                            // Reset selection index to keep focus on search
+                            this.selectedIndex = -1;
+                            searchInput.focus();
+                        }
                     }
                     break;
 
                 case 'e':
                     if (this.selectedIndex >= 0 && visibleLabels[this.selectedIndex]) {
                         e.preventDefault();
-                        console.log('Edit button clicked for label:', visibleLabels[this.selectedIndex].getAttribute('data-label-id'));
+                        // console.log('Edit button clicked for label:', visibleLabels[this.selectedIndex].getAttribute('data-label-id'));
                     }
                     break;
 
                 case 'd':
                     if (this.selectedIndex >= 0 && visibleLabels[this.selectedIndex]) {
                         e.preventDefault();
-                        console.log('Delete button clicked for label:', visibleLabels[this.selectedIndex].getAttribute('data-label-id'));
+                        // console.log('Delete button clicked for label:', visibleLabels[this.selectedIndex].getAttribute('data-label-id'));
                     }
                     break;
 
@@ -388,9 +396,17 @@ class LabelManager {
                 e.preventDefault();
                 const searchTerm = searchInput.value.trim().toLowerCase();
                 if (searchTerm && !visibleLabels.length) {
-                    console.log('Creating label:', searchTerm);
+                    // console.log('Creating label:', searchTerm);
+                    this.createLabelItem(searchTerm);
                 } else if (visibleLabels.length > 0) {
-                    console.log('Label clicked:', visibleLabels[0].getAttribute('data-label-id'));
+                    // console.log('Label clicked:', visibleLabels[0].getAttribute('data-label-id'));
+                    const searchInput = this.uiElements.get('searchInput');
+                    if (searchInput) {
+                        // Reset selection index to keep focus on search
+                        this.selectedIndex = -1;
+                        searchInput.focus();
+                    }
+                    this.applyLabel(visibleLabels[0].getAttribute('data-label-id'))
                 }
             }
         });
@@ -419,6 +435,51 @@ class LabelManager {
         });
 
         return section;
+    }
+
+    async createLabelItem(searchTerm) {
+        const capitalizedTerm = searchTerm.trim().toUpperCase();
+        const actionId = `${capitalizedTerm}`;
+
+        // Check if action can be started
+        if (!window.start_action(actionId, 'Creating new label...')) {
+            window.show_warning('A label creation is already in progress. Please wait.');
+            return false;
+        }
+
+        try {
+            // Check if label already exists
+            const existingLabel = [...(this.labels.owned || [])]
+                .find(label => label.label_name.toUpperCase() === capitalizedTerm);
+
+            if (existingLabel) {
+                window.complete_action(actionId, false, 'Label already exists');
+                window.show_warning('Label already exists');
+                return false;
+            }
+
+            // Get profile data and create label
+            const profileData = window.labelManagerUtils.getProfileInfo();
+            console.log(profileData)
+            const result = await window.labelsDatabase.addLabel({
+                label_name: capitalizedTerm,
+                label_id: `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                label_color: window.labelManagerUtils.getRandomColor(),
+            }, profileData);
+
+            if (result) {
+                window.complete_action(actionId, true, 'Label created successfully');
+                // window.show_success(`Label "${capitalizedTerm}" created successfully`);
+                return true;
+            } else {
+                throw new Error('Failed to create label');
+            }
+        } catch (error) {
+            console.error('Failed to create label:', error);
+            window.complete_action(actionId, false, 'Failed to create label');
+            // window.show_error('Failed to create label');
+            return false;
+        }
     }
 
     createLabelElement(label) {
@@ -451,7 +512,13 @@ class LabelManager {
         // Label name
         const nameSpan = document.createElement('span');
         nameSpan.textContent = label.label_name;
-        nameSpan.style.flex = '1';
+        nameSpan.style.cssText = `
+            flex: 1;
+            outline: none;
+            padding: 2px 4px;
+            border-radius: 2px;
+            min-width: 50px;
+        `;
 
         // Profile count
         const countSpan = document.createElement('span');
@@ -470,21 +537,89 @@ class LabelManager {
             display: none;
             position: absolute;
             right: 8px;
+            gap: 4px;
         `;
 
+        let isEditing = false;
+
+        const finishEditing = async () => {
+            if (!isEditing) return;
+
+            isEditing = false;
+            nameSpan.contentEditable = 'false';
+            nameSpan.style.backgroundColor = '';
+            nameSpan.style.border = '';
+
+            const newName = nameSpan.textContent.trim().toUpperCase();
+            if (newName && newName !== label.label_name) {
+                try {
+                    const success = await window.labelsDatabase.editLabel(label.label_id, {
+                        label_name: newName,
+                        label_color: label.label_color
+                    });
+
+                    if (success) {
+                        label.label_name = newName;
+                        labelElement.setAttribute('data-label-name', newName);
+                        window.show_success('Label updated');
+                    } else {
+                        nameSpan.textContent = label.label_name;
+                        window.show_error('Failed to update label');
+                    }
+                } catch (error) {
+                    console.error('Error updating label:', error);
+                    nameSpan.textContent = label.label_name;
+                    window.show_error('Failed to update label');
+                }
+            } else {
+                nameSpan.textContent = label.label_name;
+            }
+        };
+
+        const startEditing = (e) => {
+            e.stopPropagation();
+            if (isEditing) return;
+
+            isEditing = true;
+            nameSpan.contentEditable = 'true';
+            nameSpan.style.backgroundColor = 'white';
+            nameSpan.style.border = '1px solid #e5e7eb';
+
+            // Select all text and focus
+            const range = document.createRange();
+            range.selectNodeContents(nameSpan);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            nameSpan.focus();
+        };
+
+        // Edit button
         const editButton = document.createElement('button');
         editButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
         editButton.style.marginRight = '4px';
-        editButton.onclick = (e) => {
-            e.stopPropagation();
-            console.log('Edit button clicked for label:', label.label_id);
-        };
+        editButton.onclick = startEditing;
 
+        // Delete button
         const deleteButton = document.createElement('button');
         deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`;
-        deleteButton.onclick = (e) => {
+        deleteButton.onclick = async (e) => {
             e.stopPropagation();
-            console.log('Delete button clicked for label:', label.label_id);
+            try {
+                if (!window.start_action('delete-label', 'Deleting a label...')) {
+                    window.show_warning('Deleting another label, please wait.');
+                    return;
+                }
+                const success = await window.labelsDatabase.deleteLabel(label.label_id);
+                if (success) {
+                    window.complete_action('delete-label', true, 'Label deleted');
+                } else {
+                    window.complete_action('delete-label',false,'Failed to delete label');
+                }
+            } catch (error) {
+                console.error('Error deleting label:', error);
+                window.complete_action('delete-label',false, 'Failed to delete label');
+            }
         };
 
         actionsContainer.appendChild(editButton);
@@ -497,17 +632,36 @@ class LabelManager {
             labelElement.appendChild(actionsContainer);
         }
 
+        // Handle editing completion
+        nameSpan.addEventListener('blur', finishEditing);
+        nameSpan.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                finishEditing();
+            } else if (e.key === 'Escape') {
+                isEditing = false;
+                nameSpan.contentEditable = 'false';
+                nameSpan.textContent = label.label_name;
+                nameSpan.style.backgroundColor = '';
+                nameSpan.style.border = '';
+            }
+        });
+
         // Hover effects
         labelElement.addEventListener('mouseenter', () => {
-            labelElement.style.backgroundColor = 'rgb(243, 244, 246)';
-            actionsContainer.style.display = 'flex';
-            countSpan.style.display = 'none';
+            if (!isEditing) {
+                labelElement.style.backgroundColor = 'rgb(243, 244, 246)';
+                actionsContainer.style.display = 'flex';
+                countSpan.style.display = 'none';
+            }
         });
 
         labelElement.addEventListener('mouseleave', () => {
-            labelElement.style.backgroundColor = '';
-            actionsContainer.style.display = 'none';
-            countSpan.style.display = 'inline';
+            if (!isEditing) {
+                labelElement.style.backgroundColor = '';
+                actionsContainer.style.display = 'none';
+                countSpan.style.display = 'inline';
+            }
         });
 
         // Owner tooltip for shared labels
@@ -517,7 +671,14 @@ class LabelManager {
 
         // Label click handler
         labelElement.addEventListener('click', () => {
-            console.log('Label clicked:', label.label_id);
+            if (!isEditing) {
+                const searchInput = this.uiElements.get('searchInput');
+                if (searchInput) {
+                    this.selectedIndex = -1;
+                    searchInput.focus();
+                }
+                this.applyLabel(label.label_id);
+            }
         });
 
         return labelElement;
@@ -525,7 +686,7 @@ class LabelManager {
 
 
     toggleDropdown() {
-        console.log(this.isDropdownOpen)
+        // console.log(this.isDropdownOpen)
         if (this.isDropdownOpen) {
             this.closeDropdown();
         } else {
@@ -535,7 +696,7 @@ class LabelManager {
 
     openDropdown() {
         const container = this.uiElements.get('container');
-        console.log(container)
+        // console.log(container)
         if (!container) return;
 
         this.closeDropdown();
@@ -610,6 +771,11 @@ class LabelManager {
         }
     }
 
+    async applyLabel(labelId) {
+        const profileData = await window.labelManagerUtils.getProfileInfo();
+        console.log(profileData)
+        window.labelsDatabase.addProfileToLabel(labelId, profileData.profile_id, profileData);
+    }
     filterLabels(searchTerm) {
         const labelElements = document.querySelectorAll('.label-element');
         const sections = document.querySelectorAll('.label-section');

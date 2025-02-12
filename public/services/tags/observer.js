@@ -58,7 +58,7 @@ const stylish = {
 
         .profile-label-remove:hover {
             opacity: 1;
-            background: rgba(0,0,0,0.1);
+            // background: rgba(0,0,0,0.1);
             border-radius: 50%;
         }
 

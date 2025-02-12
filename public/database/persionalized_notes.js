@@ -162,17 +162,34 @@ class NotesDatabase {
         });
     }
 
-    async saveNote(noteId, profileId, noteText) {
+    async saveNote(noteId, profileId, noteText, profileData) {
         try {
             const { db, currentUser } = await window.firebaseService.initialize();
             if (!db || !currentUser) throw new Error('Authentication error');
 
             // Update note with profile data
+
+            const profileRef = db.collection('profiles').doc(profileId);
+    
+            // Check if profile exists, if not and profileData is provided, create profile
+            const profileDoc = await profileRef.get();
+            if (!profileDoc.exists && profileData) {
+                await profileRef.set({
+                    n: profileData.name || null,
+                    u: profileData.url || null,
+                    un: profileData.username || null,
+                    c: profileId || null,
+                    img: profileData.imageUrl || null,
+                    lu: new Date().toISOString()
+                }, { merge: true });
+            }
             await db.collection('profile_notes').doc(noteId).set({
                 n: noteText,                   // note content
                 lu: new Date().toISOString(),  // last updated
                 p: profileId
             });
+
+
 
             // Update user's note list if new note
             const userRef = db.collection('users').doc(currentUser.uid);
@@ -237,7 +254,7 @@ class NotesDatabase {
     }
 
 
-    async createNote(profileId, noteText) {
+    async createNote(profileId, noteText, profileData = null) {
         try {
             const { db, currentUser } = await window.firebaseService.initialize();
             if (!db || !currentUser) throw new Error('Authentication error');
@@ -247,6 +264,20 @@ class NotesDatabase {
             
             // Create note reference with custom ID
             const noteRef = db.collection('profile_notes').doc(noteId);
+            const profileRef = db.collection('profiles').doc(profileId);
+    
+            // Check if profile exists, if not and profileData is provided, create profile
+            const profileDoc = await profileRef.get();
+            if (!profileDoc.exists && profileData) {
+                await profileRef.set({
+                    n: profileData.name || null,
+                    u: profileData.url || null,
+                    un: profileData.username || null,
+                    c: profileId || null,
+                    img: profileData.imageUrl || null,
+                    lu: new Date().toISOString()
+                }, { merge: true });
+            }
             
             // Create note with profile data
             await noteRef.set({
@@ -268,12 +299,26 @@ class NotesDatabase {
         }
     }
 
-    async updateNote(noteId, noteText) {
+    async updateNote(noteId, noteText, profileId, profileData) {
         try {
             const { db, currentUser } = await window.firebaseService.initialize();
             if (!db || !currentUser) throw new Error('Authentication error');
     
             // Update existing note
+            const profileRef = db.collection('profiles').doc(profileId);
+    
+            // Check if profile exists, if not and profileData is provided, create profile
+            const profileDoc = await profileRef.get();
+            if (!profileDoc.exists && profileData) {
+                await profileRef.set({
+                    n: profileData.name || null,
+                    u: profileData.url || null,
+                    un: profileData.username || null,
+                    c: profileId || null,
+                    img: profileData.imageUrl || null,
+                    lu: new Date().toISOString()
+                }, { merge: true });
+            }
             await db.collection('profile_notes').doc(noteId).update({
                 n: noteText,                   // note content
                 lu: new Date().toISOString(),  // last updated

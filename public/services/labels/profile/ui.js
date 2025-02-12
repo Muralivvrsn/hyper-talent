@@ -865,15 +865,15 @@ window.labelProfileManagerUI = {
 
             const profileId = connectionCode;
             const profile_url = window.location.href
-            console.log({
-                url: profile_url,
-                profileId,
-                connectionCode,
-                name,
-                username,
-                image_url,
-                addedAt: new Date().toISOString()
-            })
+            // console.log({
+            //     url: profile_url,
+            //     profileId,
+            //     connectionCode,
+            //     name,
+            //     username,
+            //     image_url,
+            //     addedAt: new Date().toISOString()
+            // })
             return {
                 url,
                 profileId,

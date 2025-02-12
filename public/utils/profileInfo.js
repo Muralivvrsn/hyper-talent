@@ -28,13 +28,7 @@ window.labelManagerUtils = {
                 if (!name || !profileUrl || !img || !profile_id) {
                     return null;
                 }
-                console.log({
-                    profile_id,
-                    name,
-                    url: profileUrl,
-                    image_url: img,
-                    username: null // Using name as username since it's not separately available
-                })
+
                 return {
                     profile_id,
                     name,
@@ -76,14 +70,6 @@ window.labelManagerUtils = {
                     }
                 }
                 let username = this.extractUsername(url)
-    
-                console.log({
-                    url,
-                    profile_id: connectionCode,
-                    name,
-                    username,
-                    image_url:imageUrl
-                })
                 return {
                     url,
                     profile_id: connectionCode,
@@ -149,5 +135,33 @@ window.labelManagerUtils = {
                 reject(new Error(`Element ${selector} not found within ${timeout}ms`));
             }, timeout);
         });
-    }
+    },
+    getRandomColor (){
+        // 20 distinct, visually appealing colors
+        const colors = [
+            '#191970', // midnightBlue
+            '#800020', // burgundy
+            '#36454F', // charcoal
+            '#228B22', // forestGreen
+            '#301934', // deepPurple
+            '#002147', // oxfordBlue
+            '#654321', // darkBrown
+            '#2F4F4F', // darkSlateGray
+            '#4B0082', // indigo
+            '#8B0000', // darkCrimson
+            '#556B2F', // darkOlive
+            '#004D4D', // darkTeal
+            '#555D50', // ebony
+            '#702963', // byzantium
+            '#8B008B', // darkMagenta
+            '#008B8B', // darkCyan
+            '#242124', // raisinBlack
+            '#1F2D1B', // verdunGreen
+            '#003153', // prussianBlue
+            '#3C1414'  // darkSienna
+          ];
+        
+        // Return a random color from the array
+        return colors[Math.floor(Math.random() * colors.length)];
+    },
 };

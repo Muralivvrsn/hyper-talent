@@ -4,16 +4,21 @@ class LinkedInSearchLabelManager {
         this.urlObserver = null;
         this.lastUrl = '';
         this.labelsData = [];
+        this.initialized = false;
         
-        this.handleUrlChange = this.handleUrlChange.bind(this);
-        this.processSearchList = this.processSearchList.bind(this);
+        // Only bind handleLabelsUpdate as it's used as a callback
+        this.handleLabelsUpdate = this.handleLabelsUpdate.bind(this);
         
-        // Initialize
-        this.injectStyles();
+        // Initialize only if not already initialized
+        if (!this.initialized) {
+            this.injectStyles();
+            this.initialized = true;
+        }
+        
         this.setupUrlObserver();
         this.setupSearchListObserver();
         
-        window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
+        window.labelsDatabase.addListener(this.handleLabelsUpdate);
     }
 
     injectStyles() {
@@ -140,8 +145,13 @@ class LinkedInSearchLabelManager {
     }
 
     findMatchingLabels(profileId) {
-        return this.labelsData.filter(label =>
-            label.profiles.some(profile => profile.profile_id === profileId)
+        const allLabels = [
+            ...(this.labelsData?.owned || []),
+            ...(this.labelsData?.shared || [])
+        ];
+
+        return allLabels.filter(label =>
+            label.profiles?.some(profile => profile.profile_id === profileId)
         ).map(label => ({
             ...label,
             matchingProfile: label.profiles.find(profile => 
@@ -169,9 +179,9 @@ class LinkedInSearchLabelManager {
         const removeButton = document.createElement('span');
         removeButton.className = 'label-remove';
         removeButton.innerHTML = '×';
-        removeButton.addEventListener('click', async (e) => {
+        removeButton.onclick = async () => {
             await this.handleRemoveLabel(labelId, matchingProfile.profile_id, label);
-        });
+        };
         label.appendChild(removeButton);
 
         return label;
@@ -197,40 +207,30 @@ class LinkedInSearchLabelManager {
     }
 
     processListItem(listItem) {
-        console.log('Processing list item:', listItem);
         const profileLink = listItem.querySelector('a[href*="miniProfileUrn"]');
-        console.log('Profile link found:', profileLink);
         if (!profileLink) return;
-    
+
         const profileId = this.extractProfileId(profileLink.href);
-        console.log('Extracted profile ID:', profileId);
         if (!profileId) return;
-    
+
         let labelsContainer = listItem.querySelector('.profile-labels-container');
         if (!labelsContainer) {
             labelsContainer = document.createElement('div');
             labelsContainer.className = 'profile-labels-container';
-    
-            // Find the target container using the specific selector
+
             const targetContainer = listItem.querySelector('.linked-area div div:nth-child(2) div.t-roman');
-            console.log('Target container found:', targetContainer);
-            
             if (targetContainer) {
-                // Insert as second child
                 const firstChild = targetContainer.firstChild;
                 if (firstChild) {
                     targetContainer.insertBefore(labelsContainer, firstChild.nextSibling);
                 } else {
                     targetContainer.appendChild(labelsContainer);
                 }
-                console.log('Labels container inserted');
             }
         }
-    
+
         const matchingLabels = this.findMatchingLabels(profileId);
-        console.log('Matching labels found:', matchingLabels);
-    
-        // Add new labels
+
         matchingLabels.forEach(label => {
             if (!labelsContainer.querySelector(`[data-label-id="${label.label_id}"]`)) {
                 const labelElement = this.createLabel(
@@ -240,20 +240,17 @@ class LinkedInSearchLabelManager {
                     label.matchingProfile
                 );
                 labelsContainer.appendChild(labelElement);
-                console.log('Added label:', label.label_name);
             }
         });
-    
+
         labelsContainer.style.display = matchingLabels.length > 0 ? 'flex' : 'none';
     }
 
     processSearchList() {
         const searchList = document.querySelector('ul[role="list"]');
-        console.log(searchList)
         if (searchList) {
             const listItems = searchList.querySelectorAll('li');
             listItems.forEach(item => this.processListItem(item));
-
         }
     }
 
@@ -272,14 +269,8 @@ class LinkedInSearchLabelManager {
             this.searchListObserver.disconnect();
         }
 
-        this.searchListObserver = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.type === 'childList' ||
-                    (mutation.type === 'attributes' && mutation.target.tagName === 'LI')) {
-                    this.processSearchList();
-                    break;
-                }
-            }
+        this.searchListObserver = new MutationObserver(() => {
+            this.processSearchList();
         });
 
         const searchList = document.querySelector('ul[role="list"]');
@@ -287,8 +278,7 @@ class LinkedInSearchLabelManager {
             this.searchListObserver.observe(searchList, {
                 childList: true,
                 subtree: true,
-                attributes: true,
-                characterData: true
+                attributes: true
             });
             this.processSearchList();
         }
@@ -305,12 +295,12 @@ class LinkedInSearchLabelManager {
                 subtree: true
             });
 
-            window.addEventListener('popstate', this.handleUrlChange);
+            window.addEventListener('popstate', () => this.handleUrlChange());
         }
     }
 
-    handleLabelsUpdate(newLabels) {
-        this.labelsData = newLabels;
+    handleLabelsUpdate(data) {
+        this.labelsData = data.labels;
         this.processSearchList();
     }
 
@@ -321,10 +311,8 @@ class LinkedInSearchLabelManager {
         if (this.urlObserver) {
             this.urlObserver.disconnect();
         }
-        if (window.labelsDatabase) {
-            window.labelsDatabase.removeListener(this.handleLabelsUpdate);
-        }
-        window.removeEventListener('popstate', this.handleUrlChange);
+        window.labelsDatabase.removeListener(this.handleLabelsUpdate);
+        window.removeEventListener('popstate', () => this.handleUrlChange());
     }
 
     refresh() {
@@ -332,82 +320,65 @@ class LinkedInSearchLabelManager {
     }
 }
 
-// Initialize and expose the manager globally
+// Initialize observer
 const observeSearchPage = () => {
-  let lastUrl = '';
-  let checkInterval = null;
-  console.log('🔄 Search page observer initialized');
+    if (window.searchPageObserver) return;
 
-  const isSearchPage = (url) => {
-    return url.includes('search/results/people');
-  };
+    let lastUrl = '';
+    let checkInterval = null;
 
-  const tryInitialize = () => {
-    const container = document.querySelector('ul[role="list"]');
-    if (container) {
-      console.log('✅ Found search container, initializing manager');
-      if (!window.linkedInSearchLabelManager) {
-        window.linkedInSearchLabelManager = new LinkedInSearchLabelManager();
-        console.log('🚀 Search label manager initialized');
-      }
-      if (checkInterval) {
-        clearInterval(checkInterval);
-        checkInterval = null;
-        console.log('⏹️ Cleared check interval');
-      }
-    } else {
-      console.log('⏳ Search container not found, will retry...');
-    }
-  };
+    const isSearchPage = (url) => url.includes('search/results/people');
 
-  const cleanupLabelManager = () => {
-    if (window.linkedInSearchLabelManager) {
-      console.log('🧹 Cleaning up search label manager');
-      window.linkedInSearchLabelManager.destroy?.();
-      window.linkedInSearchLabelManager = null;
-    }
-    if (checkInterval) {
-      clearInterval(checkInterval);
-      checkInterval = null;
-      console.log('⏹️ Cleared check interval');
-    }
-  };
+    const tryInitialize = () => {
+        const container = document.querySelector('ul[role="list"]');
+        if (container) {
+            if (!window.linkedInSearchLabelManager) {
+                window.linkedInSearchLabelManager = new LinkedInSearchLabelManager();
+            }
+            if (checkInterval) {
+                clearInterval(checkInterval);
+                checkInterval = null;
+            }
+        }
+    };
 
-  const observer = new MutationObserver(() => {
-    const currentUrl = window.location.href;
-    if (currentUrl !== lastUrl) {
-      console.log('🔄 URL changed:', currentUrl);
-      lastUrl = currentUrl;
+    const cleanupLabelManager = () => {
+        if (window.linkedInSearchLabelManager) {
+            window.linkedInSearchLabelManager.destroy?.();
+            window.linkedInSearchLabelManager = null;
+        }
+        if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+        }
+    };
 
-      cleanupLabelManager();
+    const observer = new MutationObserver(() => {
+        const currentUrl = window.location.href;
+        if (currentUrl !== lastUrl) {
+            lastUrl = currentUrl;
+            cleanupLabelManager();
 
-      if (isSearchPage(currentUrl)) {
-        console.log('📄 Detected search results page');
+            if (isSearchPage(currentUrl)) {
+                tryInitialize();
+                checkInterval = setInterval(tryInitialize, 2000);
+            }
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    window.searchPageObserver = observer;
+
+    // Handle initial page load
+    if (isSearchPage(window.location.href)) {
         tryInitialize();
-        console.log('⏰ Setting up retry interval');
         checkInterval = setInterval(tryInitialize, 2000);
-      } else {
-        console.log('ℹ️ Not a search results page');
-      }
     }
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-
-  // Handle initial page load
-  const initialUrl = window.location.href;
-  console.log('🎬 Initial URL:', initialUrl);
-  if (isSearchPage(initialUrl)) {
-    console.log('📄 Initial page is search results');
-    tryInitialize();
-    console.log('⏰ Setting up initial retry interval');
-    checkInterval = setInterval(tryInitialize, 2000);
-  } else {
-    console.log('ℹ️ Initial page is not search results');
-  }
 };
 
+// Start observation
 observeSearchPage();

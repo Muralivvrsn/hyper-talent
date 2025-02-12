@@ -67,7 +67,7 @@ window.autoUpdateProfiles = {
         try {
             const usernameRef = db.collection('profiles').doc(username);
             const usernameDoc = await usernameRef.get();
-            console.log(profileCode)
+            // console.log(profileCode)
 
             if (usernameDoc.exists) {
                 const oldData = usernameDoc.data();

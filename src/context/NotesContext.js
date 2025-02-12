@@ -20,6 +20,8 @@ export const NotesProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const db = getFirestore();
 
+    // console.log(notes)
+
     useEffect(() => {
         if (!userProfile?.data?.noteIds?.length) {
             setNotes({});

@@ -230,7 +230,7 @@ const setupContentEditableHandlers = () => {
         if (window.isTemplateInserting) return;
         window.isTemplateInserting = true;
         
-        console.log(template);
+        // console.log(template);
         if (!currentElement) {
             window.isTemplateInserting = false;
             return;

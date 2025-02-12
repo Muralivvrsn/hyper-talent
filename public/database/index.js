@@ -105,7 +105,7 @@ class FirebaseService {
         try {
             this.refreshInProgress = true;
             const accessToken = token || await this._getGoogleToken();
-            console.log(accessToken)
+            // console.log(accessToken)
             const credential = firebase.auth.GoogleAuthProvider.credential(null, accessToken);
             const userCredential = await this.auth.signInWithCredential(credential);
             

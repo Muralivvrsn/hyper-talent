@@ -527,7 +527,7 @@ class LinkedInManager {
         document.addEventListener('keydown', (e) => {
             // 'L' key to open dropdown
             if (e.key.toLowerCase() === 'l' && !this.isInputFocused()) {
-                console.log('Opening dropdown with L key');
+                // console.log('Opening dropdown with L key');
                 e.preventDefault(); // Add this to prevent 'l' from being typed
 
                 // Only open if not already visible
@@ -547,7 +547,7 @@ class LinkedInManager {
 
                 switch (e.key) {
                     case 'Escape':
-                        console.log('Closing dropdown with Escape');
+                        // console.log('Closing dropdown with Escape');
                         e.preventDefault();
                         this.hideDropdown();
                         break;
@@ -759,7 +759,7 @@ class LinkedInManager {
         const totalItems = this.filteredLabels.length + (this.searchTerm ? 1 : 0);
         const searchInput = e.target;
 
-        console.log('Search keydown:', e.key, 'Selected index:', this.selectedIndex);
+        // console.log('Search keydown:', e.key, 'Selected index:', this.selectedIndex);
 
         switch (e.key) {
             case 'ArrowDown':
@@ -785,25 +785,25 @@ class LinkedInManager {
 
             case 'Enter':
                 e.preventDefault();
-                console.log('Enter pressed with index:', this.selectedIndex);
+                // console.log('Enter pressed with index:', this.selectedIndex);
 
                 // If no item is selected and we have search text, create new label
                 if (this.selectedIndex === -1 && this.searchTerm) {
-                    console.log('Creating new label from search');
+                    // console.log('Creating new label from search');
                     this.createNewLabel(this.searchTerm);
                     return;
                 }
 
                 // If selection is on create option
                 if (this.selectedIndex === this.filteredLabels.length) {
-                    console.log('Creating new label from selection');
+                    // console.log('Creating new label from selection');
                     this.createNewLabel(this.searchTerm);
                     return;
                 }
 
                 // If a label is selected
                 if (this.selectedIndex >= 0 && this.selectedIndex < this.filteredLabels.length) {
-                    console.log('Selecting existing label');
+                    // console.log('Selecting existing label');
                     const label = this.filteredLabels[this.selectedIndex];
                     this.handleLabelSelect(label);
                 }
@@ -829,7 +829,7 @@ class LinkedInManager {
 
     async createNewLabel(labelName) {
         if (this.loading || !labelName) {
-            console.log('Cannot create label: loading or no name provided');
+            // console.log('Cannot create label: loading or no name provided');
             window.show_error('Cannot create empty label');
             return;
         }
@@ -837,7 +837,7 @@ class LinkedInManager {
         // Clean up and capitalize the label name
         const cleanLabelName = labelName.trim().toUpperCase();
         if (!cleanLabelName) {
-            console.log('Cannot create label: empty name after trimming');
+            // console.log('Cannot create label: empty name after trimming');
             window.show_error('Label name cannot be empty');
             return;
         }
@@ -849,12 +849,12 @@ class LinkedInManager {
         );
     
         if (isDuplicate) {
-            console.log('Cannot create label: duplicate name');
+            // console.log('Cannot create label: duplicate name');
             window.show_error(`Label "${cleanLabelName}" already exists`);
             return;
         }
     
-        console.log('Creating new label:', cleanLabelName);
+        // console.log('Creating new label:', cleanLabelName);
         window.start_action('create-label', 'Creating new label...');
     
         try {
@@ -868,17 +868,17 @@ class LinkedInManager {
                 profiles: []
             };
     
-            console.log('Label data:', labelData);
+            // console.log('Label data:', labelData);
             
             const success = await window.labelsDatabase.addLabel(labelData);
             if (success) {
-                console.log('Label created successfully');
+                // console.log('Label created successfully');
                 window.show_success(`Label "${cleanLabelName}" created successfully`);
     
                 if (this.isProfilePage()) {
                     const profileId = this.getProfileIdFromURL();
                     if (profileId) {
-                        console.log('Adding profile to new label:', profileId);
+                        // console.log('Adding profile to new label:', profileId);
                         await window.labelsDatabase.addProfileToLabel(labelId, profileId);
                     }
                 }
@@ -902,7 +902,7 @@ class LinkedInManager {
         // Ensure action is completed after 5 seconds
         setTimeout(() => {
             if (window.get_active_actions().includes('create-label')) {
-                console.log('Create label action timed out');
+                // console.log('Create label action timed out');
                 window.complete_action('create-label', false, 'Create operation timed out');
             }
         }, 5000);
@@ -1101,7 +1101,7 @@ class LinkedInManager {
                 e.preventDefault();
                 e.stopPropagation();
                 if (this.searchTerm) {
-                    console.log('Creating label:', this.searchTerm);
+                    // console.log('Creating label:', this.searchTerm);
                     this.createNewLabel(this.searchTerm);
                 }
             };
@@ -1140,7 +1140,7 @@ class LinkedInManager {
 
     handleMessageLabelClick(labelId) {
         // Implement message-specific label click handling
-        console.log('Message label clicked:', labelId);
+        // console.log('Message label clicked:', labelId);
     }
 
     getProfileIdFromURL() {

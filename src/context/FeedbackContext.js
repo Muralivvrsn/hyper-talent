@@ -233,7 +233,7 @@ export const FeedbackProvider = ({ children }) => {
         const userId = userEmailMap[email];
   
         if (!userId) {
-          console.log(`No user found for email: ${email}`);
+          // console.log(`No user found for email: ${email}`);
           continue;
         }
   
@@ -266,7 +266,7 @@ export const FeedbackProvider = ({ children }) => {
           });
         }
   
-        console.log(`Successfully processed feedback for ${email}`);
+        // console.log(`Successfully processed feedback for ${email}`);
       }
   
       return { success: true, message: 'Sheet data processed successfully' };
