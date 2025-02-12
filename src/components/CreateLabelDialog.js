@@ -18,6 +18,8 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
     const { user } = useAuth();
     const db = getFirestore();
 
+    console.log("ownedLabels: ", ownedLabels)
+
     const handleCreateLabel = async () => {
         if (isCreating || !labelName.trim()) return;
 

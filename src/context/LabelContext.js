@@ -13,7 +13,7 @@ export const useLabels = () => {
 };
 
 export const LabelProvider = ({ children }) => {
-    const { userData } = useAuth();
+    const { userProfile } = useAuth();
     const [labels, setLabels] = useState({});
     const [activeSharedLabels, setActiveSharedLabels] = useState({});
     const [pendingSharedLabels, setPendingSharedLabels] = useState({});
@@ -23,7 +23,7 @@ export const LabelProvider = ({ children }) => {
     const db = getFirestore();
 
     useEffect(() => {
-        if (!userData) {
+        if (!userProfile?.data) {
             setLabels({});
             setActiveSharedLabels({});
             setPendingSharedLabels({});
@@ -38,8 +38,8 @@ export const LabelProvider = ({ children }) => {
 
         // Subscribe to owned labels
         const subscribeToOwnedLabels = () => {
-            if (userData.labelIds?.length) {
-                userData.labelIds.forEach(labelId => {
+            if (userProfile?.data?.labelIds?.length) {
+                userProfile?.data?.labelIds.forEach(labelId => {
                     const unsubscribe = onSnapshot(
                         doc(db, 'profile_labels', labelId),
                         (docSnapshot) => {
@@ -78,17 +78,17 @@ export const LabelProvider = ({ children }) => {
 
         // Subscribe to shared labels
         const subscribeToSharedLabels = () => {
-            // First, clear any shared labels not in userData
-            if (!userData.sharedLabels?.length) {
+            // First, clear any shared labels not in userProfile?.data?
+            if (!userProfile?.data?.sharedLabels?.length) {
                 setActiveSharedLabels({});
                 setPendingSharedLabels({});
                 return;
             }
 
-            // Get current label IDs from userData
-            const currentLabelIds = new Set(userData.sharedLabels.map(sl => sl.l));
+            // Get current label IDs from userProfile?.data?
+            const currentLabelIds = new Set(userProfile?.data?.sharedLabels.map(sl => sl.l));
 
-            // Clean up any labels that are no longer in userData
+            // Clean up any labels that are no longer in userProfile?.data?
             setPendingSharedLabels(prev => {
                 const updated = {};
                 Object.entries(prev).forEach(([id, label]) => {
@@ -110,7 +110,7 @@ export const LabelProvider = ({ children }) => {
             });
 
             // Subscribe to each shared label
-            userData.sharedLabels.forEach(sharedLabel => {
+            userProfile?.data?.sharedLabels.forEach(sharedLabel => {
                 const unsubscribe = onSnapshot(
                     doc(db, 'profile_labels', sharedLabel.l),
                     (docSnapshot) => {
@@ -231,7 +231,7 @@ export const LabelProvider = ({ children }) => {
             unsubscribers.forEach(unsub => unsub());
             profileUnsubscribers.forEach(unsub => unsub());
         };
-    }, [userData, db]);
+    }, [userProfile?.data, db]);
 
     const getLabelProfiles = (labelId, isShared = false) => {
         const labelCollection = isShared ? activeSharedLabels : labels;
