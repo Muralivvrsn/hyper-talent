@@ -16,6 +16,7 @@ export default function ProfilePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLabels, setSelectedLabels] = useState([]);
   const [filterMode, setFilterMode] = useState('any');
+  const [hasNotesFilter, setHasNotesFilter] = useState(false);
 
   const profilesData = useMemo(() => {
     const profileMap = new Map();
@@ -125,7 +126,7 @@ export default function ProfilePage() {
   }, [labels, activeSharedLabels, notes, getLabelProfiles, getNoteWithProfile]);
 
   const filteredProfiles = useMemo(() => {
-    return profilesData.filter(({ profile, labels }) => {
+    return profilesData.filter(({ profile, labels, note }) => {
       const matchesSearch = !searchTerm ||
         profile.name?.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -139,9 +140,11 @@ export default function ProfilePage() {
           )
       );
 
-      return matchesSearch && matchesLabels;
+      const matchesNotes = !hasNotesFilter || (note !== null);
+
+      return matchesSearch && matchesLabels && matchesNotes;
     });
-  }, [profilesData, searchTerm, selectedLabels, filterMode]);
+  }, [profilesData, searchTerm, selectedLabels, filterMode, hasNotesFilter]);
 
   const handleLabelToggle = (labelId) => {
     setSelectedLabels(prev =>
@@ -153,6 +156,10 @@ export default function ProfilePage() {
 
   const handleFilterModeChange = (mode) => {
     setFilterMode(mode);
+  };
+
+  const handleNotesFilterChange = (hasNotes) => {
+    setHasNotesFilter(hasNotes);
   };
 
   if (labelsLoading || notesLoading) {
@@ -188,6 +195,7 @@ export default function ProfilePage() {
         onSearchChange={setSearchTerm}
         filterMode={filterMode}
         onFilterModeChange={handleFilterModeChange}
+        onNotesFilterChange={handleNotesFilterChange}
       />
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3">

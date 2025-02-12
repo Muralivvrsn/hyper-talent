@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PopoverContent } from './ui/popover';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Search, Users, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
-
+import { Checkbox } from './ui/checkbox';
 const FilterType = {
     MY_LABELS: 'my_labels',
     SHARED_LABELS: 'shared_labels',
@@ -22,6 +22,8 @@ const FilterPopover = ({
     selectedLabels,
     tempSelectedLabels,
     setTempSelectedLabels,
+    hasNotesFilter,
+    setHasNotesFilter,
     onApplyFilters,
     onClearFilters,
     onClose
@@ -29,8 +31,13 @@ const FilterPopover = ({
     const [activeFilter, setActiveFilter] = useState(FilterType.MY_LABELS);
     const [filterSearch, setFilterSearch] = useState('');
     const [filterMode, setFilterMode] = useState(FilterMode.ANY);
+    const [tempHasNotesFilter, setTempHasNotesFilter] = useState(hasNotesFilter);
 
-    const hasActiveFilters = selectedLabels.length > 0;
+    useEffect(() => {
+        setTempHasNotesFilter(hasNotesFilter);
+    }, [hasNotesFilter]);
+
+    const hasActiveFilters = selectedLabels.length > 0 || hasNotesFilter;
 
     const filterLabels = (labels) => {
         if (!filterSearch) return labels;
@@ -40,14 +47,21 @@ const FilterPopover = ({
     };
 
     const handleApplyFilters = () => {
-        onApplyFilters(tempSelectedLabels, filterMode);
+        onApplyFilters(tempSelectedLabels, filterMode, tempHasNotesFilter);
         onClose?.();
     };
 
     const handleClearFilters = () => {
         setTempSelectedLabels([]);
+        setTempHasNotesFilter(false);
         onClearFilters();
         onClose?.();
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && (tempSelectedLabels.length > 0 || tempHasNotesFilter)) {
+            handleApplyFilters();
+        }
     };
 
     const toggleLabel = (labelId) => {
@@ -95,6 +109,7 @@ const FilterPopover = ({
             className="w-[280px] p-0 sm:w-[320px]"
             align="start"
             side="bottom"
+            onKeyDown={handleKeyDown}
         >
             <div className="flex flex-col h-[400px]">
                 {/* Search */}
@@ -105,6 +120,7 @@ const FilterPopover = ({
                             placeholder="Search labels..."
                             value={filterSearch}
                             onChange={(e) => setFilterSearch(e.target.value)}
+                            onKeyDown={handleKeyDown}
                             className="pl-8 h-8 text-sm"
                         />
                     </div>
@@ -139,9 +155,26 @@ const FilterPopover = ({
                 <div className="flex-1 overflow-y-auto">
                     <div className="space-y-1 p-2">
                         {activeFilter === FilterType.NOTES ? (
-                            <div className="p-4 text-center text-sm text-muted-foreground">
-                                Filter profiles with notes
-                            </div>
+                            <>
+                                <label
+                                    className={cn(
+                                        "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-accent/50",
+                                        tempHasNotesFilter && "bg-accent"
+                                    )}
+                                >
+                                    <Checkbox
+                                        checked={tempHasNotesFilter}
+                                        onCheckedChange={() => setTempHasNotesFilter(!tempHasNotesFilter)}
+                                        className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                    />
+                                    <div className="flex-1 flex items-center gap-2">
+                                        <span className="text-sm">Show profiles with notes</span>
+                                    </div>
+                                </label>
+                                <p className="mt-2 text-xs text-muted-foreground px-2">
+                                    Filter profiles that have any notes added to them
+                                </p>
+                            </>
                         ) : (
                             renderLabels()
                         )}
@@ -149,7 +182,7 @@ const FilterPopover = ({
                 </div>
                 {/* Filter Mode */}
                 {tempSelectedLabels.length > 0 && (
-                    <div className="p-2 border-b">
+                    <div className="p-2 border-t">
                         <div className="grid grid-cols-2 gap-2">
                             <Button
                                 variant={filterMode === FilterMode.ANY ? "secondary" : "ghost"}

@@ -12,8 +12,9 @@ import {
 } from './ui/dialog';
 import { Search, Users, Loader2, Send } from 'lucide-react';
 import { getFirestore, doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 
-const ShareLabelsDialog = ({ownedLabels}) => {
+const ShareLabelsDialog = ({ ownedLabels }) => {
   const { otherUsers } = useOtherUsers();
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState('labels');
@@ -24,11 +25,7 @@ const ShareLabelsDialog = ({ownedLabels}) => {
   const [isSharing, setIsSharing] = useState(false);
   const db = getFirestore();
 
-  const labelsList = Object.entries(ownedLabels).map(([id, label]) => ({
-    id,
-    name: label.name,
-    color: label.color
-  }));
+  const labelsList = ownedLabels || [];
 
   const filteredUsers = searchTerm
     ? otherUsers.filter(user =>
@@ -77,6 +74,7 @@ const ShareLabelsDialog = ({ownedLabels}) => {
     setSelectedUsers([]);
     setSearchTerm('');
   };
+
   const handleShare = async () => {
     if (selectedLabels.length === 0 || selectedUsers.length === 0) {
       return;
@@ -109,6 +107,7 @@ const ShareLabelsDialog = ({ownedLabels}) => {
         }
       }));
 
+      toast.success('Labels shared successfully');
       setIsOpen(false);
       setStep('labels');
       setSelectedLabels([]);
@@ -116,6 +115,7 @@ const ShareLabelsDialog = ({ownedLabels}) => {
       setSearchTerm('');
     } catch (error) {
       console.error('Error sharing labels:', error);
+      toast.error('Failed to share labels');
     } finally {
       setIsSharing(false);
     }
@@ -175,6 +175,11 @@ const ShareLabelsDialog = ({ownedLabels}) => {
                   </label>
                 </div>
               ))}
+              {filteredLabels.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  No labels found
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-2">
@@ -214,7 +219,7 @@ const ShareLabelsDialog = ({ownedLabels}) => {
                       className={`flex items-center space-x-2 p-2 rounded-md ${selectedUsers.includes(user.id)
                         ? 'bg-accent'
                         : 'hover:bg-accent/50'
-                      }`}
+                        }`}
                     >
                       <Checkbox
                         id={user.id}

@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
 import { doc, setDoc, getFirestore, updateDoc } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
-import { useSheet } from '../context/SheetContext';
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +14,7 @@ import {
 import { useLabels } from '../context/LabelContext';
 import { useNotes } from '../context/NotesContext';
 import { useTemplates } from '../context/TemplateContext';
+import { useSheet } from '../context/SheetContext';
 
 const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled }) => (
   <TooltipProvider>
@@ -111,15 +111,8 @@ const SheetPage = () => {
       setLoadingStates(prev => ({ ...prev, create: true }));
       const token = await getGoogleToken();
       const firstName = user.displayName.split(' ')[0];
-      const data = {
-        labels: { labels },
-        notes,
-        shortcuts: templates
-      };
 
       const sheet = await createSheet(token, `${firstName} - LinkedIn Manager`);
-      await syncSheet(sheet.spreadsheetId, token, data);
-
       const currentTime = new Date().toISOString();
 
       const newSheetData = {
