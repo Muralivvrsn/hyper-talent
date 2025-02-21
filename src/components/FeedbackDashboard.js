@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import {
   Card,
@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
@@ -20,7 +21,8 @@ import {
 } from "./ui/select";
 import { Separator } from "./ui/separator";
 import { Button } from "./ui/button";
-import { Link2, ExternalLink } from 'lucide-react';
+import { Link2, ExternalLink, User, Mail } from 'lucide-react';
+import { Avatar, AvatarFallback } from "./ui/avatar";
 
 const statusConfig = {
   'ns': {
@@ -92,6 +94,24 @@ const FeedbackDashboard = () => {
     fetchFeedback();
   }, []);
 
+  const getUserData = async (userId) => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        return {
+          name: userData.n || 'Anonymous User',
+          email: userData.e || 'No email provided'
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      return null;
+    }
+  };
+
   const fetchFeedback = async () => {
     try {
       setLoading(true);
@@ -100,9 +120,10 @@ const FeedbackDashboard = () => {
       
       let allFeedback = [];
       
-      feedbackSnapshot.forEach((userDoc) => {
+      for (const userDoc of feedbackSnapshot.docs) {
         const userData = userDoc.data();
         const userId = userDoc.id;
+        const userInfo = await getUserData(userId);
         
         Object.entries(userData).forEach(([feedbackId, feedbackData]) => {
           if (feedbackId.startsWith('bug_') || 
@@ -111,13 +132,14 @@ const FeedbackDashboard = () => {
             allFeedback.push({
               id: feedbackId,
               userId: userId,
+              userInfo,
               ...feedbackData,
               t: feedbackId.startsWith('bug_') ? 'b' : 
                  feedbackId.startsWith('feature_') ? 'f' : 's'
             });
           }
         });
-      });
+      }
       
       allFeedback.sort((a, b) => {
         const dateA = a.ca?.toDate?.() || new Date(a.ca);
@@ -140,7 +162,7 @@ const FeedbackDashboard = () => {
       const now = new Date();
       await updateDoc(userDocRef, {
         [`${feedbackId}.s`]: newStatus,
-        [`${feedbackId}.ls`]: now // Last status update timestamp
+        [`${feedbackId}.ls`]: now
       });
       
       setFeedbackItems(prev => 
@@ -169,6 +191,15 @@ const FeedbackDashboard = () => {
       hour: '2-digit',
       minute: '2-digit'
     }).format(d);
+  };
+
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   if (loading) {
@@ -214,7 +245,7 @@ const FeedbackDashboard = () => {
 
       <div className="grid gap-4">
         {getFilteredFeedback().map((item) => (
-          <Card key={item.id} className="overflow-hidden">
+          <Card key={item.id} className="overflow-hidden transition-colors">
             <CardHeader className="space-y-4">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
@@ -251,8 +282,32 @@ const FeedbackDashboard = () => {
               </div>
               <Separator />
             </CardHeader>
+            
             <CardContent className="space-y-4">
-              <p className="text-base">{item.d}</p>
+              <div className="flex items-start gap-4">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10">
+                    {item.userInfo ? getInitials(item.userInfo.name) : 'AN'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    <span>{item.userInfo?.name || 'Anonymous User'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span>{item.userInfo?.email || 'No email provided'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <p className="text-base">{item.d}</p>
+              </div>
+
               {item.u && item.u.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium flex items-center gap-2">
@@ -283,6 +338,12 @@ const FeedbackDashboard = () => {
                 </div>
               )}
             </CardContent>
+
+            <CardFooter className="bg-muted/50 p-4">
+              <p className="text-sm text-muted-foreground">
+                {statusConfig[item.s || 'ns'].description}
+              </p>
+            </CardFooter>
           </Card>
         ))}
       </div>

@@ -66,30 +66,44 @@ const formatUserProfile = (profileData) => ({
 
 export const AuthProvider = ({ children }) => {
   const [authState, setAuthState] = useState({
+    status: 'in_progress',
     user: null,
     userProfile: null,
-    isLoading: true,
-    error: null,
-    isAuthenticating: false
+    error: null
   });
 
   const chrome = window.chrome;
 
-  const fetchAuthToken = async () => {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' }, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-          return;
-        }
-        
-        if (response.success && response.token) {
-          resolve(response.token);
-        } else {
-          reject(new Error(response.error || 'Token fetch failed'));
-        }
+  // Check token status and validity
+  const checkAuthStatus = async () => {
+    console.log('checkAuthStatus')
+    try {
+      const response = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({ type: 'GET_TOKEN' }, (response) => {
+          console.log(response)
+          if (chrome.runtime.lastError) {
+            console.log(chrome.runtime.lastError)
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          resolve(response);
+        });
       });
-    });
+
+      console.log(response)
+      if (response.type === 'logged_in' && response.data?.accessToken) {
+        const credential = GoogleAuthProvider.credential(null, response.data.accessToken);
+        await signInWithCredential(auth, credential);
+        return true;
+      } else {
+        await handleSignOut();
+        return false;
+      }
+    } catch (error) {
+      console.error('Token check failed:', error);
+      // await handleSignOut();
+      return false;
+    }
   };
 
   const updateUserProfile = (snapshot) => {
@@ -97,14 +111,12 @@ export const AuthProvider = ({ children }) => {
       const formattedProfile = formatUserProfile(snapshot.data());
       setAuthState(prev => ({ 
         ...prev, 
-        userProfile: formattedProfile,
-        isLoading: false 
+        userProfile: formattedProfile
       }));
     } else {
       setAuthState(prev => ({ 
         ...prev, 
-        userProfile: null,
-        isLoading: false 
+        userProfile: null
       }));
     }
   };
@@ -112,54 +124,68 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let profileUnsubscribe = null;
 
+    const messageListener = (message) => {
+      if (message.type === 'LOGGED_OUT') {
+        // handleSignOut();
+      }
+    };
+
     const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          try {
-            await fetchAuthToken();
-          } catch (error) {
-            await handleSignOut();
+          // Set in_progress while checking token
+          setAuthState(prev => ({
+            ...prev,
+            status: 'in_progress'
+          }));
+
+          const isTokenValid = await checkAuthStatus();
+          if (!isTokenValid) {
             return;
           }
 
-          setAuthState(prev => ({ 
-            ...prev, 
+          profileUnsubscribe = onSnapshot(
+            doc(db, 'users', firebaseUser.uid),
+            updateUserProfile
+          );
+
+          setAuthState(prev => ({
+            ...prev,
+            status: 'logged_in',
             user: firebaseUser,
             error: null
           }));
-
-          profileUnsubscribe = onSnapshot(
-            doc(db, 'users', firebaseUser.uid),
-            updateUserProfile,
-            () => handleSignOut()
-          );
         } else {
-          setAuthState(prev => ({ 
+          setAuthState(prev => ({
             ...prev,
+            status: 'logged_out',
             user: null,
             userProfile: null,
-            isLoading: false,
             error: null
           }));
         }
-      } catch {
-        await handleSignOut();
+      } catch (error) {
+        console.error('Auth state change error:', error);
+        // await handleSignOut();
       }
     });
+
+    // Add message listener
+    chrome.runtime.onMessage.addListener(messageListener);
 
     return () => {
       authUnsubscribe();
       if (profileUnsubscribe) {
         profileUnsubscribe();
       }
+      chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, []);
 
   const handleSignIn = async () => {
     setAuthState(prev => ({ 
       ...prev, 
-      isAuthenticating: true, 
-      isLoading: true,
+      status: 'in_progress',
       error: null 
     }));
 
@@ -212,80 +238,83 @@ export const AuthProvider = ({ children }) => {
 
       const { access_token, refresh_token, expires_in } = await tokenResponse.json();
 
-      await Promise.all([
-        chrome.storage.local.set({
-          clientId,
-          clientSecret
-        }),
-        chrome.runtime.sendMessage({ 
-          type: 'STORE_TOKEN', 
-          token: access_token,
-          refreshToken: refresh_token,
-          expiresIn: expires_in 
-        })
-      ]);
+      await chrome.runtime.sendMessage({ 
+        type: 'STORE_TOKEN', 
+        token: access_token,
+        refreshToken: refresh_token,
+        expiresIn: expires_in,
+        clientId,
+        clientSecret
+      });
 
       const credential = GoogleAuthProvider.credential(null, access_token);
       await signInWithCredential(auth, credential);
+      await chrome.runtime.sendMessage({ type: 'SIGNED_IN' });
 
     } catch (error) {
+      console.error('Sign in failed:', error);
       setAuthState(prev => ({ 
         ...prev, 
-        error: 'Authentication failed',
-        isAuthenticating: false ,
-        isLoading: false,
+        status: 'logged_out',
+        error: 'Authentication failed'
       }));
-      await handleSignOut();
-    } finally {
-      setAuthState(prev => ({ 
-        ...prev, 
-        isAuthenticating: false ,
-        isLoading: false,
-      }));
+      // await handleSignOut();
     }
   };
 
-  const handleSignOut = async () => {
-    setAuthState(prev => ({ 
-      ...prev, 
-      isAuthenticating: true,
-      error: null 
-    }));
+// ... rest of the code remains the same ...
 
-    try {
-      await Promise.all([
-        chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' }),
-        signOut(auth),
-        chrome.storage.local.clear(),
-        new Promise(resolve => {
-          localStorage.clear();
-          sessionStorage.clear();
-          resolve();
-        })
-      ]);
+const handleSignOut = async () => {
+  setAuthState(prev => ({ 
+    ...prev, 
+    status: 'in_progress',
+    error: null 
+  }));
 
-      setAuthState({
-        user: null,
-        userProfile: null,
-        isLoading: false,
-        error: null,
-        isAuthenticating: false
-      });
-    } catch {
-      setAuthState(prev => ({ 
-        ...prev, 
-        error: 'Sign out failed',
-        isAuthenticating: false 
-      }));
-    }
-  };
+  try {
+    // First notify background about signout
+    await chrome.runtime.sendMessage({ type: 'SIGNED_OUT' });
+
+    // Then clear all tokens and state
+    await Promise.all([
+      chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' }),
+      signOut(auth),
+      chrome.storage.local.clear(),
+      new Promise(resolve => {
+        localStorage.clear();
+        sessionStorage.clear();
+        resolve();
+      })
+    ]);
+
+    console.log({
+      status: 'logged_out',
+      user: null,
+      userProfile: null,
+      error: null
+    })
+
+    setAuthState({
+      status: 'logged_out',
+      user: null,
+      userProfile: null,
+      error: null
+    });
+  } catch (error) {
+    console.error('Sign out failed:', error);
+    // setAuthState(prev => ({ 
+    //   ...prev, 
+    //   status: 'logged_out',
+    //   error: 'Sign out failed'
+    // }));
+  }
+};
 
   const contextValue = {
+    status: authState.status,
     user: authState.user,
     userProfile: authState.userProfile,
-    isLoading: authState.isLoading,
     error: authState.error,
-    isAuthenticating: authState.isAuthenticating,
     signIn: handleSignIn,
     signOut: handleSignOut
   };

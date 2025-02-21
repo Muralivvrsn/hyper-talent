@@ -57,12 +57,15 @@ window.labelManagerUtils = {
                     ...document.querySelectorAll('a[href*="miniProfileUrn"]'),
                     ...document.querySelectorAll('a[href*="fsd_profilePosition"]'),
                     ...document.querySelectorAll('a[href*="details"][href*="profileUrn"]'),
-                    ...document.querySelectorAll('a[href*="skill-associations-details"]')
+                    ...document.querySelectorAll('a[href*="skill-associations-details"]'),
+                    ...document.querySelectorAll('a[id*="navigation"]')
                 ];
     
                 for (const anchor of potentialAnchors) {
                     const href = anchor?.getAttribute('href');
+                    console.log(href)
                     if (href) {
+                        console.log(href)
                         connectionCode = this.extractConnectionCode(href);
                         if (connectionCode) {
                             break;
@@ -96,15 +99,45 @@ window.labelManagerUtils = {
     },
     // Helper function to extract connection code
     extractConnectionCode(href) {
-        // First, try matching with original regex pattern
-        let connectionMatch = href.match(/(?:connectionOf|followerOf|miniProfileUrn|profileUrn|fsd_profilePosition)=([^&]+)/);
-        if (connectionMatch) {
-            connectionMatch = connectionMatch[1].match(/%22([^%]+)%22/);
+        if (!href) return null;
+    
+        // Pattern 1: Extract from profileUrn or miniProfileUrn
+        const urnMatch = href.match(/profileUrn=([^&]*)|miniProfileUrn=([^&]*)/);
+        if (urnMatch) {
+            const urn = urnMatch[1] || urnMatch[2]; // Use the first non-null match
+            if (urn) {
+                const decodedUrn = decodeURIComponent(urn);
+                const codeMatch = decodedUrn.match(/fsd_profile:([\w-]+)|fs_miniProfile:([\w-]+)/);
+                if (codeMatch) {
+                    return codeMatch[1] || codeMatch[2]; // Return the first non-null match
+                }
+            }
         }
-        
-        return connectionMatch ? connectionMatch[1] : null;
+    
+        // Pattern 2: Extract from connectionOf, followerOf, or fsd_profilePosition
+        const connectionMatch = href.match(/(?:connectionOf|followerOf|fsd_profilePosition)=([^&]+)/);
+        if (connectionMatch) {
+            const encodedCode = connectionMatch[1];
+            const decodedCode = decodeURIComponent(encodedCode);
+            const codeMatch = decodedCode.match(/%22([^%]+)%22/);
+            if (codeMatch) {
+                return codeMatch[1];
+            }
+        }
+    
+        // Pattern 3: Extract from skill-associations-details or other similar patterns
+        const skillMatch = href.match(/skill-associations-details.*profileUrn=([^&]*)/);
+        if (skillMatch) {
+            const decodedUrn = decodeURIComponent(skillMatch[1]);
+            const codeMatch = decodedUrn.match(/fsd_profile:([\w-]+)/);
+            if (codeMatch) {
+                return codeMatch[1];
+            }
+        }
+    
+        // If no match is found, return null
+        return null;
     },
-
     // Wait for an element to be present in the DOM
     async waitForElement(selector, timeout = 10000) {
         return new Promise((resolve, reject) => {

@@ -1,36 +1,38 @@
 class FirebaseService {
     constructor() {
         // Core services
-        this.db = null;
         this.auth = null;
         this.currentUser = null;
+        this.db = null;
+        this.status = null; // Start with no status
+        this.refreshInterval = null;
 
         // Listeners
         this.authStateListeners = new Set();
 
-        // Auth refresh control
-        this.lastRefreshTime = 0;
-        this.refreshInProgress = false;
-        this.REFRESH_INTERVAL = 45 * 60 * 1000; // 45 minutes
-        this.refreshTimer = null;
+        // Bind handlers
+        this._handleBackgroundMessages = this._handleBackgroundMessages.bind(this);
+        
+        // Add message listener
+        chrome.runtime.onMessage.addListener(this._handleBackgroundMessages);
 
-        // Bind token refresh handler
-        this._handleTokenRefresh = this._handleTokenRefresh.bind(this);
-        
-        // Add token refresh listener
-        chrome.runtime.onMessage.addListener(this._handleTokenRefresh);
-        
         // Initialize
         this.initialize().catch(error => {
             console.error('[FirebaseService] Initialization failed:', error);
+            this._updateStatus('logged_out');
         });
     }
 
     addAuthStateListener(callback) {
         if (typeof callback === 'function') {
             this.authStateListeners.add(callback);
-            if (this.currentUser) {
-                callback(this.currentUser);
+            // Only notify if we have a status
+            if (this.status) {
+                callback({
+                    type: 'status',
+                    status: this.status,
+                    timestamp: new Date().toISOString()
+                });
             }
         }
     }
@@ -39,90 +41,69 @@ class FirebaseService {
         this.authStateListeners.delete(callback);
     }
 
-    _notifyListeners(data) {
+    _notifyListeners(status) {
+        console.log('auth')
+        console.log(status)
         this.authStateListeners.forEach(callback => {
             try {
-                callback(data);
+                callback({
+                    type: 'status',
+                    status: status,
+                    timestamp: new Date().toISOString()
+                });
             } catch (error) {
                 console.error('[FirebaseService] Listener notification failed:', error);
             }
         });
     }
 
-    async _getGoogleToken() {
-        return new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({ type: 'GET_GOOGLE_TOKEN' }, response => {
-                if (response?.success && response.token) {
-                    resolve(response.token);
-                } else {
-                    reject(new Error(response?.error || 'Failed to get token'));
-                }
+    _updateStatus(newStatus) {
+        // Only update and notify if status actually changed
+        if (this.status !== newStatus) {
+            this.status = newStatus;
+            this._notifyListeners(newStatus);
+        }
+    }
+
+    _handleBackgroundMessages(message, sender, sendResponse) {
+        switch (message.type) {
+            case 'LOGGED_OUT':
+                this._handleLoggedOut();
+                break;
+            case 'LOGGED_IN':
+                this.initialize();
+        }
+        sendResponse({ received: true });
+        return true;
+    }
+
+    _handleLoggedOut() {
+        this.stopTokenRefresh();
+        this._updateStatus('logged_out');
+        this.currentUser = null;
+        if (this.auth) {
+            this.auth.signOut().catch(error => {
+                console.error('[FirebaseService] Sign out failed:', error);
             });
-        });
-    }
-
-    async _handleTokenRefresh(message, sender, sendResponse) {
-        if (message.type === 'TOKEN_REFRESHED' && message.token) {
-            try {
-                const now = Date.now();
-                if (now - this.lastRefreshTime >= this.REFRESH_INTERVAL) {
-                    await this.refreshAuthState(message.token);
-                    sendResponse({ success: true });
-                } else {
-                    sendResponse({ success: true, message: 'Refresh skipped - too soon' });
-                }
-            } catch (error) {
-                console.error('[FirebaseService] Auth refresh failed:', error);
-                sendResponse({ success: false, error: error.message });
-            }
         }
     }
 
-    scheduleNextRefresh() {
-        if (this.refreshTimer) {
-            clearTimeout(this.refreshTimer);
-        }
-
-        this.refreshTimer = setTimeout(async () => {
-            try {
-                await this.refreshAuthState();
-                this.scheduleNextRefresh();
-            } catch (error) {
-                console.error('[FirebaseService] Scheduled refresh failed:', error);
-                // Retry in 5 minutes if failed
-                setTimeout(() => this.scheduleNextRefresh(), 5 * 60 * 1000);
-            }
-        }, this.REFRESH_INTERVAL);
-    }
-
-    async refreshAuthState(token) {
-        const now = Date.now();
-        
-        if (this.refreshInProgress || (now - this.lastRefreshTime < this.REFRESH_INTERVAL)) {
-            return this.currentUser;
-        }
-
+    async _verifyToken(token) {
         try {
-            this.refreshInProgress = true;
-            const accessToken = token || await this._getGoogleToken();
-            // console.log(accessToken)
-            const credential = firebase.auth.GoogleAuthProvider.credential(null, accessToken);
+            const credential = firebase.auth.GoogleAuthProvider.credential(null, token);
             const userCredential = await this.auth.signInWithCredential(credential);
-            
-            this.lastRefreshTime = now;
             this.currentUser = userCredential.user;
-            this._notifyListeners(this.currentUser);
-            return this.currentUser;
+            console.log(userCredential.user)
+            return true;
         } catch (error) {
-            this.currentUser = null;
-            throw error;
-        } finally {
-            this.refreshInProgress = false;
+            console.error('[FirebaseService] Token verification failed:', error);
+            return false;
         }
     }
 
     async initialize() {
         try {
+            // Initialize Firebase if not already initialized
             if (!firebase.apps?.length) {
                 firebase.initializeApp({
                     apiKey: "AIzaSyBFggUUWmz6H53hxr-jL00tGDYr9x4DQg4",
@@ -131,56 +112,79 @@ class FirebaseService {
                 });
             }
 
-            if (!this.auth) {
-                this.auth = firebase.auth();
-                this.auth.onAuthStateChanged(user => {
-                    this.currentUser = user;
-                    this._notifyListeners(user);
-                });
-            }
-            
-            if (!this.db) {
-                this.db = firebase.firestore();
+            // Initialize auth
+            this.auth = firebase.auth();
+            this.db = firebase.firestore();
+
+            // Request token
+            const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
+
+            if (response.type === 'logged_in' && response.data?.accessToken) {
+                // First set to in_progress while verifying
+                // this._updateStatus('in_progress');
+                
+                // Verify token with Firebase
+                const isValid = await this._verifyToken(response.data.accessToken);
+                if (isValid) {
+                    this._updateStatus('logged_in');
+                    this.startTokenRefresh();
+                } else {
+                    this._updateStatus('logged_out');
+                }
+            } else {
+                this._updateStatus('logged_out');
             }
 
-            // Initial auth state refresh
-            await this.refreshAuthState();
-            
-            // Schedule next refresh
-            this.scheduleNextRefresh();
-            
-            return {
-                db: this.db,
-                auth: this.auth,
-                currentUser: this.currentUser
-            };
         } catch (error) {
-            this.currentUser = null;
+            console.error('[FirebaseService] Initialization failed:', error);
+            this._updateStatus('logged_out');
             throw error;
         }
     }
 
-    isInitialized() {
-        return !!(this.db && this.auth && this.currentUser);
+    startTokenRefresh() {
+        // Clear any existing refresh interval
+        this.stopTokenRefresh();
+        
+        // Set up new refresh interval (45 minutes)
+        this.refreshInterval = setInterval(async () => {
+            try {
+                const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
+                
+                if (response.type === 'logged_in' && response.data?.accessToken) {
+                    const isValid = await this._verifyToken(response.data.accessToken);
+                    if (!isValid) {
+                        this._handleLoggedOut();
+                    }
+                } else {
+                    this._handleLoggedOut();
+                }
+            } catch (error) {
+                console.error('[FirebaseService] Token refresh failed:', error);
+                this._handleLoggedOut();
+            }
+        }, 45 * 60 * 1000);
+    }
+
+    stopTokenRefresh() {
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = null;
+        }
     }
 
     destroy() {
-        // Clear refresh timer
-        if (this.refreshTimer) {
-            clearTimeout(this.refreshTimer);
-            this.refreshTimer = null;
-        }
-
-        // Remove message listener
-        chrome.runtime.onMessage.removeListener(this._handleTokenRefresh);
-        
-        // Clear auth listeners
+        this.stopTokenRefresh();
+        chrome.runtime.onMessage.removeListener(this._handleBackgroundMessages);
         this.authStateListeners.clear();
-        
-        // Clear services
-        this.db = null;
         this.auth = null;
+        this.db = null;  // Clear db reference
         this.currentUser = null;
+        const wasLoggedIn = this.status === 'logged_in';
+        this.status = null;
+        if (wasLoggedIn) {
+            this._notifyListeners('logged_out');
+        }
     }
 }
 

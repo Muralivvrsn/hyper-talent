@@ -3,22 +3,13 @@ import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { PlusCircle, MinusCircle, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useMigration } from '../context/MigrationContext';
-import Dashboard from '../components/Dashboard';
-import ScreenRecorder from '../components/ScreenRecorder';
 import { useFeedback } from '../context/FeedbackContext';
 import FeedbackDashboard from '../components/FeedbackDashboard';
+// import ScreenRecorder from './ScreenRecorder';
 const AdminPage = () => {
   const { user } = useAuth();
   const { add_label_user } = useMigration();
   const {updateSheetToDatabase} = useFeedback()
-
-  // const handleMigration = async () => {
-  //   // const result = await updateSheetToDatabase(sheetData);
-
-  //   // if (result.success) {
-  //     // console.log(`Migrated ${result.usersProcessed} users`);
-  //   }
-  // };
 
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
@@ -317,6 +308,7 @@ const AdminPage = () => {
       </div> */}
       <div>
        {/* <Dashboard/> */}
+       {/* <ScreenRecorder/> */}
        {/* <ScreenRecorder/> */}
        <FeedbackDashboard/>
       </div>

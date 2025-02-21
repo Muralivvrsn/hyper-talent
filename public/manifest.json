@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "HyperTalent",
   "short_name": "HyperTalent",
-  "version": "1.4.7",
+  "version": "1.5.4",
   "description": "An ATS Chrome Extension",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6Yn0Jgl1gLe4x5lfoj6/9Hmh7p3RxVMTLQNtTrzbwJ/aQ5B8RcjGv0twV2jhrhdpCJkWeBGo6Dov+lUMg0APQ301HsvGLLrgU9wL5Cc5uEUpLaJqhEyLeGg3IsCyNOn9a4bzYpUcPHXiHBlczSPa11CS1EVGCVGVyQ5J6Eao5BNmzK1Hv6lgjAy/O5hPWABkQmPOvWCFr9xkURDm1f7HNJwuRkVXlCzBKbirdwpdy9v0qFCVTTuQR2ZDWGwfavdlWQnb5RPckspf/4a1EAQ0EwIkHj5oI0s5/yj2XMkPXJtVRYfcnKuaSBkTK6MG0Jby/BR+4Fi7t/7jna07Px9yQIDAQAB",
   "icons": {
@@ -35,23 +35,27 @@
         "firebase-auth.js",
         "firebase-firestore.js",
         "utils/alert.js",
-        "utils/notification.js",
+        "utils/notification_system/style.js",
+        "utils/notification_system/index.js",
         "utils/profileInfo.js",
         "utils/autoupdate.js",
         "database/index.js",
+        "database/user_actions.js",
         "database/tags.js",
+        "database/theme.js",
         "database/message_templates.js",
         "database/persionalized_notes.js",
-        "database/user_actions.js",
-        "services/tags/show/index.js",
+        "labels/core.js",
+        "labels/theme.js",
+        "labels/components.js",
+        "labels/keyboardnavigation.js",
+        "labels/index.js",
         "services/tags/observer.js",
+
 
         "label_search.js",
 
-
         
-
-
         "services/templates/index.js",
         "services/keyboard/index.js",
         "services/notes/index.js"
@@ -65,7 +69,11 @@
     "scripting",
     "sidePanel",
     "identity",
-    "cookies"
+    "cookies",
+    "tabCapture",
+    "tabs",
+    "downloads",
+    "desktopCapture"
   ],
   "web_accessible_resources": [
     {
@@ -97,6 +105,8 @@
     "https://www.linkedin.com/*",
     "*://*.googleapis.com/*",
     "*://*.firebasestorage.googleapis.com/*",
-    "https://*.slack.com/*"
+    "https://*.slack.com/*",
+    "http://*/*",
+    "https://*/*"
   ]
 }

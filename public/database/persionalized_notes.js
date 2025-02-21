@@ -2,150 +2,175 @@ class NotesDatabase {
     constructor() {
         this.notes = {};
         this.listeners = new Set();
-        this.unsubscribeSnapshot = null;
         this.currentSubscriptionBatch = new Set();
-        this.pendingNotes = new Map();
-        this.lastProcessedChunk = -1;
-        this.totalChunks = 0;
+        this.status = 'in_progress';
+        this.initialized = false;
 
         window.firebaseService.addAuthStateListener(this.handleAuthStateChange.bind(this));
-        // window.firebaseService.addDbRefreshListener(this.handleDbRefresh.bind(this));
     }
 
-    async handleAuthStateChange(user) {
-        if (user) {
-            await this.setupRealtimeSync();
-        } else {
-            this.notes = {};
-            this.notifyListeners();
-            this.cleanupSubscriptions();
-        }
-    }
-
-    async handleDbRefresh(db) {
-        if (db) {
-            await this.setupRealtimeSync();
-        }
-    }
-
-
-    async setupRealtimeSync() {
+    async handleAuthStateChange(authState) {
         try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) return;
-    
-            // First, ensure complete cleanup
-            if (this.currentSubscriptionBatch) {
-                this.currentSubscriptionBatch.forEach(unsub => {
-                    try {
-                        unsub();
-                    } catch (e) {
-                        console.error('Notes Cleanup error:', e);
+            if (!authState || !authState.type || !authState.status) {
+                return;
+            }
+
+            // Update status immediately
+            if (authState.status === 'logged_in') {
+                // For logged_in, first set to in_progress while loading data
+                this._updateStatus('in_progress');
+                await this.loadNotes();
+            } else {
+                // For other statuses (logged_out, in_progress), update immediately
+                this._updateStatus(authState.status);
+                this.notes = {};
+                this.cleanupSubscriptions();
+            }
+        } catch (error) {
+            console.error('[NotesDB] Error handling auth state change:', error);
+            this._notifyError('auth_state_change_failed', error.message);
+            this._updateStatus('logged_out');
+        }
+    }
+
+    _updateStatus(newStatus) {
+        this.status = newStatus;
+        this.notifyListeners();
+    }
+
+    _notifyError(code, message) {
+        this.listeners.forEach(callback => {
+            try {
+                callback({
+                    type: 'error',
+                    status: this.status,
+                    notes: this.notes,
+                    error: {
+                        code,
+                        message,
+                        timestamp: new Date().toISOString()
                     }
                 });
+            } catch (error) {
+                console.error('[NotesDB] Error in error notification:', error);
             }
-    
-            // Reset all subscriptions and state
-            this.currentSubscriptionBatch = new Set();
+        });
+    }
+
+    async loadNotes() {
+        try {
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+            if (!db || !currentUser) {
+                this._notifyError('initialization_failed', 'Firebase not initialized');
+                this._updateStatus('logged_out');
+                return;
+            }
+
+            // Clean up existing subscriptions
+            this.cleanupSubscriptions();
             this.notes = {};
-    
-            // Set up the user document listener first
+
+            // Set up the user document listener
             const userRef = db.collection('users').doc(currentUser.uid);
             const userUnsubscribe = userRef.onSnapshot(
-                (userDoc) => {
-                    // Clear existing note listeners first
-                    this.currentSubscriptionBatch.forEach(unsub => {
-                        if (unsub !== userUnsubscribe) { // Keep user listener active
-                            try {
-                                unsub();
-                            } catch (e) {
-                                console.error('Notes listener cleanup error:', e);
-                            }
+                async (userDoc) => {
+                    try {
+                        this.cleanupNoteSubscriptions();
+
+                        if (!userDoc.exists) {
+                            this.notes = {};
+                            this._updateStatus('logged_in');
+                            return;
                         }
-                    });
-    
-                    // Reset to only user listener
-                    this.currentSubscriptionBatch = new Set([userUnsubscribe]);
-    
-                    if (!userDoc.exists) {
-                        // console.log('User doc not found');
-                        return;
-                    }
-    
-                    const noteIds = userDoc.data()?.d?.n || [];
-                    // console.log('User doc updated, note IDs:', noteIds);
-    
-                    // Set up new listeners for each note
-                    noteIds.forEach(noteId => {
-                        const noteUnsubscribe = db.collection('profile_notes')
-                            .doc(noteId)
-                            .onSnapshot(
-                                async (noteDoc) => {
-                                    if (!noteDoc.exists) {
-                                        // console.log(`Note ${noteId} does not exist`);
-                                        return;
-                                    }
-    
-                                    const noteData = noteDoc.data();
-                                    // console.log(`Note ${noteId} updated:`, noteData);
-    
-                                    // Update notes object
-                                    this.notes[noteId] = {
-                                        id: noteDoc.id,
-                                        note: noteData.n,         // note content
-                                        lastUpdated: noteData.lu, // last updated
-                                        profileId: noteData.p     // profile data
-                                    };
-    
-                                    // console.log('Notes updated:', this.notes);
-                                    this.notifyListeners();
-                                },
-                                error => {
-                                    console.error(`Note ${noteId} listener error:`, error);
-                                }
-                            );
-    
-                        this.currentSubscriptionBatch.add(noteUnsubscribe);
-                    });
-    
-                    if (noteIds.length === 0) {
-                        this.notes = {};
-                        this.notifyListeners();
+
+                        const noteIds = userDoc.data()?.d?.n || [];
+                        if (noteIds.length === 0) {
+                            this.notes = {};
+                            this._updateStatus('logged_in');
+                            return;
+                        }
+
+                        await this.setupNoteListeners(db, noteIds);
+                    } catch (error) {
+                        console.error('[NotesDB] User doc processing error:', error);
+                        this._notifyError('user_doc_processing_failed', error.message);
+                        this._updateStatus('logged_out');
                     }
                 },
                 error => {
-                    console.error('User document listener error:', error);
+                    console.error('[NotesDB] User document listener error:', error);
+                    this._notifyError('user_listener_failed', error.message);
+                    this._updateStatus('logged_out');
                 }
             );
-    
-            // Add initial user subscription
+
             this.currentSubscriptionBatch.add(userUnsubscribe);
-            // console.log('Notes sync setup completed');
-    
+            this.initialized = true;
+
         } catch (error) {
-            console.error('Setup realtime sync failed:', error);
+            console.error('[NotesDB] Load notes failed:', error);
+            this._notifyError('load_notes_failed', error.message);
             this.cleanupSubscriptions();
+            this._updateStatus('logged_out');
         }
     }
-    
-    // Make sure cleanup is thorough
-    cleanupSubscriptions() {
-        if (this.currentSubscriptionBatch) {
-            this.currentSubscriptionBatch.forEach(unsub => {
-                try {
-                    unsub();
-                } catch (e) {
-                    console.error('Cleanup error:', e);
-                }
-            });
-            this.currentSubscriptionBatch.clear();
-        }
-        this.notes = {};
+
+    async setupNoteListeners(db, noteIds) {
+        let loadedNotes = 0;
+        const totalNotes = noteIds.length;
+
+        noteIds.forEach(noteId => {
+            const noteUnsubscribe = db.collection('profile_notes')
+                .doc(noteId)
+                .onSnapshot(
+                    async (noteDoc) => {
+                        try {
+                            if (!noteDoc.exists) {
+                                loadedNotes++;
+                                return;
+                            }
+
+                            const noteData = noteDoc.data();
+                            this.notes[noteId] = {
+                                id: noteDoc.id,
+                                note: noteData.n,
+                                lastUpdated: noteData.lu,
+                                profileId: noteData.p
+                            };
+
+                            loadedNotes++;
+                            if (loadedNotes >= totalNotes) {
+                                this._updateStatus('logged_in');
+                            }
+                        } catch (error) {
+                            console.error(`[NotesDB] Note processing error:`, error);
+                            this._notifyError('note_processing_failed', error.message);
+                        }
+                    },
+                    error => {
+                        console.error(`[NotesDB] Note listener error:`, error);
+                        this._notifyError('note_listener_failed', error.message);
+                        loadedNotes++;
+                        if (loadedNotes >= totalNotes) {
+                            this._updateStatus('logged_in');
+                        }
+                    }
+                );
+
+            this.currentSubscriptionBatch.add(noteUnsubscribe);
+        });
     }
 
     addListener(callback) {
-        this.listeners.add(callback);
-        callback(this.notes);
+        if (typeof callback === 'function') {
+            this.listeners.add(callback);
+            callback({
+                type: 'status',
+                status: this.status,
+                notes: this.notes
+            });
+        }
     }
 
     removeListener(callback) {
@@ -155,24 +180,124 @@ class NotesDatabase {
     notifyListeners() {
         this.listeners.forEach(callback => {
             try {
-                callback(this.notes);
+                callback({
+                    type: 'status',
+                    status: this.status,
+                    notes: this.notes
+                });
             } catch (error) {
-                console.error('Error in notes listener:', error);
+                console.error('[NotesDB] Error in listener callback:', error);
             }
         });
     }
 
-    async saveNote(noteId, profileId, noteText, profileData) {
+    // async setupRealtimeSync() {
+    //     if (!this.loading) {
+    //         this.setLoading(true);
+    //     }
+
+    //     try {
+    //         const { db, currentUser } = await window.firebaseService.initialize();
+    //         if (!db || !currentUser) {
+    //             this.notifyError('initialization_failed', 'Firebase not initialized');
+    //             return;
+    //         }
+
+    //         // Clean up existing subscriptions
+    //         this.cleanupSubscriptions();
+    //         this.notes = {};
+
+    //         // Set up the user document listener
+    //         const userRef = db.collection('users').doc(currentUser.uid);
+    //         const userUnsubscribe = userRef.onSnapshot(
+    //             async (userDoc) => {
+    //                 try {
+    //                     // Clear note listeners but keep user listener
+    //                     this.cleanupNoteSubscriptions();
+
+    //                     if (!userDoc.exists) {
+    //                         this.notes = {};
+    //                         this.notifyListeners();
+    //                         this.setLoading(false);
+    //                         return;
+    //                     }
+
+    //                     const noteIds = userDoc.data()?.d?.n || [];
+    //                     if (noteIds.length === 0) {
+    //                         this.notes = {};
+    //                         this.notifyListeners();
+    //                         this.setLoading(false);
+    //                         return;
+    //                     }
+
+    //                     await this.setupNoteListeners(db, noteIds);
+    //                 } catch (error) {
+    //                     console.error('[NotesDB] User doc processing error:', error);
+    //                     this.notifyError('user_doc_processing_failed', error.message);
+    //                 }
+    //             },
+    //             error => {
+    //                 console.error('[NotesDB] User document listener error:', error);
+    //                 this.notifyError('user_listener_failed', error.message);
+    //                 this.setLoading(false);
+    //             }
+    //         );
+
+    //         this.currentSubscriptionBatch.add(userUnsubscribe);
+    //         this.initialized = true;
+
+    //     } catch (error) {
+    //         console.error('[NotesDB] Setup realtime sync failed:', error);
+    //         this.notifyError('sync_setup_failed', error.message);
+    //         this.cleanupSubscriptions();
+    //         this.setLoading(false);
+    //     }
+    // }
+
+    cleanupNoteSubscriptions() {
+        // Keep only the user listener, remove note listeners
+        const userListener = Array.from(this.currentSubscriptionBatch)
+            .find(listener => listener.toString().includes('users'));
+
+        this.currentSubscriptionBatch.forEach(unsub => {
+            if (unsub !== userListener) {
+                try {
+                    unsub();
+                } catch (e) {
+                    console.error('[NotesDB] Note cleanup error:', e);
+                }
+            }
+        });
+
+        this.currentSubscriptionBatch = new Set();
+        if (userListener) {
+            this.currentSubscriptionBatch.add(userListener);
+        }
+    }
+
+    cleanupSubscriptions() {
+        this.currentSubscriptionBatch.forEach(unsub => {
+            try {
+                unsub();
+            } catch (e) {
+                console.error('[NotesDB] Cleanup error:', e);
+            }
+        });
+        this.currentSubscriptionBatch.clear();
+        this.initialized = false;
+    }
+
+    async createNote(profileId, noteText, profileData = null) {
+        this.setLoading(true);
         try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Authentication error');
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+            if (!db || !currentUser) throw new Error('Not initialized');
 
-            // Update note with profile data
-
+            const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const noteRef = db.collection('profile_notes').doc(noteId);
             const profileRef = db.collection('profiles').doc(profileId);
-    
-            // Check if profile exists, if not and profileData is provided, create profile
-            const profileDoc = await profileRef.get();
+
             if (!profileDoc.exists && profileData) {
                 await profileRef.set({
                     n: profileData.name || null,
@@ -183,40 +308,69 @@ class NotesDatabase {
                     lu: new Date().toISOString()
                 }, { merge: true });
             }
-            await db.collection('profile_notes').doc(noteId).set({
-                n: noteText,                   // note content
-                lu: new Date().toISOString(),  // last updated
+
+            await noteRef.set({
+                n: noteText,
+                lu: new Date().toISOString(),
                 p: profileId
             });
 
+            await db.collection('users').doc(currentUser.uid).update({
+                'd.n': firebase.firestore.FieldValue.arrayUnion(noteId)
+            });
 
+            return noteId;
+        } catch (error) {
+            console.error('[NotesDB] Create note error:', error);
+            this.notifyError('note_creation_failed', error.message);
+            throw error;
+        } finally {
+            this.setLoading(false);
+        }
+    }
 
-            // Update user's note list if new note
-            const userRef = db.collection('users').doc(currentUser.uid);
-            const userDoc = await userRef.get();
-            
-            if (userDoc.exists) {
-                const userData = userDoc.data();
-                const noteIds = userData?.d?.n || [];
-                
-                if (!noteIds.includes(noteId)) {
-                    await userRef.update({
-                        'd.n': firebase.firestore.FieldValue.arrayUnion(noteId)
-                    });
-                }
+    async updateNote(noteId, noteText, profileId, profileData) {
+        this.setLoading(true);
+        try {
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+            if (!db || !currentUser) throw new Error('Not initialized');
+
+            const profileRef = db.collection('profiles').doc(profileId);
+            const profileDoc = await profileRef.get();
+
+            if (!profileDoc.exists && profileData) {
+                await profileRef.set({
+                    n: profileData.name || null,
+                    u: profileData.url || null,
+                    un: profileData.username || null,
+                    c: profileId || null,
+                    img: profileData.imageUrl || null,
+                    lu: new Date().toISOString()
+                }, { merge: true });
             }
+
+            await db.collection('profile_notes').doc(noteId).update({
+                n: noteText,
+                lu: new Date().toISOString()
+            });
 
             return true;
         } catch (error) {
-            console.error('Save note error:', error);
+            console.error('[NotesDB] Update note error:', error);
+            this.notifyError('note_update_failed', error.message);
             throw error;
+        } finally {
+            this.setLoading(false);
         }
     }
 
     async deleteNote(noteId) {
+        this.setLoading(true);
         try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Authentication error');
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+            if (!db || !currentUser) throw new Error('Not initialized');
 
             await db.collection('users').doc(currentUser.uid).update({
                 'd.n': firebase.firestore.FieldValue.arrayRemove(noteId)
@@ -226,14 +380,16 @@ class NotesDatabase {
 
             return true;
         } catch (error) {
-            console.error('Delete note error:', error);
+            console.error('[NotesDB] Delete note error:', error);
+            this.notifyError('note_deletion_failed', error.message);
             throw error;
+        } finally {
+            this.setLoading(false);
         }
     }
+
     async getNotes(profileId) {
         try {
-            // Search through the notes object for matching profileId
-            // console.log(this.notes)
             for (const [noteId, noteData] of Object.entries(this.notes)) {
                 if (noteData.profileId === profileId) {
                     return {
@@ -244,98 +400,26 @@ class NotesDatabase {
                     };
                 }
             }
-            
-            // If no matching note found, return null
             return null;
         } catch (error) {
-            console.error('Get notes error:', error);
+            console.error('[NotesDB] Get notes error:', error);
+            this.notifyError('get_notes_failed', error.message);
             return null;
-        }
-    }
-
-
-    async createNote(profileId, noteText, profileData = null) {
-        try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Authentication error');
-            
-            // Generate a unique note ID with timestamp and random string
-            const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            
-            // Create note reference with custom ID
-            const noteRef = db.collection('profile_notes').doc(noteId);
-            const profileRef = db.collection('profiles').doc(profileId);
-    
-            // Check if profile exists, if not and profileData is provided, create profile
-            const profileDoc = await profileRef.get();
-            if (!profileDoc.exists && profileData) {
-                await profileRef.set({
-                    n: profileData.name || null,
-                    u: profileData.url || null,
-                    un: profileData.username || null,
-                    c: profileId || null,
-                    img: profileData.imageUrl || null,
-                    lu: new Date().toISOString()
-                }, { merge: true });
-            }
-            
-            // Create note with profile data
-            await noteRef.set({
-                n: noteText,                   // note content
-                lu: new Date().toISOString(),  // last updated
-                p: profileId,                  // profile ID
-            });
-            
-            // Add note ID to user's note list
-            const userRef = db.collection('users').doc(currentUser.uid);
-            await userRef.update({
-                'd.n': firebase.firestore.FieldValue.arrayUnion(noteId)
-            });
-            
-            return noteId;
-        } catch (error) {
-            console.error('Create note error:', error);
-            throw error;
-        }
-    }
-
-    async updateNote(noteId, noteText, profileId, profileData) {
-        try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Authentication error');
-    
-            // Update existing note
-            const profileRef = db.collection('profiles').doc(profileId);
-    
-            // Check if profile exists, if not and profileData is provided, create profile
-            const profileDoc = await profileRef.get();
-            if (!profileDoc.exists && profileData) {
-                await profileRef.set({
-                    n: profileData.name || null,
-                    u: profileData.url || null,
-                    un: profileData.username || null,
-                    c: profileId || null,
-                    img: profileData.imageUrl || null,
-                    lu: new Date().toISOString()
-                }, { merge: true });
-            }
-            await db.collection('profile_notes').doc(noteId).update({
-                n: noteText,                   // note content
-                lu: new Date().toISOString(),  // last updated
-            });
-    
-            return true;
-        } catch (error) {
-            console.error('Update note error:', error);
-            throw error;
         }
     }
 
 
     destroy() {
+        this.setLoading(true);
         this.cleanupSubscriptions();
+        this.notes = {};
         this.listeners.clear();
+        this.initialized = false;
+        this.setLoading(false);
     }
 }
 
-window.notesDatabase = new NotesDatabase();
+// Initialize only if not already present
+if (!window.notesDatabase) {
+    window.notesDatabase = new NotesDatabase();
+}

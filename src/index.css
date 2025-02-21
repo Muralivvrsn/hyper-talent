@@ -58,6 +58,11 @@
   }
 }
 
+#root{
+  height: 100vh;
+  overflow: hidden;
+}
+
 
 *{
   font-family: 'Poppins', sans-serif !important;

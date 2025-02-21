@@ -1,265 +1,321 @@
 class MessageTemplateDatabase {
     constructor() {
+        // console.log('[MessageTemplateDB] Initializing...');
         this.templates = [];
         this.listeners = new Set();
         this.currentSubscriptionBatch = new Set();
-        this.pendingTemplates = new Map();
-        this.lastProcessedChunk = -1;
-        this.totalChunks = 0;
+        this.status = null; // Start with no status
+        this.initialized = false;
+        this.isLoadingTemplates = false;
 
-        window.firebaseService.addAuthStateListener(this.handleAuthStateChange.bind(this));
+        // Bind the auth listener only once
+        this.boundAuthListener = this.handleAuthStateChange.bind(this);
+        window.firebaseService.addAuthStateListener(this.boundAuthListener);
+        // console.log('[MessageTemplateDB] Auth listener added');
     }
 
-    async handleAuthStateChange(user) {
+    async handleAuthStateChange(authState) {
+        // console.log('[MessageTemplateDB] Auth state change:', authState);
+
         try {
-            if (user) {
-                await this.setupRealtimeSync();
-            } else {
-                this.templates = [];
-                this.notifyListeners();
-                if (this.unsubscribeSnapshot) {
-                    this.unsubscribeSnapshot();
-                    this.unsubscribeSnapshot = null;
-                }
+            if (!authState || !authState.type || !authState.status) {
+                // console.log('[MessageTemplateDB] Invalid auth state received');
+                return;
+            }
+
+            // If we're already loading templates, don't trigger another load
+            if (this.isLoadingTemplates) {
+                // console.log('[MessageTemplateDB] Template loading already in progress');
+                return;
+            }
+
+            switch (authState.status) {
+                case 'logged_in':
+                    console.log(this.status)
+                    if (this.status !== 'in_progress') {
+                        console.log('[MessageTemplateDB] Starting template load process');
+                        this._updateStatus('in_progress');
+                        await this.loadTemplates();
+                    }
+                    break;
+
+                case 'logged_out':
+                    // console.log('[MessageTemplateDB] Handling logout');
+                    this.cleanupSubscriptions();
+                    this.templates = [];
+                    this._updateStatus('logged_out');
+                    break;
+
+                case 'in_progress':
+                    // Only update if we're not already in progress
+                    if (this.status !== 'in_progress') {
+                        // console.log('[MessageTemplateDB] Setting in-progress state');
+                        this._updateStatus('in_progress');
+                    }
+                    break;
             }
         } catch (error) {
-            console.error('[MessageTemplateDB] Error handling auth state change:', error);
+            console.error('[MessageTemplateDB] Auth state change error:', error);
+            this._notifyError('auth_state_change_failed', error.message);
         }
     }
 
-    async setupRealtimeSync() {
-        try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) return;
+    _updateStatus(newStatus) {
+        // console.log('[MessageTemplateDB] Status update:', this.status, '->', newStatus);
+        if (this.status !== newStatus) {
+            this.status = newStatus;
+            this.notifyListeners();
+        }
+    }
+
+    async loadTemplates() {
+        if (this.isLoadingTemplates) {
+            console.log('[MessageTemplateDB] Template loading already in progress');
+            return;
+        }
     
-            // First, ensure complete cleanup
-            if (this.currentSubscriptionBatch) {
-                this.currentSubscriptionBatch.forEach(unsub => {
-                    try {
-                        unsub();
-                    } catch (e) {
-                        console.error('[MessageTemplateDB] Cleanup error:', e);
-                    }
-                });
+        this.isLoadingTemplates = true;
+        console.log('[MessageTemplateDB] Starting template load');
+    
+        try {
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+            if (!db || !currentUser) {
+                throw new Error('Firebase not initialized');
             }
     
-            // Reset all subscriptions and state
-            this.currentSubscriptionBatch = new Set();
+            // Clean up existing subscriptions
+            this.cleanupSubscriptions();
             this.templates = [];
     
-            // Set up the user document listener first
+            // Set up single snapshot listener for user document
             const userRef = db.collection('users').doc(currentUser.uid);
-            const userUnsubscribe = userRef.onSnapshot(
-                (userDoc) => {
-                    // Clear existing template listeners first
-                    this.currentSubscriptionBatch.forEach(unsub => {
-                        if (unsub !== userUnsubscribe) { // Keep user listener active
-                            try {
-                                unsub();
-                            } catch (e) {
-                                console.error('[MessageTemplateDB] Template listener cleanup error:', e);
-                            }
-                        }
-                    });
-    
-                    // Reset to only user listener
-                    this.currentSubscriptionBatch = new Set([userUnsubscribe]);
-    
+            
+            const userUnsubscribe = userRef.onSnapshot(async (userDoc) => {
+
+                try {
+                    this.cleanupTemplateSubscriptions()
                     if (!userDoc.exists) {
-                        // console.log('[MessageTemplateDB] User doc not found');
+                        console.log('[MessageTemplateDB] User document does not exist');
+                        this.templates = [];
+                        this._updateStatus('logged_in');
                         return;
                     }
     
                     const templateIds = userDoc.data()?.d?.s || [];
-                    // console.log('[MessageTemplateDB] User doc updated, template IDs:', templateIds);
-    
-                    // Set up new listeners for each template
-                    templateIds.forEach(templateId => {
-                        const templateUnsubscribe = db.collection('message_templates')
-                            .doc(templateId)
-                            .onSnapshot(
-                                async (templateDoc) => {
-                                    if (!templateDoc.exists) {
-                                        // console.log(`[MessageTemplateDB] Template ${templateId} does not exist`);
-                                        return;
-                                    }
-    
-                                    const templateData = templateDoc.data();
-                                    // console.log(`[MessageTemplateDB] Template ${templateId} updated:`, templateData);
-    
-                                    // Update templates array
-                                    const templateIndex = this.templates.findIndex(t => t.template_id === templateId);
-                                    const newTemplate = {
-                                        template_id: templateDoc.id,
-                                        title: templateData.t,
-                                        message: templateData.n,
-                                        last_updated: templateData.lu
-                                    };
-    
-                                    if (templateIndex === -1) {
-                                        this.templates.push(newTemplate);
-                                    } else {
-                                        this.templates[templateIndex] = newTemplate;
-                                    }
-    
-                                    // console.log('[MessageTemplateDB] Templates updated:', this.templates);
-                                    this.notifyListeners();
-                                },
-                                error => {
-                                    console.error(`[MessageTemplateDB] Template ${templateId} listener error:`, error);
-                                }
-                            );
-    
-                        this.currentSubscriptionBatch.add(templateUnsubscribe);
-                    });
+                    console.log('[MessageTemplateDB] Found template IDs:', templateIds.length);
     
                     if (templateIds.length === 0) {
                         this.templates = [];
-                        this.notifyListeners();
+                        this._updateStatus('logged_in');
+                        return;
                     }
-                },
-                error => {
-                    console.error('[MessageTemplateDB] User document listener error:', error);
-                }
-            );
     
-            // Add initial user subscription
+                    // Get all templates in a single query
+                    await this.setupTemplateListeners(db, templateIds);
+                } catch (error) {
+                    console.error('[MessageTemplateDB] Template processing error:', error);
+                    this._notifyError('template_processing_failed', error.message);
+                    this._updateStatus('logged_out');
+                }
+            });
+    
             this.currentSubscriptionBatch.add(userUnsubscribe);
-            // console.log('[MessageTemplateDB] Sync setup completed');
+            this.initialized = true;
     
         } catch (error) {
-            console.error('[MessageTemplateDB] Setup realtime sync failed:', error);
+            console.error('[MessageTemplateDB] Load templates failed:', error);
+            this._notifyError('load_templates_failed', error.message);
             this.cleanupSubscriptions();
+            this._updateStatus('logged_out');
+        } finally {
+            this.isLoadingTemplates = false;
         }
     }
-    
-    // Make sure cleanup is thorough
+
+    async setupTemplateListeners(db, templateIds) {
+        let loadedTemplates = 0;
+        const totalTemplates = templateIds.length;
+        // console.log('[MessageTemplateDB] Setting up listeners for', totalTemplates, 'templates');
+
+        templateIds.forEach(templateId => {
+            const templateUnsubscribe = db.collection('message_templates')
+                .doc(templateId)
+                .onSnapshot(
+                    async (templateDoc) => {
+                        try {
+                            if (!templateDoc.exists) {
+                                loadedTemplates++;
+                                // console.log('[MessageTemplateDB] Template not found:', templateId);
+                                return;
+                            }
+
+                            const templateData = templateDoc.data();
+                            this.updateTemplate({
+                                template_id: templateDoc.id,
+                                title: templateData.t,
+                                message: templateData.n,
+                                last_updated: templateData.lu
+                            });
+
+                            loadedTemplates++;
+                            // console.log('[MessageTemplateDB] Loaded template:', templateId, `(${loadedTemplates}/${totalTemplates})`);
+
+                            if (loadedTemplates >= totalTemplates) {
+                                // console.log('[MessageTemplateDB] All templates loaded');
+                                this._updateStatus('logged_in');
+                            }
+                        } catch (error) {
+                            console.error(`[MessageTemplateDB] Template processing error:`, error);
+                            this._notifyError('template_processing_failed', error.message);
+                        }
+                    },
+                    error => {
+                        console.error(`[MessageTemplateDB] Template listener error:`, error);
+                        this._notifyError('template_listener_failed', error.message);
+                        loadedTemplates++;
+                        if (loadedTemplates >= totalTemplates) {
+                            this._updateStatus('logged_in');
+                        }
+                    }
+                );
+
+            this.currentSubscriptionBatch.add(templateUnsubscribe);
+        });
+        this._updateStatus('logged_in');
+    }
+
+    updateTemplate(newTemplate) {
+        // console.log('[MessageTemplateDB] Updating template:', newTemplate.template_id);
+        const index = this.templates.findIndex(t => t.template_id === newTemplate.template_id);
+        if (index === -1) {
+            this.templates.push(newTemplate);
+        } else {
+            this.templates[index] = newTemplate;
+        }
+        this.notifyListeners();
+    }
+
     cleanupSubscriptions() {
-        if (this.currentSubscriptionBatch) {
-            this.currentSubscriptionBatch.forEach(unsub => {
+        // console.log('[MessageTemplateDB] Cleaning up all subscriptions');
+        this.currentSubscriptionBatch.forEach(unsub => {
+            try {
+                unsub();
+            } catch (e) {
+                console.error('[MessageTemplateDB] Cleanup error:', e);
+            }
+        });
+        this.currentSubscriptionBatch.clear();
+        this.initialized = false;
+    }
+
+    cleanupTemplateSubscriptions() {
+        // console.log('[MessageTemplateDB] Cleaning up template subscriptions');
+        const userListener = Array.from(this.currentSubscriptionBatch)
+            .find(listener => listener.toString().includes('users'));
+
+        this.currentSubscriptionBatch.forEach(unsub => {
+            if (unsub !== userListener) {
                 try {
                     unsub();
                 } catch (e) {
-                    console.error('[MessageTemplateDB] Cleanup error:', e);
+                    console.error('[MessageTemplateDB] Template cleanup error:', e);
                 }
-            });
-            this.currentSubscriptionBatch.clear();
-        }
-        this.templates = [];
-    }
+            }
+        });
 
-    async addTemplate(templateData) {
-        try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Not initialized');
-
-            // Update user's document to include new template ID
-            const userRef = db.collection('users').doc(currentUser.uid);
-            await db.runTransaction(async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                const userData = userDoc.data();
-                const userTemplates = userData?.d?.s || [];
-
-                if (!userTemplates.includes(templateData.template_id)) {
-                    transaction.update(userRef, {
-                        'd.s': firebase.firestore.FieldValue.arrayUnion(templateData.template_id)
-                    });
-                }
-            });
-
-            // Create template document
-            const templateRef = db.collection('message_templates').doc(templateData.template_id);
-            await templateRef.set({
-                t: templateData.title,
-                n: templateData.message,
-                lu: new Date().toISOString()
-            });
-
-            return true;
-        } catch (error) {
-            console.error('[MessageTemplateDB] Failed to add template:', error);
-            return false;
-        }
-    }
-
-    async editTemplate(templateId, updatedTemplate) {
-        try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Not initialized');
-
-            const templateRef = db.collection('message_templates').doc(templateId);
-            await templateRef.update({
-                t: updatedTemplate.title,
-                n: updatedTemplate.message,
-                lu: new Date().toISOString()
-            });
-
-            return true;
-        } catch (error) {
-            console.error('[MessageTemplateDB] Failed to edit template:', error);
-            return false;
-        }
-    }
-
-    async deleteTemplate(templateId) {
-        try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Not initialized');
-
-            // Remove template ID from user's document
-            const userRef = db.collection('users').doc(currentUser.uid);
-            await db.runTransaction(async (transaction) => {
-                const userDoc = await transaction.get(userRef);
-                const userData = userDoc.data();
-                const userTemplates = userData?.d?.s || [];
-
-                if (userTemplates.includes(templateId)) {
-                    transaction.update(userRef, {
-                        'd.s': firebase.firestore.FieldValue.arrayRemove(templateId)
-                    });
-                }
-            });
-
-            // Delete template document
-            const templateRef = db.collection('message_templates').doc(templateId);
-            await templateRef.delete();
-
-            return true;
-        } catch (error) {
-            console.error('[MessageTemplateDB] Failed to delete template:', error);
-            return false;
+        this.currentSubscriptionBatch = new Set();
+        if (userListener) {
+            this.currentSubscriptionBatch.add(userListener);
         }
     }
 
     addListener(callback) {
         if (typeof callback === 'function') {
+            // console.log('[MessageTemplateDB] Adding new listener');
             this.listeners.add(callback);
-            callback(this.templates);
+            // Only notify if we have a status
+            if (this.status) {
+                callback({
+                    type: 'status',
+                    status: this.status,
+                    templates: this.templates
+                });
+            }
         }
     }
 
     removeListener(callback) {
+        // console.log('[MessageTemplateDB] Removing listener');
         this.listeners.delete(callback);
     }
 
     notifyListeners() {
+        // console.log('[MessageTemplateDB] Notifying listeners, status:', this.status);
         this.listeners.forEach(callback => {
             try {
-                callback(this.templates);
+                callback({
+                    type: 'status',
+                    status: this.status,
+                    templates: this.templates
+                });
             } catch (error) {
                 console.error('[MessageTemplateDB] Error in listener callback:', error);
             }
         });
     }
 
+    _notifyError(code, message) {
+        console.error('[MessageTemplateDB] Error:', code, message);
+        this.listeners.forEach(callback => {
+            try {
+                callback({
+                    type: 'error',
+                    status: this.status,
+                    templates: this.templates,
+                    error: {
+                        code,
+                        message,
+                        timestamp: new Date().toISOString()
+                    }
+                });
+            } catch (error) {
+                console.error('[MessageTemplateDB] Error in error notification:', error);
+            }
+        });
+    }
+    _notifyListeners(status) {
+        // console.log('[MessageTemplateDB] Sending notification to listeners:', status);
+        this.listeners.forEach(callback => {
+            try {
+                callback({
+                    type: 'status',
+                    status: status,
+                    templates: this.templates,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('[MessageTemplateDB] Error in listener notification:', error);
+            }
+        });
+    }
+
     destroy() {
-        if (this.unsubscribeSnapshot) {
-            this.unsubscribeSnapshot();
-            this.unsubscribeSnapshot = null;
-        }
+        // console.log('[MessageTemplateDB] Destroying instance');
+        this.cleanupSubscriptions();
+        this.templates = [];
         this.listeners.clear();
+        this.initialized = false;
+        window.firebaseService.removeAuthStateListener(this.boundAuthListener);
+        const wasLoggedIn = this.status === 'logged_in';
+        this.status = null;
+        if (wasLoggedIn) {
+            this._notifyListeners('logged_out');
+        }
     }
 }
 
-// Initialize the message template database
-window.messageTemplateDatabase = new MessageTemplateDatabase();
+// Initialize only if not already present
+if (!window.messageTemplateDatabase) {
+    window.messageTemplateDatabase = new MessageTemplateDatabase();
+}

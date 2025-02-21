@@ -1,7 +1,8 @@
 class UserActionsDatabase {
-    async addAction(actionTitle) {
+    async addAction(actionTitle, description = null) {
         try {
-            const { db, currentUser } = await window.firebaseService.initialize();
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
             if (!db || !currentUser) throw new Error('Firebase not initialized or user not logged in');
 
             const userActionsRef = db.collection('user_actions').doc(currentUser.uid);
@@ -10,6 +11,11 @@ class UserActionsDatabase {
                 title: actionTitle,
                 timestamp: new Date().toISOString()
             };
+
+            // Only add description if it's provided
+            if (description) {
+                newAction.description = description;
+            }
 
             await userActionsRef.set({
                 actions: firebase.firestore.FieldValue.arrayUnion(newAction)

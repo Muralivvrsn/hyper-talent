@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
-  const { signIn, isAuthenticating } = useAuth();
+  const { signIn, status } = useAuth();
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background/95 p-4">
@@ -34,10 +34,10 @@ const LoginPage = () => {
 
           <Button
             onClick={signIn}
-            disabled={isAuthenticating}
+            disabled={status==='in_progress'}
             className="w-full flex items-center justify-center gap-2"
           >
-            {isAuthenticating ? (
+            {status==='in_progress' ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Signing in...</span>

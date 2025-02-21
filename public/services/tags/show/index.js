@@ -6,9 +6,11 @@ class LabelManager {
         this.uiElements = new Map();
         this.isDropdownOpen = false;
         this.selectedIndex = -1;
-        this.labels = {}
+        this.labels = {};
+        this.currentTheme = 'light';
 
         this.handleLabelsUpdate = this.handleLabelsUpdate.bind(this);
+        this.handleThemeChange = this.handleThemeChange.bind(this);
 
         this.initialize();
     }
@@ -17,13 +19,123 @@ class LabelManager {
         if (this.isInitialized) return;
 
         this.setupLabelsListener();
+        this.setupThemeListener();
         this.setupUrlChangeListener();
         this.setupKeyboardListener();
 
         this.currentPath = location.pathname;
-        // this.checkAndCreateUI();
-
         this.isInitialized = true;
+    }
+
+    setupThemeListener() {
+        if (window.themeManager) {
+            window.themeManager.addListener(this.handleThemeChange);
+        }
+    }
+
+    handleThemeChange(theme) {
+        this.currentTheme = theme;
+        this.updateThemeStyles();
+    }
+
+    updateThemeStyles() {
+        const container = this.uiElements.get('container');
+        const dropdown = this.uiElements.get('dropdown');
+        const searchInput = this.uiElements.get('searchInput');
+        const countBadge = this.uiElements.get('countBadge');
+
+        if (container) {
+            if (this.currentTheme === 'dark') {
+                container.style.backgroundColor = 'rgba(0,0,0, 0.7)';
+                container.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                container.style.color = 'white';
+            } else {
+                container.style.backgroundColor = 'white';
+                container.style.borderColor = 'rgb(229, 231, 235)';
+                container.style.color = 'black';
+            }
+        }
+
+        if (dropdown) {
+            if (this.currentTheme === 'dark') {
+                dropdown.style.backgroundColor = '#1a1a1a';
+                dropdown.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                dropdown.style.color = 'white';
+            } else {
+                dropdown.style.backgroundColor = 'white';
+                dropdown.style.borderColor = 'rgb(229, 231, 235)';
+                dropdown.style.color = 'black';
+            }
+        }
+
+        if (searchInput) {
+            if (this.currentTheme === 'dark') {
+                searchInput.style.backgroundColor = '#2d2d2d';
+                searchInput.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                searchInput.style.color = 'white !important';
+            } else {
+                searchInput.style.backgroundColor = 'white';
+                searchInput.style.borderColor = 'rgb(229, 231, 235)';
+                searchInput.style.color = 'black !important';
+            }
+        }
+
+        // Update all label elements
+        const labelElements = document.querySelectorAll('.label-element');
+        labelElements.forEach(labelElement => {
+            const labelId = labelElement.getAttribute('data-label-id');
+            const label = this.findLabelById(labelId);
+            if (label) {
+                this.applyLabelThemeStyles(labelElement, label);
+            }
+        });
+    }
+
+    findLabelById(labelId) {
+        const allLabels = [...(this.labels.owned || []), ...(this.labels.shared || [])];
+        return allLabels.find(label => label.label_id === labelId);
+    }
+
+    applyLabelThemeStyles(labelElement, label) {
+        if (this.currentTheme === 'dark') {
+            labelElement.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            labelElement.style.color = label.label_color;
+            
+            // Update hover styles for dark theme
+            labelElement.addEventListener('mouseenter', () => {
+                if (!labelElement.isEditing) {
+                    labelElement.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                }
+            });
+            
+            labelElement.addEventListener('mouseleave', () => {
+                if (!labelElement.isEditing) {
+                    labelElement.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                }
+            });
+        } else {
+            labelElement.style.backgroundColor = 'transparent';
+            labelElement.style.color = 'black';
+            
+            // Update hover styles for light theme
+            labelElement.addEventListener('mouseenter', () => {
+                if (!labelElement.isEditing) {
+                    labelElement.style.backgroundColor = 'rgb(243, 244, 246)';
+                }
+            });
+            
+            labelElement.addEventListener('mouseleave', () => {
+                if (!labelElement.isEditing) {
+                    labelElement.style.backgroundColor = 'transparent';
+                }
+            });
+        }
+
+        // Update color dot
+        const colorDot = labelElement.querySelector('.label-color-dot');
+        if (colorDot) {
+            colorDot.style.backgroundColor = label.label_color;
+        }
     }
 
 
@@ -272,18 +384,20 @@ class LabelManager {
     createDropdown(labels) {
         const dropdown = document.createElement('div');
         dropdown.className = 'label-manager-dropdown';
-        dropdown.style.cssText = `
+        const baseDropdownStyles = `
             position: absolute;
             top: 100%;
             left: 0;
             margin-top: 4px;
-            background: white;
-            border: 1px solid rgb(229, 231, 235);
             border-radius: 4px;
             min-width: 280px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             z-index: 1000;
         `;
+        
+        dropdown.style.cssText = baseDropdownStyles + (this.currentTheme === 'dark' 
+            ? `background: #1a1a1a; border: 1px solid rgba(255, 255, 255, 0.2); color: white;`
+            : `background: white; border: 1px solid rgb(229, 231, 235); color: black;`);
 
         // Search input
         const searchContainer = document.createElement('div');
@@ -310,11 +424,11 @@ class LabelManager {
         this.uiElements.set('searchInput', searchInput);
 
         // Owned Tags Section with filtered labels
-        const ownedSection = this.createLabelSection('Owned Tags', labels.owned || []);
+        const ownedSection = this.createLabelSection('Owned Labels', labels.owned || []);
         dropdown.appendChild(ownedSection);
 
         // Shared Tags Section
-        const sharedSection = this.createLabelSection('Shared Tags', labels.shared || []);
+        const sharedSection = this.createLabelSection('Shared Labels', labels.shared || []);
         dropdown.appendChild(sharedSection);
 
         dropdown.addEventListener('keydown', (e) => {
@@ -459,7 +573,7 @@ class LabelManager {
             }
 
             // Get profile data and create label
-            const profileData = window.labelManagerUtils.getProfileInfo();
+            const profileData = await window.labelManagerUtils.getProfileInfo();
             console.log(profileData)
             const result = await window.labelsDatabase.addLabel({
                 label_name: capitalizedTerm,
@@ -469,6 +583,7 @@ class LabelManager {
 
             if (result) {
                 window.complete_action(actionId, true, 'Label created successfully');
+                
                 // window.show_success(`Label "${capitalizedTerm}" created successfully`);
                 return true;
             } else {
@@ -498,7 +613,7 @@ class LabelManager {
             cursor: pointer;
             position: relative;
         `;
-
+        this.applyLabelThemeStyles(labelElement, label);
         // Color indicator
         const colorDot = document.createElement('span');
         colorDot.style.cssText = `
@@ -542,36 +657,39 @@ class LabelManager {
 
         let isEditing = false;
 
-        const finishEditing = async () => {
+        const finishEditing = async (shouldSave = false) => {
             if (!isEditing) return;
-
+        
             isEditing = false;
             nameSpan.contentEditable = 'false';
             nameSpan.style.backgroundColor = '';
             nameSpan.style.border = '';
-
-            const newName = nameSpan.textContent.trim().toUpperCase();
-            if (newName && newName !== label.label_name) {
-                try {
-                    const success = await window.labelsDatabase.editLabel(label.label_id, {
-                        label_name: newName,
-                        label_color: label.label_color
-                    });
-
-                    if (success) {
-                        label.label_name = newName;
-                        labelElement.setAttribute('data-label-name', newName);
-                        window.show_success('Label updated');
-                    } else {
+        
+            if (shouldSave) {
+                const newName = nameSpan.textContent.trim().toUpperCase();
+                if (newName && newName !== label.label_name) {
+                    try {
+                        const success = await window.labelsDatabase.editLabel(label.label_id, {
+                            label_name: newName,
+                            label_color: label.label_color
+                        });
+        
+                        if (success) {
+                            label.label_name = newName;
+                            labelElement.setAttribute('data-label-name', newName);
+                            window.show_success('Label updated');
+                        } else {
+                            nameSpan.textContent = label.label_name;
+                            window.show_error('Failed to update label');
+                        }
+                    } catch (error) {
+                        console.error('Error updating label:', error);
                         nameSpan.textContent = label.label_name;
                         window.show_error('Failed to update label');
                     }
-                } catch (error) {
-                    console.error('Error updating label:', error);
-                    nameSpan.textContent = label.label_name;
-                    window.show_error('Failed to update label');
                 }
             } else {
+                // If not saving, revert to original name
                 nameSpan.textContent = label.label_name;
             }
         };
@@ -632,8 +750,6 @@ class LabelManager {
             labelElement.appendChild(actionsContainer);
         }
 
-        // Handle editing completion
-        nameSpan.addEventListener('blur', finishEditing);
         nameSpan.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -827,11 +943,9 @@ class LabelManager {
         if (window.labelsDatabase) {
             window.labelsDatabase.removeListener(this.handleLabelsUpdate);
         }
-
-        if (this.urlObserver) {
-            this.urlObserver.disconnect();
+        if (window.themeManager) {
+            window.themeManager.removeListener(this.handleThemeChange);
         }
-
         document.removeEventListener('click', this.handleOutsideClick);
         document.removeEventListener('keydown', this.setupKeyboardListener);
 

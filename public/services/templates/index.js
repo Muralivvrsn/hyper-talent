@@ -353,7 +353,8 @@ const setupContentEditableHandlers = () => {
     };
 
     window.messageTemplateDatabase.addListener((updatedTemplates) => {
-        templates = updatedTemplates;
+        console.log(updatedTemplates)
+        templates = updatedTemplates.templates;
         if (floatingPanel?.style.display === 'block') {
             const searchInput = floatingPanel.querySelector('.search-input');
             renderTemplateList(searchInput?.value || '');

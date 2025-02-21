@@ -50,7 +50,7 @@ const MainLayout = ({ children }) => {
 
 
   return (
-    <div className="bg-background">
+    <div className="bg-background h-full">
       <header className="border-b fixed top-0 w-full bg-background z-50">
         <div className="flex items-center justify-between">
           <Navigation
@@ -62,7 +62,7 @@ const MainLayout = ({ children }) => {
           />
         </div>
       </header>
-      <main className="mx-auto p-3 mt-[60px] relative h-[100vh] overflow-hidden">
+      <main className="mx-auto p-3 mt-[60px] relative overflow-hidden h-full">
         {renderPage()}
       </main>
     </div>
@@ -79,7 +79,8 @@ const LoadingScreen = () => (
 );
 
 function AppContent() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, status } = useAuth();
+  console.log(status)
   const { loading: themeLoading } = useTheme();
   const { loading: dataLoading } = useData();
   const [initialLoad, setInitialLoad] = useState(true);
@@ -109,15 +110,15 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (!authLoading && !themeLoading && !dataLoading) {
+    if (status!=='in_progress' && !themeLoading && !dataLoading) {
       const timer = setTimeout(() => {
         setInitialLoad(false);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [authLoading, themeLoading, dataLoading]);
+  }, [status, themeLoading, dataLoading]);
 
-  if (initialLoad || authLoading || themeLoading || dataLoading) {
+  if (initialLoad || status==='in_progress' || themeLoading || dataLoading) {
     return <LoadingScreen />;
   }
 

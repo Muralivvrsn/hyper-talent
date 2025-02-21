@@ -171,22 +171,84 @@ chrome.runtime.onStartup.addListener(() => {
 
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'GET_GOOGLE_TOKEN') {
+  if (message.type === 'GET_TOKEN') {
+    
     handleAsyncMessage(async () => {
+      // const newToken = await refreshingToken();
+      // console.log(newToken)
       try {
-        const { accessToken, tokenExpiration } = await chrome.storage.local.get(['accessToken', 'tokenExpiration']);
+        // Get all required credentials
+        const {
+          accessToken,
+          refreshToken,
+          tokenExpiration,
+          clientId,
+          clientSecret
+        } = await chrome.storage.local.get([
+          'accessToken',
+          'refreshToken',
+          'tokenExpiration',
+          'clientId',
+          'clientSecret'
+        ]);
+
+        // Check if all required credentials exist
+        if (!clientId || !clientSecret) {
+          return {
+            type: 'logged_out',
+            message: 'Missing client credentials'
+          };
+        }
+        console.log({
+          accessToken,
+          refreshToken,
+          tokenExpiration,
+          clientId,
+          clientSecret
+        })
+
+        if (!accessToken || !refreshToken) {
+          return {
+            type: 'logged_out',
+            message: 'No tokens found'
+          };
+        }
+
         const currentTime = Date.now();
         
         // Check if token exists and is not near expiration (50 minutes threshold)
         if (accessToken && tokenExpiration && currentTime < tokenExpiration - 50 * 60 * 1000) {
-          return { token: accessToken, success: true };
+          return {
+            type: 'logged_in',
+            data: {
+              accessToken,
+              expiresAt: tokenExpiration
+            }
+          };
         }
         
         // Token is expired or near expiration, try to refresh
-        const newToken = await refreshToken();
-        return { token: newToken, success: true };
+        try {
+          const newToken = await refreshingToken();
+          return {
+            type: 'logged_in',
+            data: {
+              accessToken: newToken.accessToken,
+              expiresAt: newToken.expiresAt
+            }
+          };
+        } catch (refreshError) {
+          console.log(refreshError)
+          return {
+            type: 'logged_out',
+            message: 'Token refresh failed'
+          };
+        }
       } catch (error) {
-        return { token: null, success: false, error: error.message };
+        return {
+          type: 'logged_out',
+          message: error.message
+        };
       }
     }, sendResponse);
     return true;
@@ -199,11 +261,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await chrome.storage.local.set({
           accessToken: message.token,
           refreshToken: message.refreshToken,
-          tokenExpiration: expirationTime
+          tokenExpiration: expirationTime,
+          clientId: message.clientId,
+          clientSecret: message.clientSecret
         });
-        return { success: true };
+        return { 
+          type: 'logged_in',
+          success: true 
+        };
       } catch (error) {
-        return { success: false, error: error.message };
+        return { 
+          type: 'logged_out',
+          success: false, 
+          message: error.message 
+        };
       }
     }, sendResponse);
     return true;
@@ -212,13 +283,45 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'CLEAR_TOKEN') {
     handleAsyncMessage(async () => {
       try {
-        await chrome.storage.local.remove(['accessToken', 'refreshToken', 'tokenExpiration']);
-        return { success: true };
+        await chrome.storage.local.remove([
+          'accessToken', 
+          'refreshToken', 
+          'tokenExpiration',
+          'clientId',
+          'clientSecret'
+        ]);
+        return { 
+          type: 'logged_out',
+          success: true 
+        };
       } catch (error) {
-        return { success: false, error: error.message };
+        return { 
+          type: 'logged_out',
+          success: false, 
+          message: error.message 
+        };
       }
     }, sendResponse);
     return true;
+  }
+  if (message.type === 'SIGNED_OUT') {
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, { type: 'LOGGED_OUT' });
+      });
+  });
+  sendResponse({ received: true });
+  return true;
+  }
+
+  if (message.type === 'SIGNED_IN') {
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(tab.id, { type: 'LOGGED_IN' });
+      });
+  });
+  sendResponse({ received: true });
+  return true;
   }
 });
 
@@ -226,14 +329,14 @@ const handleAsyncMessage = (asyncFn, sendResponse) => {
   asyncFn().then(sendResponse);
 };
 
-const refreshToken = async () => {
+const refreshingToken = async () => {
   try {
     const { refreshToken, clientId, clientSecret } = await chrome.storage.local.get([
       'refreshToken',
       'clientId',
       'clientSecret'
     ]);
-    
+    console.log({ refreshToken, clientId, clientSecret })
     if (!refreshToken || !clientId || !clientSecret) {
       throw new Error('Missing required credentials');
     }
@@ -249,6 +352,7 @@ const refreshToken = async () => {
       })
     });
 
+    console.log(response)
     if (!response.ok) {
       throw new Error('Failed to refresh token');
     }
@@ -260,9 +364,13 @@ const refreshToken = async () => {
       accessToken: data.access_token,
       tokenExpiration: expirationTime
     });
-
-    return data.access_token;
+    return {
+      accessToken: data.access_token,
+      expiresAt: expirationTime
+    }
+    // return data.access_token;
   } catch (error) {
+    console.log(error)
     throw error;
   }
 };
