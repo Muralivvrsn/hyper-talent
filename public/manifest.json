@@ -38,19 +38,16 @@
         "utils/notification_system/style.js",
         "utils/notification_system/index.js",
         "utils/profileInfo.js",
-        "utils/autoupdate.js",
         "database/index.js",
         "database/user_actions.js",
         "database/tags.js",
         "database/theme.js",
         "database/message_templates.js",
         "database/persionalized_notes.js",
-        "labels/core.js",
-        "labels/theme.js",
-        "labels/components.js",
-        "labels/keyboardnavigation.js",
-        "labels/index.js",
-        "services/tags/observer.js",
+        "tags/index.js",
+        "tags/keyboard.js",
+        "tags/observer.js",
+
 
 
         "label_search.js",

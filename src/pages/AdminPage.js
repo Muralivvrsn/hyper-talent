@@ -3,14 +3,17 @@ import { doc, setDoc, getFirestore } from 'firebase/firestore';
 import { PlusCircle, MinusCircle, Save } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useMigration } from '../context/MigrationContext';
-import { useFeedback } from '../context/FeedbackContext';
+// import { useFeedback } from '../context/FeedbackContext';
 import FeedbackDashboard from '../components/FeedbackDashboard';
 // import ScreenRecorder from './ScreenRecorder';
 const AdminPage = () => {
   const { user } = useAuth();
-  const { add_label_user } = useMigration();
-  const {updateSheetToDatabase} = useFeedback()
+  const { migrateData } = useMigration();
+  // const {updateSheetToDatabase} = useFeedback()
 
+  const handleMigration = ()=>{
+    migrateData()
+  }
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
 
@@ -303,14 +306,14 @@ const AdminPage = () => {
           )}
         </button>
       </form>
-      {/* <div onClick={()=>handleMigration()}>
+      <div onClick={()=>handleMigration()} className='p-5 bg-black text-white text-sm cursor-pointer'>
         Migrate feedack
-      </div> */}
+      </div>
       <div>
        {/* <Dashboard/> */}
        {/* <ScreenRecorder/> */}
        {/* <ScreenRecorder/> */}
-       <FeedbackDashboard/>
+       {/* <FeedbackDashboard/> */}
       </div>
     </div>
   );

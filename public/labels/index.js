@@ -195,22 +195,22 @@
                     console.log('Label clicked:', label);
                     await window.labelCore.applyLabel(label.label_id)    
                 },
-                onLabelEdit: async (label) => {
-                    try {
-                        console.log('edit button clicked')
-                    } catch (error) {
-                        console.error('Edit label error:', error);
-                    }
-                },
-                onLabelDelete: async (label) => {
-                    try {
-                        console.log(label)
-                        await window.labelCore.deleteLabel(label.label_id, label.label_name)    
-                        console.log('delete button clicked')
-                    } catch (error) {
-                        console.error('Delete label error:', error);
-                    }
-                },
+                // onLabelEdit: async (label) => {
+                //     try {
+                //         console.log('edit button clicked')
+                //     } catch (error) {
+                //         console.error('Edit label error:', error);
+                //     }
+                // },
+                // onLabelDelete: async (label) => {
+                //     try {
+                //         console.log(label)
+                //         await window.labelCore.deleteLabel(label.label_id, label.label_name)    
+                //         console.log('delete button clicked')
+                //     } catch (error) {
+                //         console.error('Delete label error:', error);
+                //     }
+                // },
                 onLabelHover: (label, isHovered) => {
                     console.log('Label hover:', label.label_name, isHovered);
                 }
