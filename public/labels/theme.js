@@ -322,6 +322,14 @@ class ThemeStylesManager {
             .visible {
                 display: flex !important;
             }
+            
+            .label-manager-no-labels{
+                text-align: center !important;
+                padding: 30px !important;
+                background: var(--lm-bg) !important;
+                color: var(--lm-text) !important;
+                font-size: 13px !important
+            }
         `;
     }
 

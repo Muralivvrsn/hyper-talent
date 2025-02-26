@@ -44,104 +44,6 @@ window.setupFloatingPanel = () => {
     if (floatingPanel) return floatingPanel;
 
     floatingPanel = document.createElement('div');
-    
-    if (!document.getElementById('shortcuts-styles')) {
-        const styleSheet = document.createElement('style');
-        styleSheet.id = 'shortcuts-styles';
-        styleSheet.textContent = `
-            .floating-panel {
-                font-family: 'Poppins', -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto !important;
-                position: fixed !important;
-                height: auto !important;
-                max-height: 400px !important;
-                display: none !important;
-                z-index: 10000 !important;
-                padding: 16px !important;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                transform: translateY(10px) !important;
-                overflow: hidden !important;
-                border-radius: 12px !important;
-                background-color: white !important;
-                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
-                backdrop-filter: blur(8px) !important;
-                border: 1px solid rgba(0, 0, 0, 0.08) !important;
-            }
-            .search-container {
-                position: relative !important;
-                margin-bottom: 12px !important;
-            }
-            .search-input {
-                width: 100% !important;
-                padding: 12px 16px !important;
-                border: 2px solid #e0e0e0 !important;
-                border-radius: 10px !important;
-                font-family: 'Poppins', sans-serif !important;
-                font-size: 14px !important;
-                outline: none !important;
-                transition: all 0.2s ease !important;
-                background: #f8f9fa !important;
-                color: black !important;
-            }
-            .search-input:focus {
-                border-color: #0a66c2 !important;
-                box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.1) !important;
-                background: white !important;
-            }
-            .template-list {
-                max-height: 320px !important;
-                overflow-y: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                list-style: none !important;
-            }
-            .template-item {
-                padding: 14px !important;
-                border-radius: 10px !important;
-                margin-bottom: 8px !important;
-                cursor: pointer !important;
-                background-color: #f8f9fa !important;
-                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                border: 1px solid transparent !important;
-            }
-            .template-item.selected {
-                background-color: #f3f6f8 !important;
-                border-color: #0a66c2 !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-            }
-            .template-item:hover:not(.selected) {
-                background-color: #f3f6f8 !important;
-                transform: translateY(-1px) !important;
-                border-color: #e0e0e0 !important;
-            }
-            .template-title {
-                font-size: 14px !important;
-                font-weight: 600 !important;
-                color: #1a1a1a !important;
-                margin-bottom: 6px !important;
-            }
-            .template-preview {
-                font-size: 12px !important;
-                color: #666666 !important;
-                display: -webkit-box !important;
-                -webkit-line-clamp: 2 !important;
-                -webkit-box-orient: vertical !important;
-                overflow: hidden !important;
-                line-height: 1.5 !important;
-            }
-            .no-results {
-                text-align: center !important;
-                padding: 24px !important;
-                color: #666666 !important;
-                font-size: 14px !important;
-                font-weight: 500 !important;
-            }
-            .floating-panel[style*="display: block"] {
-                display: block !important;
-            }
-        `;
-        document.head.appendChild(styleSheet);
-    }
-
     floatingPanel.className = 'floating-panel';
     floatingPanel.innerHTML = `
         <div class="search-container">
@@ -183,13 +85,49 @@ const setupContentEditableHandlers = () => {
     const renderTemplateList = (searchTerm = '') => {
         const listContainer = floatingPanel.querySelector('.template-list');
         if (!listContainer) return;
-
+        
+        // Check the status from messageTemplateDatabase
+        const status = window.messageTemplateDatabase?.status || 'in_progress';
+        
+        // Handle different states
+        if (status === 'in_progress') {
+            listContainer.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading templates...</div>
+                </div>
+            `;
+            return;
+        }
+        
+        if (status === 'logged_out') {
+            listContainer.innerHTML = `
+                <div class="login-container">
+                    <p class="login-message">Please login through the extension to access your message templates</p>
+                    <button class="login-button">Login</button>
+                </div>
+            `;
+            
+            // Add click handler for login button
+            setTimeout(() => {
+                const loginButton = listContainer.querySelector('.login-button');
+                if (loginButton) {
+                    loginButton.addEventListener('click', () => {
+                        chrome.runtime.sendMessage({ type: 'HYPER_TALENT_LOGGIN' });
+                    });
+                }
+            }, 0);
+            
+            return;
+        }
+        
+        // Normal flow for logged-in state with templates
         const searchLower = searchTerm.toLowerCase();
         filteredTemplates = templates.filter(template => 
             template.title.toLowerCase().includes(searchLower) ||
             template.message.toLowerCase().includes(searchLower)
         );
-
+    
         if (filteredTemplates.length === 0) {
             listContainer.innerHTML = `
                 <div class="no-results">
@@ -199,7 +137,7 @@ const setupContentEditableHandlers = () => {
             selectedIndex = -1;
             return;
         }
-
+    
         const html = filteredTemplates.map((template, index) => `
             <li class="template-item ${index === 0 ? 'selected' : ''}" 
                 data-id="${template.template_id}"
@@ -209,17 +147,17 @@ const setupContentEditableHandlers = () => {
                 <div class="template-preview">${replacePlaceholders(template.message)}</div>
             </li>
         `).join('');
-
+    
         listContainer.innerHTML = html;
         selectedIndex = 0;
-
+    
         listContainer.querySelectorAll('.template-item').forEach((item, index) => {
             item.addEventListener('click', () => {
                 selectTemplate(index);
                 const template = filteredTemplates[index];
                 if (template) insertTemplate(template);
             });
-
+    
             item.addEventListener('mouseenter', () => {
                 selectTemplate(index);
             });
@@ -352,9 +290,10 @@ const setupContentEditableHandlers = () => {
         }
     };
 
-    window.messageTemplateDatabase.addListener((updatedTemplates) => {
-        console.log(updatedTemplates)
-        templates = updatedTemplates.templates;
+    window.messageTemplateDatabase.addListener((updatedData) => {
+        console.log('Template data updated:', updatedData);
+        templates = updatedData.templates || [];
+        
         if (floatingPanel?.style.display === 'block') {
             const searchInput = floatingPanel.querySelector('.search-input');
             renderTemplateList(searchInput?.value || '');

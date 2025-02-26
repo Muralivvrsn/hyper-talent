@@ -6,6 +6,7 @@ class FirebaseService {
         this.db = null;
         this.status = null; // Start with no status
         this.refreshInterval = null;
+        this.lastSentStatus = null; // Track the last sent status
 
         // Listeners
         this.authStateListeners = new Set();
@@ -26,13 +27,14 @@ class FirebaseService {
     addAuthStateListener(callback) {
         if (typeof callback === 'function') {
             this.authStateListeners.add(callback);
-            // Only notify if we have a status
-            if (this.status) {
+            // Only notify if we have a status and it's different from the last sent status
+            if (this.status && this.status !== this.lastSentStatus) {
                 callback({
                     type: 'status',
                     status: this.status,
                     timestamp: new Date().toISOString()
                 });
+                this.lastSentStatus = this.status;
             }
         }
     }
@@ -42,19 +44,21 @@ class FirebaseService {
     }
 
     _notifyListeners(status) {
-        console.log('auth')
-        console.log(status)
-        this.authStateListeners.forEach(callback => {
-            try {
-                callback({
-                    type: 'status',
-                    status: status,
-                    timestamp: new Date().toISOString()
-                });
-            } catch (error) {
-                console.error('[FirebaseService] Listener notification failed:', error);
-            }
-        });
+        // Only notify if the status is different from the last sent status
+        if (status !== this.lastSentStatus) {
+            this.authStateListeners.forEach(callback => {
+                try {
+                    callback({
+                        type: 'status',
+                        status: status,
+                        timestamp: new Date().toISOString()
+                    });
+                } catch (error) {
+                    console.error('[FirebaseService] Listener notification failed:', error);
+                }
+            });
+            this.lastSentStatus = status;
+        }
     }
 
     _updateStatus(newStatus) {

@@ -1,547 +1,292 @@
-
-
 class LinkedInLabelsDatabase {
     constructor() {
         this.state = {
-            labels: {
-                owned: [],
-                shared: []
-            },
-            loading: true,
+            labels: [],
             listeners: new Set(),
-            subscriptions: new Map(),
-            userDataCache: new Map()
+            status: "in_progress",
+            subscriptions: new Map()
         };
 
-        this.status = null; // Add status property
-        this.isLoadingLabels = false; // Add loading flag
-        this.initialized = false;
-
-        // Bind the auth listener
         this.boundAuthListener = this.handleAuthStateChange.bind(this);
         window.firebaseService.addAuthStateListener(this.boundAuthListener);
     }
 
     async handleAuthStateChange(authState) {
-        try {
-            if (!authState || !authState.type || !authState.status) {
-                return;
-            }
+        if (!authState?.status) return;
 
-            // If we're already loading labels, don't trigger another load
-            if (this.isLoadingLabels) {
-                return;
-            }
-
-            switch (authState.status) {
-                case 'logged_in':
-                    if (this.status !== 'in_progress') {
-                        this._updateStatus('in_progress');
-                        await this.setupRealtimeSync();
-                    }
-                    break;
-
-                case 'logged_out':
-                    this.cleanupSubscriptions();
-                    this.resetState();
-                    this._updateStatus('logged_out');
-                    break;
-
-                case 'in_progress':
-                    if (this.status !== 'in_progress') {
-                        this._updateStatus('in_progress');
-                    }
-                    break;
-            }
-        } catch (error) {
-            console.error('[LinkedInLabels] Auth state change error:', error);
-            this._updateStatus('logged_out');
-        }
-    }
-
-    resetState() {
-        const hadLabels = this.state.labels.owned.length > 0 || this.state.labels.shared.length > 0;
-        this.state.labels = { owned: [], shared: [] };
-        this.cleanupSubscriptions();
-        if (hadLabels) {
-            this.notifyListeners();
-        }
-    }
-
-    _updateStatus(newStatus) {
-        if (this.status !== newStatus) {
-            this.status = newStatus;
-            this.notifyListeners();
-        }
-    }
-
-    async fetchUserName(userId) {
-        try {
-            const db = window.firebaseService.db;
-            // const currentUser = window.firebaseService.currentUser;
-
-            if (this.state.userDataCache.has(userId)) {
-                return this.state.userDataCache.get(userId);
-            }
-
-            const userDoc = await db.collection('users').doc(userId).get();
-            const userName = userDoc.data()?.n || 'Unknown User';
-
-            this.state.userDataCache.set(userId, userName);
-            return userName;
-        } catch (error) {
-            console.error('[LinkedInLabels] Error fetching user name:', error);
-            return 'Unknown User';
+        switch (authState.status) {
+            case 'logged_in':
+                await this.setupRealtimeSync();
+                break;
+            case 'logged_out':
+                this.cleanupSubscriptions();
+                this.resetState();
+                this._updateStatus('logged_out');
+                break;
         }
     }
 
     async setupRealtimeSync() {
-        console.log('realtimesysnc');
-        if (this.isLoadingLabels) {
-            return;
-        }
-        this.isLoadingLabels = true;
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
+
             if (!db || !currentUser) {
                 this._updateStatus('logged_out');
                 return;
             }
 
             this.cleanupSubscriptions();
-            this.resetState();
 
-            // User document listener
-            const userRef = db.collection('users').doc(currentUser.uid);
+            // Setup user document listener
+            const userRef = db.collection('users_v2').doc(currentUser.uid);
             const userUnsubscribe = userRef.onSnapshot(async (userDoc) => {
-                try {
-                    if (!userDoc.exists) return;
+                if (!userDoc.exists) return;
 
-                    const userData = userDoc.data()?.d || {};
-                    const ownedLabelIds = userData.l || [];
-                    const sharedLabels = userData.sl || [];
-                    const acceptedSharedLabelIds = sharedLabels
-                        .filter(label => label.a === true)
-                        .map(label => label.l);
+                const userData = userDoc.data()?.d || {};
+                const labelsList = userData.l || [];
 
-                    const allLabelIds = [...new Set([...ownedLabelIds, ...acceptedSharedLabelIds])];
-
-                    await Promise.all([
-                        this.setupLabelListeners(ownedLabelIds, 'owned', currentUser.uid),
-                        this.setupLabelListeners(acceptedSharedLabelIds, 'shared', currentUser.uid)
-                    ]);
-
-                    // Setup individual label listeners
-                    allLabelIds.forEach(labelId => {
-                        if (!this.state.subscriptions.has(`label_${labelId}`)) {
-                            const labelRef = db.collection('profile_labels').doc(labelId);
-                            const labelUnsubscribe = labelRef.onSnapshot(labelDoc => {
-                                if (labelDoc.exists) {
-                                    const labelData = labelDoc.data();
-                                    if (ownedLabelIds.includes(labelId)) {
-                                        this.updateLabel({
-                                            type: 'owned',
-                                            label_id: labelId,
-                                            label_name: labelData.n,
-                                            label_color: labelData.c,
-                                            profiles: labelData.p || [],
-                                            owned_by: 'mine'
-                                        }, 'owned');
-                                    } else if (acceptedSharedLabelIds.includes(labelId)) {
-                                        this.updateLabel({
-                                            type: 'shared',
-                                            label_id: labelId,
-                                            label_name: labelData.n,
-                                            label_color: labelData.c,
-                                            profiles: labelData.p || [],
-                                            owned_by: labelData.lc
-                                        }, 'shared');
-                                    }
-                                }
-                            });
-                            this.state.subscriptions.set(`label_${labelId}`, labelUnsubscribe);
-                        }
-                    });
-
-                } catch (error) {
-                    console.error('[LinkedInLabels] User document sync error:', error);
-                }
+                // Process each label and setup individual listeners
+                await this.setupLabelListeners(labelsList);
+                console.log('sending message to listenrs')
+                await this._updateStatus('logged_in');
+            }, error => {
+                console.error('[LinkedInLabels] User document sync error:', error);
+                // this._updateStatus('logged_out');
             });
 
             this.state.subscriptions.set('user', userUnsubscribe);
-            this._updateStatus('logged_in');
+            // this._updateStatus('logged_in');
+
         } catch (error) {
             console.error('[LinkedInLabels] Setup realtime sync failed:', error);
             this.cleanupSubscriptions();
-            this._updateStatus('logged_out');
+
+        }
+        finally {
             
         }
-        finally{
-            this.isLoadingLabels = false;
-        }
     }
 
-
-    async setupLabelListeners(labelIds, type, currentUserId) {
+    async getProfileDetails(profileIds) {
         try {
             const db = window.firebaseService.db;
-            // const currentUser = window.firebaseService.currentUser;
-
-            this.cleanupLabelListeners(type);
-            // this.updateLoading(true);
-
-            // Guard against non-array or empty labelIds
-            if (!Array.isArray(labelIds) || labelIds.length === 0) {
-                this.state.labels[type] = [];
-                this.notifyListeners();
-                return;
-            }
-
-            console.log(type);
-            console.log(labelIds)
-
-            const labelListeners = labelIds.map(labelId => {
-                console.log(labelId)
-                if (!labelId) {
-                    console.error('[LinkedInLabels] Invalid label ID:', labelId);
-                    return null;
-                }
-
-
-                const labelRef = db.collection('profile_labels').doc(labelId);
-                return {
-                    id: labelId,
-                    unsubscribe: labelRef.onSnapshot(async (labelDoc) => {
-                        try {
-                            // this.updateLoading(true);
-                            if (!labelDoc.exists) {
-                                this.removeLabel(labelId, type);
-                                return;
-                            }
-
-                            const labelData = labelDoc.data();
-                            const profiles = await this.fetchProfiles(labelData.p || []);
-                            const owned_by = type === 'owned' ?
-                                'mine' :
-                                await this.fetchUserName(labelData.lc);
-
-                            this.updateLabel({
-                                type,
-                                label_id: labelDoc.id,
-                                label_name: labelData.n,
-                                label_color: labelData.c,
-                                profiles,
-                                owned_by
-                            }, type);
-                        } finally {
-                            // this._updateStatus('logged_in');
-                            // this.initialized = true;
-                        }
-                    }, error => {
-                        console.error(`[LinkedInLabels] Label ${labelId} sync error:`, error);
-                        // this._updateStatus('logged_in');
-                    })
-                };
-            }).filter(Boolean); // Remove any null entries from invalid labelIds
-
-            labelListeners.forEach(({ id, unsubscribe }) => {
-                this.state.subscriptions.set(`${type}_${id}`, unsubscribe);
-            });
-
-            this.cleanupRemovedLabels(labelIds, type);
-        } catch (error) {
-            console.error('[LinkedInLabels] Setup label listeners failed:', error);
-        } finally {
-            if (this.status !== 'logged_in') {
-                this._updateStatus('logged_in');
-            }
-        }
-    }
-
-    async fetchProfiles(profileIds) {
-        // this.updateLoading(true);
-        const db = window.firebaseService.db;
-        // const currentUser = window.firebaseService.currentUser;
-        const profiles = [];
-
-        try {
-            await Promise.all(profileIds.map(async profileId => {
-                try {
-                    const profileDoc = await db.collection('profiles').doc(profileId).get();
-                    if (profileDoc.exists) {
-                        const profile = profileDoc.data();
-                        profiles.push({
-                            profile_id: profileDoc.id,
-                            name: profile.n,
-                            image_url: profile.img,
-                            code: profile.c,
-                            user_name: profile.un || null
-                        });
-                    }
-                } catch (error) {
-                    console.error(`[LinkedInLabels] Error fetching profile ${profileId}:`, error);
+            const profiles = [];
+    
+            // Use Promise.all to fetch all profiles in parallel
+            await Promise.all(profileIds.map(async (profileId) => {
+                const profileRef = db.collection('profiles').doc(profileId);
+                const profileDoc = await profileRef.get();
+                
+                if (profileDoc.exists) {
+                    const profileData = profileDoc.data();
+                    profiles.push({
+                        profile_id: profileId,
+                        name: profileData.n,
+                        image_url: profileData.img,
+                        username: profileData.un,
+                        url: profileData.u
+                    });
                 }
             }));
-        } finally {
-            // this._updateStatus('logged_in');
-        }
-
-        return profiles;
-    }
-
-    updateLabel(newLabel, type) {
-        const labelArray = this.state.labels[type];
-        const index = labelArray.findIndex(l => l.label_id === newLabel.label_id);
-        let changed = false;
     
-        if (index === -1) {
-            labelArray.push(newLabel);
-            changed = true;
-        } else if (JSON.stringify(labelArray[index]) !== JSON.stringify(newLabel)) {
-            labelArray[index] = newLabel;
-            changed = true;
+            return profiles;
+        } catch (error) {
+            console.error('[LinkedInLabels] Get profile details error:', error);
+            return [];
         }
+    }
     
-        if (changed) {
-            this.notifyListeners();
-        }
-    }
-
-    removeLabel(labelId, type) {
-        const labelArray = this.state.labels[type];
-        const index = labelArray.findIndex(l => l.label_id === labelId);
-        if (index !== -1) {
-            labelArray.splice(index, 1);
-            this.notifyListeners();
-        }
-    }
-
-    cleanupRemovedLabels(currentLabelIds, type) {
-        const originalLength = this.state.labels[type].length;
-        this.state.labels[type] = this.state.labels[type].filter(label =>
-            currentLabelIds.includes(label.label_id)
-        );
-        if (this.state.labels[type].length !== originalLength) {
-            this.notifyListeners();
-        }
-    }
-
-    cleanupLabelListeners(type) {
+    async setupLabelListeners(labelsList) {
+        console.log("[setupLabelListeners] Initializing label listeners...");
+    
+        const db = window.firebaseService.db;
+        let firsttime = true;
+        const currentLabels = new Set();
+    
+        console.log("[setupLabelListeners] Received labelsList:", labelsList);
+    
+        labelsList.forEach(labelData => {
+            const labelId = labelData.id;
+            console.log(`[setupLabelListeners] Processing label: ${labelId}`);
+    
+            currentLabels.add(labelId);
+    
+            // Skip if listener already exists
+            if (this.state.subscriptions.has(`label_${labelId}`)) {
+                console.warn(`[setupLabelListeners] Listener already exists for label ${labelId}, skipping.`);
+                return;
+            }
+    
+            console.log(`[setupLabelListeners] Setting up listener for label: ${labelId}`);
+            const labelRef = db.collection('profile_labels_v2').doc(labelId);
+    
+            const labelUnsubscribe = labelRef.onSnapshot(async (labelDoc) => {
+                console.log(`[onSnapshot] Snapshot received for label ${labelId}`);
+    
+                if (!labelDoc.exists) {
+                    console.warn(`[onSnapshot] Label ${labelId} does not exist. Removing from state.`);
+                    this.removeLabel(labelId);
+                    return;
+                }
+    
+                const label = labelDoc.data();
+                console.log(`[onSnapshot] Label data for ${labelId}:`, label);
+    
+                // Get profile details for each profile ID
+                console.log(`[onSnapshot] Fetching profile details for label ${labelId}`);
+                const profileDetails = await this.getProfileDetails(label.p || []);
+                console.log(`[onSnapshot] Profile details fetched for label ${labelId}:`, profileDetails);
+    
+                const labelInfo = {
+                    label_id: labelId,
+                    label_name: label.n,
+                    label_color: label.c,
+                    profiles: profileDetails, // Now contains full profile objects
+                    last_updated: label.lu,
+                    type: labelData.t,
+                    ...(labelData.t === 'owned' && { created_at: labelData.ca }),
+                    ...(labelData.t === 'shared' && {
+                        permission: labelData.ps,
+                        shared_by: labelData.sbn,
+                        shared_at: labelData.sa
+                    })
+                };
+    
+                console.log(`[onSnapshot] Constructed labelInfo for ${labelId}:`, labelInfo);
+    
+                // if (!firsttime) {
+                //     console.log(`[onSnapshot] Updating label ${labelId}`);
+                    this.updateLabel(labelInfo, firsttime);
+                // } else {
+                //     console.log(`[onSnapshot] First-time execution, skipping update for ${labelId}`);
+                // }
+            }, error => {
+                console.error(`[onSnapshot] Label ${labelId} sync error:`, error);
+            });
+    
+            this.state.subscriptions.set(`label_${labelId}`, labelUnsubscribe);
+            firsttime = false;
+            console.log(`[setupLabelListeners] Listener added for label: ${labelId}`);
+        });
+    
+       
+        console.log("[setupLabelListeners] First-time flag set to false.");
+    
+        // Cleanup listeners for removed labels
+        console.log("[setupLabelListeners] Checking for removed labels...");
         for (const [key, unsubscribe] of this.state.subscriptions.entries()) {
-            if (key.startsWith(`${type}_`)) {
-                unsubscribe();
-                this.state.subscriptions.delete(key);
+            if (key.startsWith('label_')) {
+                const labelId = key.replace('label_', '');
+                if (!currentLabels.has(labelId)) {
+                    console.warn(`[setupLabelListeners] Label ${labelId} is no longer in labelsList. Cleaning up.`);
+                    unsubscribe();
+                    this.state.subscriptions.delete(key);
+                    this.removeLabel(labelId);
+                    console.log(`[setupLabelListeners] Unsubscribed and removed label: ${labelId}`);
+                }
             }
         }
+    
+        console.log("[setupLabelListeners] Completed label listener setup.");
+    }
+    
+    async removeProfileFromLabel(labelId, profileId) {
+        try {
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+
+            const profileInfo = await window.labelManagerUtils.getProfileInfo();
+    
+            if (!db || !currentUser) {
+                throw new Error('Not authenticated');
+            }
+    
+            // Get the label reference
+            const labelRef = db.collection('profile_labels_v2').doc(labelId);
+            const labelDoc = await labelRef.get();
+    
+            if (!labelDoc.exists) {
+                throw new Error('Label not found');
+            }
+    
+            const labelData = labelDoc.data();
+            
+            console.log(profileId)
+            console.log(profileInfo.profile_id);
+
+            // Check if profile exists in the profiles array
+            if (!labelData.p || !labelData.p.includes(profileInfo.profile_id)) {
+                throw new Error('Profile not found in label');
+            }
+    
+            // Remove profile from the profiles array
+            await labelRef.update({
+                p: firebase.firestore.FieldValue.arrayRemove(profileInfo.profile_id),
+                lu: new Date().toISOString() // Update last updated timestamp
+            });
+    
+            return true;
+        } catch (error) {
+            console.error('[LinkedInLabels] Remove profile from label error:', error);
+            throw error;
+        }
+    }
+
+    updateLabel(newLabel, firsttime) {
+        this.state.labels = this.state.labels.map(label =>
+            label.label_id === newLabel.label_id ? newLabel : label
+        );
+    
+        // If the label is new, add it
+        if (!this.state.labels.some(label => label.label_id === newLabel.label_id)) {
+            this.state.labels = [...this.state.labels, newLabel]; // ✅ Replaces array
+        }
+    
+        if (!firsttime) {
+            this.notifyListeners(); // ✅ UI should update now
+        }
+    }
+
+    removeLabel(labelId) {
+        this.state.labels = this.state.labels.filter(l => l.label_id !== labelId);
+        this.notifyListeners();
     }
 
     cleanupSubscriptions() {
-        Array.from(this.state.subscriptions.values()).forEach(unsubscribe => {
+        for (const unsubscribe of this.state.subscriptions.values()) {
             try {
                 unsubscribe();
             } catch (error) {
                 console.error('[LinkedInLabels] Cleanup error:', error);
             }
-        });
+        }
         this.state.subscriptions.clear();
-        this.state.userDataCache.clear();
     }
 
-    async addLabel(labelData) {
-
-        try {
-            // this.updateLoading(true);
-            const db = window.firebaseService.db;
-            const currentUser = window.firebaseService.currentUser;
-            if (!db || !currentUser) throw new Error('Firebase not initialized');
-
-            // Validate required fields
-            if (!labelData.label_id || !labelData.label_name || !labelData.label_color) {
-                console.error('[LinkedInLabels] Missing required label data:', labelData);
-                return false;
-            }
-
-            const batch = db.batch();
-            const userRef = db.collection('users').doc(currentUser.uid);
-            const labelRef = db.collection('profile_labels').doc(labelData.label_id);
-
-            batch.update(userRef, {
-                'd.l': firebase.firestore.FieldValue.arrayUnion(labelData.label_id)
-            });
-
-            // Initialize document with profile array
-            const labelDoc = {
-                n: labelData.label_name,
-                c: labelData.label_color,
-                lc: currentUser.uid,
-                lu: new Date().toISOString(),
-                p: [] // Initialize empty array by default
-            };
-
-            batch.set(labelRef, labelDoc);
-
-            await batch.commit();
-            window.userActionsDatabase.addAction("label_added")
-            return true;
-        } catch (error) {
-            console.error('[LinkedInLabels] Failed to add label:', error);
-            window.userActionsDatabase.addAction("label_added_failed", error)
-            return false;
-        } finally {
-            // this._updateStatus('logged_in');
-        }
+    resetState() {
+        this.state.labels = [];
+        this.notifyListeners();
     }
 
-    async editLabel(labelId, updatedLabel) {
-        try {
-            // this.updateLoading(true);
-            const db = window.firebaseService.db;
-            const currentUser = window.firebaseService.currentUser;
-            if (!db || !currentUser) throw new Error('Firebase not initialized');
-
-            await db.collection('profile_labels').doc(labelId).update({
-                n: updatedLabel.label_name,
-                c: updatedLabel.label_color,
-                lu: new Date().toISOString()
-            });
-            window.userActionsDatabase.addAction("label_edited")
-            return true;
-        } catch (error) {
-            console.error('[LinkedInLabels] Failed to edit label:', error);
-            window.userActionsDatabase.addAction("label_edited_failed", error)
-            return false;
-        } finally {
-            this._updateStatus('logged_in');
-        }
-    }
-
-    async deleteLabel(labelId) {
-        try {
-            // this.updateLoading(true);
-            const db = window.firebaseService.db;
-            const currentUser = window.firebaseService.currentUser;
-            if (!db || !currentUser) throw new Error('Firebase not initialized');
-
-            const batch = db.batch();
-            const userRef = db.collection('users').doc(currentUser.uid);
-            const labelRef = db.collection('profile_labels').doc(labelId);
-
-            batch.update(userRef, {
-                'd.l': firebase.firestore.FieldValue.arrayRemove(labelId)
-            });
-
-            batch.delete(labelRef);
-
-            await batch.commit();
-            window.userActionsDatabase.addAction("label_deleted")
-            return true;
-        } catch (error) {
-            console.error('[LinkedInLabels] Failed to delete label:', error);
-            window.userActionsDatabase.addAction("label_deleted_failed", error)
-            return false;
-        } finally {
-            this._updateStatus('logged_in');
-        }
-    }
-
-    async addProfileToLabel(labelId, profileId, profileData) {
-        try {
-            // this.updateLoading(true);
-
-            // Validate inputs
-            if (!labelId || !profileId) {
-                console.error('[LinkedInLabels] Invalid inputs:', { labelId, profileId });
-                return false;
-            }
-
-            const db = window.firebaseService.db;
-            const currentUser = window.firebaseService.currentUser;
-            if (!db || !currentUser) throw new Error('Firebase not initialized');
-
-            const labelRef = db.collection('profile_labels').doc(labelId);
-            const labelDoc = await labelRef.get();
-
-            if (!labelDoc.exists) {
-                console.error('[LinkedInLabels] Label document does not exist:', labelId);
-                return false;
-            }
-
-            const labelData = labelDoc.data();
-            const currentProfiles = labelData.p || [];
-
-            // Check if profile already exists in the label
-            if (Array.isArray(currentProfiles) && currentProfiles.includes(profileId)) {
-                window.show_warning('This profile has already been added to this label');
-                return false;
-            }
-
-            const profileRef = db.collection('profiles').doc(profileId);
-
-            // Check if profile exists, if not and profileData is provided, create profile
-            const profileDoc = await profileRef.get();
-            if (!profileDoc.exists && profileData) {
-                await profileRef.set({
-                    n: profileData.name || null,
-                    u: profileData.url || null,
-                    un: profileData.username || null,
-                    c: profileId || null,
-                    img: profileData.imageUrl || null,
-                    lu: new Date().toISOString()
-                }, { merge: true });
-            }
-
-            // Update with a new array if p doesn't exist, or use arrayUnion if it does
-            await labelRef.update({
-                p: Array.isArray(currentProfiles) ?
-                    firebase.firestore.FieldValue.arrayUnion(profileId) :
-                    [profileId],
-                lu: new Date().toISOString()
-            });
-            window.userActionsDatabase.addAction("label_applied");
-            return true;
-        } catch (error) {
-            window.userActionsDatabase.addAction("label_applied_failed", error);
-            return false;
-        } finally {
-            this._updateStatus('logged_in');
-        }
-    }
-
-    async removeProfileFromLabel(labelId, profileId) {
-        try {
-            // this.updateLoading(true);
-            const db = window.firebaseService.db;
-            const currentUser = window.firebaseService.currentUser;
-            if (!db || !currentUser) throw new Error('Firebase not initialized');
-
-            await db.collection('profile_labels').doc(labelId).update({
-                p: firebase.firestore.FieldValue.arrayRemove(profileId),
-                lu: new Date().toISOString()
-            });
-            window.userActionsDatabase.addAction("label_removed")
-            return true;
-        } catch (error) {
-            console.error('[LinkedInLabels] Failed to remove profile from label:', error);
-            window.userActionsDatabase.addAction("label_removed_failed", error)
-            return false;
-        } finally {
-            this._updateStatus('logged_in');
+    async _updateStatus(newStatus) {
+        console.log(this.state.status);
+        console.log(newStatus)
+        if (this.state.status !== newStatus) {
+            this.state.status = newStatus;
+            this.notifyListeners();
         }
     }
 
     addListener(callback) {
         if (typeof callback === 'function') {
             this.state.listeners.add(callback);
-            // Only notify if we have a status
-            if (this.status) {
-                callback({
-                    type: 'status',
-                    status: this.status,
-                    labels: this.state.labels,
-                    timestamp: new Date().toISOString()
-                });
-            }
+            callback({
+                type: 'status',
+                status: this.state.status,
+                labels: this.state.labels,
+                timestamp: new Date().toISOString()
+            });
         }
     }
 
@@ -550,12 +295,15 @@ class LinkedInLabelsDatabase {
     }
 
     notifyListeners() {
+        this.state.labels = [...this.state.labels]; // ✅ Ensure new object reference
+    
         this.state.listeners.forEach(callback => {
+            console.log("Notifying listeners with labels:", this.state.labels);
             try {
                 callback({
                     type: 'status',
-                    status: this.status,
-                    labels: this.state?.labels,
+                    status: this.state.status,
+                    labels: [...this.state.labels], // ✅ Ensure new array reference
                     timestamp: new Date().toISOString()
                 });
             } catch (error) {
@@ -563,31 +311,216 @@ class LinkedInLabelsDatabase {
             }
         });
     }
+    // Add these methods to the LinkedInLabelsDatabase class
+
+    async createLabel(labelName) {
+        try {
+            // Check for duplicates
+            const isDuplicate = this.state.labels.some(label =>
+                label.label_name === labelName
+            );
+
+            if (isDuplicate) {
+                throw new Error('Label with this name already exists');
+            }
+
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+
+            if (!db || !currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            // Generate label ID
+            const labelId = `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            // Random color generation (light colors)
+            const generateRandomColor = () => {
+                const hue = Math.floor(Math.random() * 360);
+                return `hsl(${hue}, 70%, 75%)`;
+            };
+
+            // First, create the document in profile_labels_v2
+            const labelRef = db.collection('profile_labels_v2').doc(labelId);
+            await labelRef.set({
+                n: labelName,          // name
+                c: generateRandomColor(), // color
+                p: [],                 // profiles array
+                lu: new Date().toISOString() // last updated
+            });
+
+            // Then, update the users_v2 document
+            const userRef = db.collection('users_v2').doc(currentUser.uid);
+
+            await userRef.update({
+                'd.l': firebase.firestore.FieldValue.arrayUnion({
+                    id: labelId,
+                    t: 'owned',    // type
+                    ca: new Date().toISOString() // created at
+                })
+            });
+
+            return labelId;
+        } catch (error) {
+            console.error('[LinkedInLabels] Create label error:', error);
+            throw error;
+        }
+    }
+
+    async deleteLabel(labelId) {
+        try {
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+    
+            if (!db || !currentUser) {
+                throw new Error('Not authenticated');
+            }
+    
+            // First, get the current user document to find the exact object to remove
+            const userRef = db.collection('users_v2').doc(currentUser.uid);
+            const userDoc = await userRef.get();
+            const userData = userDoc.data()?.d || {};
+            const labelsList = userData.l || [];
+            
+            // Find the exact label object in the array
+            const labelToRemove = labelsList.find(label => label.id === labelId);
+            
+            if (!labelToRemove) {
+                throw new Error('Label not found in user document');
+            }
+    
+            // First, delete from profile_labels_v2
+            const labelRef = db.collection('profile_labels_v2').doc(labelId);
+            await labelRef.delete();
+    
+            // Then, remove from users_v2 array using the exact object
+            await userRef.update({
+                'd.l': firebase.firestore.FieldValue.arrayRemove(labelToRemove)
+            });
+        } catch (error) {
+            console.error('[LinkedInLabels] Delete label error:', error);
+            throw error;
+        }
+    }
+
+    async editLabelName(labelId, newName) {
+        try {
+            // Check for duplicates excluding the current label
+            const isDuplicate = this.state.labels.some(label =>
+                label.label_name === newName &&
+                label.label_id !== labelId
+            );
+
+            if (isDuplicate) {
+                throw new Error('Label with this name already exists');
+            }
+
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+
+            if (!db || !currentUser) {
+                throw new Error('Not authenticated');
+            }
+
+            // Update only the name in profile_labels_v2
+            const labelRef = db.collection('profile_labels_v2').doc(labelId);
+            await labelRef.update({
+                n: newName,
+                lu: new Date().toISOString() // Update last updated timestamp
+            });
+        } catch (error) {
+            console.error('[LinkedInLabels] Edit label error:', error);
+            throw error;
+        }
+    }
+
+    async applyLabel(labelId) {
+        try {
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+    
+            if (!db || !currentUser) {
+                throw new Error('Not authenticated');
+            }
+    
+            // Get current profile info from the page
+            const profileInfo = await window.labelManagerUtils.getProfileInfo();
+            console.log(profileInfo)
+            if (!profileInfo || !profileInfo.profile_id) {
+                throw new Error('Could not get profile information from current page');
+            }
+    
+            // First check if profile exists in profiles collection
+            const profileRef = db.collection('profiles').doc(profileInfo.profile_id);
+            const profileDoc = await profileRef.get();
+    
+            if (profileDoc.exists) {
+                // Profile exists, update with new info but preserve existing username if new one is null
+                const existingData = profileDoc.data();
+                await profileRef.update({
+                    n: profileInfo.name,
+                    u: profileInfo.url,
+                    img: profileInfo.image_url,
+                    un: profileInfo.username || existingData.un, // Keep existing username if new one is null
+                    lu: new Date().toISOString()
+                });
+            } else {
+                // Profile doesn't exist, create new profile
+                await profileRef.set({
+                    c: profileInfo.profile_id,
+                    n: profileInfo.name,
+                    u: profileInfo.url,
+                    img: profileInfo.image_url,
+                    un: profileInfo.username,
+                    lu: new Date().toISOString()
+                });
+            }
+    
+            // Update the label's profiles array
+            const labelRef = db.collection('profile_labels_v2').doc(labelId);
+            const labelDoc = await labelRef.get();
+    
+            if (!labelDoc.exists) {
+                throw new Error('Label not found');
+            }
+    
+            // Add profile_id to the profiles array if not already present
+            await labelRef.update({
+                p: firebase.firestore.FieldValue.arrayUnion(profileInfo.profile_id),
+                lu: new Date().toISOString()
+            });
+    
+            return {
+                success: true,
+                profile_id: profileInfo.profile_id
+            };
+    
+        } catch (error) {
+            console.error('[LinkedInLabels] Apply label error:', error);
+            throw error;
+        }
+    }
 
     destroy() {
         this.cleanupSubscriptions();
         this.state.listeners.clear();
         window.firebaseService.removeAuthStateListener(this.boundAuthListener);
-        const wasLoggedIn = this.status === 'logged_in';
-        this.status = null;
+        const wasLoggedIn = this.state.status === 'logged_in';
+        this.state.status = null;
+
         if (wasLoggedIn) {
-            // Pass correct notification object
             this.state.listeners.forEach(callback => {
-                try {
-                    callback({
-                        type: 'status',
-                        status: 'logged_out',
-                        labels: this.state.labels,
-                        timestamp: new Date().toISOString()
-                    });
-                } catch (error) {
-                    console.error('[LinkedInLabels] Error in destroy notification:', error);
-                }
+                callback({
+                    type: 'status',
+                    status: 'logged_out',
+                    labels: this.state.labels,
+                    timestamp: new Date().toISOString()
+                });
             });
         }
     }
 }
 
 if (!window.labelsDatabase) {
-    window.labelsDatabase = new LinkedInLabelsDatabase()
+    window.labelsDatabase = new LinkedInLabelsDatabase();
 }
