@@ -30,7 +30,7 @@ const PendingLabelsAlert = () => {
         setProcessing(true);
         try {
             await runTransaction(db, async (transaction) => {
-                const userRef = doc(db, 'users', user.uid);
+                const userRef = doc(db, 'users_v2', user.uid);
                 const userDoc = await transaction.get(userRef);
 
                 if (!userDoc.exists()) {
@@ -38,18 +38,27 @@ const PendingLabelsAlert = () => {
                 }
 
                 const userData = userDoc.data();
-                const currentSharedLabels = userData.d?.sl || [];
-                
-                const updatedSharedLabels = currentSharedLabels.map(label => 
-                    selectedLabels.includes(label.l) ? { ...label, a: accept } : label
-                );
+                const allLabels = userData.d?.l || [];
+
+                let updatedLabels;
+
+                if (accept) {
+                    updatedLabels = allLabels.map(label =>
+                        (selectedLabels.includes(label.id) && label.t === 'shared')
+                            ? { ...label, a: true }
+                            : label
+                    );
+                } else {
+                    updatedLabels = allLabels.filter(label =>
+                        !(selectedLabels.includes(label.id) && label.t === 'shared')
+                    );
+                }
 
                 transaction.update(userRef, {
-                    'd.sl': updatedSharedLabels
+                    'd.l': updatedLabels
                 });
             });
 
-            // Close sheet if all pending labels were processed
             if (selectedLabels.length === Object.keys(pendingSharedLabels).length) {
                 setIsOpen(false);
             }
@@ -93,23 +102,22 @@ const PendingLabelsAlert = () => {
                         </AlertDescription>
                     </Alert>
                 </SheetTrigger>
-                
+
                 <SheetContent side="bottom" className="h-[400px] flex flex-col">
                     <SheetHeader>
                         <SheetTitle>Pending Label Invitations</SheetTitle>
                     </SheetHeader>
-                    
+
                     <div className="flex-1 overflow-auto py-4">
                         <div className="space-y-2">
                             {Object.entries(pendingSharedLabels).map(([labelId, label]) => (
-                                <div 
+                                <div
                                     key={labelId}
                                     onClick={() => toggleLabelSelection(labelId)}
-                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                        selectedLabels.includes(labelId)
-                                            ? 'bg-accent' 
-                                            : 'hover:bg-accent/50'
-                                    }`}
+                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedLabels.includes(labelId)
+                                        ? 'bg-accent'
+                                        : 'hover:bg-accent/50'
+                                        }`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Checkbox
@@ -118,7 +126,7 @@ const PendingLabelsAlert = () => {
                                                 e?.stopPropagation?.();
                                                 toggleLabelSelection(labelId);
                                             }}
-                                            // onCheckedChange={() => toggleLabelSelection(labelId)}
+                                        // onCheckedChange={() => toggleLabelSelection(labelId)}
                                         />
                                         <span
                                             className="w-3 h-3 rounded-full"
@@ -127,7 +135,7 @@ const PendingLabelsAlert = () => {
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-medium">{label.name}</h4>
                                             <p className="text-sm text-muted-foreground">
-                                                Shared by {getSharedByUser(label.createdBy)}
+                                                Shared by {label.sbn || getSharedByUser(label.sb)}
                                             </p>
                                         </div>
                                     </div>

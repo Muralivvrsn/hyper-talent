@@ -36,12 +36,23 @@ export const LabelProvider = ({ children }) => {
         const unsubscribers = [];
         const profileUnsubscribers = new Map();
 
+        // Get all labels from userProfile.data.labels
+        const allLabels = userProfile?.data?.labels || [];
+        
+        // Divide labels based on type (t)
+        const ownedLabelIds = allLabels
+            .filter(label => label.t !== 'shared')
+            .map(label => label.id);
+            
+        const sharedLabels = allLabels
+            .filter(label => label.t === 'shared');
+            
         // Subscribe to owned labels
         const subscribeToOwnedLabels = () => {
-            if (userProfile?.data?.labelIds?.length) {
-                userProfile?.data?.labelIds.forEach(labelId => {
+            if (ownedLabelIds.length) {
+                ownedLabelIds.forEach(labelId => {
                     const unsubscribe = onSnapshot(
-                        doc(db, 'profile_labels', labelId),
+                        doc(db, 'profile_labels_v2', labelId),
                         (docSnapshot) => {
                             if (docSnapshot.exists()) {
                                 const labelData = docSnapshot.data();
@@ -78,21 +89,18 @@ export const LabelProvider = ({ children }) => {
 
         // Subscribe to shared labels
         const subscribeToSharedLabels = () => {
-            // First, clear any shared labels not in userProfile?.data?
-            if (!userProfile?.data?.sharedLabels?.length) {
+            if (!sharedLabels.length) {
                 setActiveSharedLabels({});
                 setPendingSharedLabels({});
                 return;
             }
 
-            // Get current label IDs from userProfile?.data?
-            const currentLabelIds = new Set(userProfile?.data?.sharedLabels.map(sl => sl.l));
+            const currentSharedLabelIds = new Set(sharedLabels.map(sl => sl.id));
 
-            // Clean up any labels that are no longer in userProfile?.data?
             setPendingSharedLabels(prev => {
                 const updated = {};
                 Object.entries(prev).forEach(([id, label]) => {
-                    if (currentLabelIds.has(id)) {
+                    if (currentSharedLabelIds.has(id)) {
                         updated[id] = label;
                     }
                 });
@@ -102,7 +110,7 @@ export const LabelProvider = ({ children }) => {
             setActiveSharedLabels(prev => {
                 const updated = {};
                 Object.entries(prev).forEach(([id, label]) => {
-                    if (currentLabelIds.has(id)) {
+                    if (currentSharedLabelIds.has(id)) {
                         updated[id] = label;
                     }
                 });
@@ -110,14 +118,14 @@ export const LabelProvider = ({ children }) => {
             });
 
             // Subscribe to each shared label
-            userProfile?.data?.sharedLabels.forEach(sharedLabel => {
+            sharedLabels.forEach(sharedLabel => {
                 const unsubscribe = onSnapshot(
-                    doc(db, 'profile_labels', sharedLabel.l),
+                    doc(db, 'profile_labels_v2', sharedLabel.id),
                     (docSnapshot) => {
                         if (docSnapshot.exists()) {
                             const labelData = docSnapshot.data();
                             const labelInfo = {
-                                id: sharedLabel.l,
+                                id: sharedLabel.id,
                                 name: labelData.n,
                                 color: labelData.c,
                                 createdBy: labelData.lc,
@@ -131,11 +139,11 @@ export const LabelProvider = ({ children }) => {
                                 // When accepted, move to active and remove from pending
                                 setActiveSharedLabels(prev => ({
                                     ...prev,
-                                    [sharedLabel.l]: labelInfo
+                                    [sharedLabel.id]: labelInfo
                                 }));
                                 setPendingSharedLabels(prev => {
                                     const updated = { ...prev };
-                                    delete updated[sharedLabel.l];
+                                    delete updated[sharedLabel.id];
                                     return updated;
                                 });
                                 subscribeToProfiles(labelData.p || [], profileUnsubscribers);
@@ -143,23 +151,23 @@ export const LabelProvider = ({ children }) => {
                                 // When declined, remove from both states
                                 setActiveSharedLabels(prev => {
                                     const updated = { ...prev };
-                                    delete updated[sharedLabel.l];
+                                    delete updated[sharedLabel.id];
                                     return updated;
                                 });
                                 setPendingSharedLabels(prev => {
                                     const updated = { ...prev };
-                                    delete updated[sharedLabel.l];
+                                    delete updated[sharedLabel.id];
                                     return updated;
                                 });
                             } else if (sharedLabel.a === null) {
                                 // When pending, add to pending and remove from active
                                 setPendingSharedLabels(prev => ({
                                     ...prev,
-                                    [sharedLabel.l]: labelInfo
+                                    [sharedLabel.id]: labelInfo
                                 }));
                                 setActiveSharedLabels(prev => {
                                     const updated = { ...prev };
-                                    delete updated[sharedLabel.l];
+                                    delete updated[sharedLabel.id];
                                     return updated;
                                 });
                             }
@@ -167,12 +175,12 @@ export const LabelProvider = ({ children }) => {
                             // If document doesn't exist, remove from both states
                             setActiveSharedLabels(prev => {
                                 const updated = { ...prev };
-                                delete updated[sharedLabel.l];
+                                delete updated[sharedLabel.id];
                                 return updated;
                             });
                             setPendingSharedLabels(prev => {
                                 const updated = { ...prev };
-                                delete updated[sharedLabel.l];
+                                delete updated[sharedLabel.id];
                                 return updated;
                             });
                         }

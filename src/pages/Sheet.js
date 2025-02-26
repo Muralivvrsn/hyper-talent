@@ -3,7 +3,7 @@ import { Button } from "../components/ui/button";
 import { Upload, Database, FileSpreadsheet, Loader2, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
-import { doc, setDoc, getFirestore, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getFirestore } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Tooltip,
@@ -106,6 +106,8 @@ const SheetPage = () => {
   const { notes, getNoteWithProfile } = useNotes();
   const { templates } = useTemplates();
 
+  const db = getFirestore();
+
   const handleCreate = async () => {
     try {
       setLoadingStates(prev => ({ ...prev, create: true }));
@@ -116,17 +118,20 @@ const SheetPage = () => {
       const currentTime = new Date().toISOString();
 
       const newSheetData = {
-        sd: {
-          id: sheet.spreadsheetId,
-          ca: currentTime,
-          ls: currentTime
-        }
+        id: sheet.spreadsheetId,
+        ca: currentTime,
+        ls: currentTime
       };
 
-      await updateDoc(doc(getFirestore(), 'users', user.uid), newSheetData);
-      setSheetData(newSheetData.sd);
+      // Update user document with new spreadsheet data
+      const userDocRef = doc(db, 'users_v2', user.uid);
+      await updateDoc(userDocRef, {
+        'd.sd': newSheetData
+      });
+      
+      setSheetData(newSheetData);
 
-      window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.sd.id}`, '_blank');
+      window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
     } catch (error) {
       console.error('Error creating sheet:', error);
     } finally {
@@ -150,9 +155,9 @@ const SheetPage = () => {
       };
 
       if (syncType === "Sheet") {
-        await syncSheet(sheetData?.id, token, { ...data, getLabelProfiles, getNoteWithProfile });
+        await syncSheet(sheetData.id, token, { ...data, getLabelProfiles, getNoteWithProfile });
       } else {
-        await syncDatabase(sheetData?.id, token, user.uid, data);
+        await syncDatabase(sheetData.id, token, user.uid, data);
       }
 
       const updatedSheetData = {
@@ -160,8 +165,10 @@ const SheetPage = () => {
         ls: new Date().toISOString()
       };
 
-      await updateDoc(doc(getFirestore(), 'users', user.uid), {
-        sd: updatedSheetData
+      // Update user document with updated spreadsheet data
+      const userDocRef = doc(db, 'users_v2', user.uid);
+      await updateDoc(userDocRef, {
+        'd.sd': updatedSheetData
       });
 
       setSheetData(updatedSheetData);
@@ -186,7 +193,7 @@ const SheetPage = () => {
       const sheetResponse = await response.json();
       const sheetRows = sheetResponse.values || [];
 
-      if (sheetRows.length === 0) return
+      if (sheetRows.length === 0) return;
 
       const headerIndices = {};
       sheetRows[0].forEach((header, index) => {
@@ -207,7 +214,11 @@ const SheetPage = () => {
           ls: new Date().toISOString()
         };
 
-        await setDoc(doc(getFirestore(), 'sheets', user.uid), updatedSheetData);
+        const userDocRef = doc(db, 'users_v2', user.uid);
+        await updateDoc(userDocRef, {
+          'd.sd': updatedSheetData
+        });
+        
         setSheetData(updatedSheetData);
       }
 
@@ -230,7 +241,7 @@ const SheetPage = () => {
     <div className="mx-auto max-w-4xl">
       <h1 className="text-lg font-semibold mb-2">Sheet Manager</h1>
       <span className="text-muted-foreground mb-2">
-        Sync and manage your LinkedIn connections using Google Sheets. {sheetData && <b>Last synced: {formatDate(sheetData.ls)}</b> }
+        Sync and manage your LinkedIn connections using Google Sheets. {sheetData && <b>Last synced: {formatDate(sheetData.lastSynced)}</b> }
       </span>
       <div>
         {!sheetData ? (

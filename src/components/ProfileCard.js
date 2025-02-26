@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Users, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2 } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2, ChevronRight } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Button } from './ui/button';
 import ProfileActionManager from './ProfileActionManager';
@@ -11,8 +11,10 @@ import { removeLabelFromProfile } from '../utils/labelUtils';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
 
-const ProfileCard = ({ profile, labels, note }) => {
+const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
   const [expanded, setExpanded] = useState(false);
+  const [sharedNotesExpanded, setSharedNotesExpanded] = useState(false);
+  const [expandedSharedNotes, setExpandedSharedNotes] = useState({});
   const [actionType, setActionType] = useState(null);
   const initials = profile.name?.slice(0, 2).toUpperCase() || '??';
   const [removingLabels, setRemovingLabels] = useState(false);
@@ -45,6 +47,13 @@ const ProfileCard = ({ profile, labels, note }) => {
     } finally {
       setRemovingLabels(prev => ({ ...prev, [labelId]: false }));
     }
+  };
+
+  const toggleSharedNoteExpanded = (noteId) => {
+    setExpandedSharedNotes(prev => ({
+      ...prev,
+      [noteId]: !prev[noteId]
+    }));
   };
 
   return (
@@ -136,6 +145,8 @@ const ProfileCard = ({ profile, labels, note }) => {
             ))}
           </div>
         )}
+        
+        {/* Primary note */}
         {note && (
           <div>
             <p className={`text-sm text-muted-foreground ${expanded ? '' : 'line-clamp-2'}`}>
@@ -161,6 +172,62 @@ const ProfileCard = ({ profile, labels, note }) => {
                   </>
                 )}
               </button>
+            )}
+          </div>
+        )}
+
+        {/* Shared notes section */}
+        {sharedNotes?.length > 0 && (
+          <div className="mt-2 border-t pt-2">
+            <div 
+              className="flex items-center gap-1 cursor-pointer" 
+              onClick={() => setSharedNotesExpanded(!sharedNotesExpanded)}
+            >
+              {sharedNotesExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <h4 className="text-xs font-medium text-muted-foreground">
+                Shared Notes ({sharedNotes.length})
+              </h4>
+            </div>
+            
+            {sharedNotesExpanded && (
+              <div className="pl-4 mt-1 space-y-2">
+                {sharedNotes.map((sharedNote) => (
+                  <div key={sharedNote.id} className="border-l-2 border-muted pl-2">
+                    <p className={`text-sm text-muted-foreground ${expandedSharedNotes[sharedNote.id] ? '' : 'line-clamp-2'}`}>
+                      {sharedNote.content}
+                    </p>
+                    
+                    {sharedNote.content.length > 100 && (
+                      <button
+                        onClick={() => toggleSharedNoteExpanded(sharedNote.id)}
+                        className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
+                      >
+                        {expandedSharedNotes[sharedNote.id] ? (
+                          <>
+                            Show less
+                            <ChevronUp className="h-3 w-3" />
+                          </>
+                        ) : (
+                          <>
+                            Show more
+                            <ChevronDown className="h-3 w-3" />
+                          </>
+                        )}
+                      </button>
+                    )}
+                    
+                    {sharedNote.sbn && (
+                      <p className="text-xs italic text-muted-foreground mt-1">
+                        Shared by: {sharedNote.sbn}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

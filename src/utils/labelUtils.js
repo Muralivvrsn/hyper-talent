@@ -12,24 +12,28 @@ export const getRandomColor = () => {
 
 export const createLabel = async (labelName, userId, db) => {
   if (!userId || !labelName.trim()) return null;
-  
+
   const normalizedLabelName = labelName.trim().toUpperCase();
-  
+
   try {
     return await runTransaction(db, async (transaction) => {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'users_v2', userId);
       const userDoc = await transaction.get(userRef);
-      
+
       if (!userDoc.exists()) {
         throw new Error('User document not found');
       }
-      
-      const userData = userDoc.data();
-      const userLabelIds = userData.d?.l || [];
 
-      if (userLabelIds.length > 0) {
-        const labelPromises = userLabelIds.map(labelId => 
-          transaction.get(doc(db, 'profile_labels', labelId))
+      const userData = userDoc.data();
+      const userLabels = Array.isArray(userData.d?.l) ? userData.d.l : [];
+
+      // Check if label with same name already exists
+      if (userLabels.length > 0) {
+        // Extract just the IDs from the labels array
+        const labelIds = userLabels.map(label => label.id);
+
+        const labelPromises = labelIds.map(labelId =>
+          transaction.get(doc(db, 'profile_labels_v2', labelId))
         );
         const labelDocs = await Promise.all(labelPromises);
 
@@ -49,7 +53,7 @@ export const createLabel = async (labelName, userId, db) => {
       const labelId = `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const color = getRandomColor();
 
-      const labelRef = doc(db, 'profile_labels', labelId);
+      const labelRef = doc(db, 'profile_labels_v2', labelId);
       transaction.set(labelRef, {
         c: color,
         lc: userId,
@@ -60,8 +64,15 @@ export const createLabel = async (labelName, userId, db) => {
         r: []
       });
 
+      // Create the new label object to add to the array
+      const newLabelObject = {
+        id: labelId,
+        t: 'owned',
+        ca: Date.now()
+      };
+
       transaction.update(userRef, {
-        'd.l': [...userLabelIds, labelId]
+        'd.l': [...userLabels, newLabelObject]
       });
 
       return labelId;
@@ -78,7 +89,7 @@ export const addLabelToProfile = async (labelId, profileId, userId, db) => {
 
   try {
     await runTransaction(db, async (transaction) => {
-      const labelRef = doc(db, 'profile_labels', labelId);
+      const labelRef = doc(db, 'profile_labels_v2', labelId);
       const labelDoc = await transaction.get(labelRef);
 
       if (!labelDoc.exists()) {
@@ -108,7 +119,7 @@ export const deleteLabel = async (labelId, userId, isShared, db) => {
 
   try {
     return await runTransaction(db, async (transaction) => {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'users_v2', userId);
       const userDoc = await transaction.get(userRef);
 
       if (!userDoc.exists()) {
@@ -116,9 +127,10 @@ export const deleteLabel = async (labelId, userId, isShared, db) => {
       }
 
       const userData = userDoc.data();
+      const userLabels = Array.isArray(userData.d?.l) ? userData.d.l : [];
 
       if (!isShared) {
-        const labelRef = doc(db, 'profile_labels', labelId);
+        const labelRef = doc(db, 'profile_labels_v2', labelId);
         const labelDoc = await transaction.get(labelRef);
 
         if (!labelDoc.exists()) {
@@ -126,26 +138,23 @@ export const deleteLabel = async (labelId, userId, isShared, db) => {
         }
 
         const labelData = labelDoc.data();
-        
+
         if (labelData.lc !== userId) {
           throw new Error('Unauthorized to delete label');
         }
 
-        const userLabelIds = userData.d?.l || [];
+        // Filter out the label to be deleted
+        const updatedLabels = userLabels.filter(label => label.id !== labelId);
 
         transaction.update(userRef, {
-          'd.l': userLabelIds.filter(id => id !== labelId)
+          'd.l': updatedLabels
         });
 
         transaction.delete(labelRef);
       } else {
-        const sharedLabels = userData.d?.sl || [];
-        const updatedSharedLabels = sharedLabels.map(label => 
-          label.l === labelId ? { ...label, a: false } : label
-        );
-
+        const updatedLabels = userLabels.filter(label => label.id !== labelId);
         transaction.update(userRef, {
-          'd.sl': updatedSharedLabels
+          'd.l': updatedLabels
         });
       }
 
@@ -162,7 +171,7 @@ export const removeLabelFromProfile = async (labelId, profileId, userId, db) => 
 
   try {
     await runTransaction(db, async (transaction) => {
-      const labelRef = doc(db, 'profile_labels', labelId);
+      const labelRef = doc(db, 'profile_labels_v2', labelId);
       const labelDoc = await transaction.get(labelRef);
 
       if (!labelDoc.exists()) {
@@ -170,13 +179,13 @@ export const removeLabelFromProfile = async (labelId, profileId, userId, db) => 
       }
 
       const labelData = labelDoc.data();
-      
+
       if (labelData.lc !== userId) {
         throw new Error('Unauthorized to modify label');
       }
 
       const profiles = labelData.p || [];
-      
+
       if (profiles.includes(profileId)) {
         transaction.update(labelRef, {
           p: profiles.filter(id => id !== profileId),
@@ -197,27 +206,34 @@ export const createNote = async (profileId, content, userId, db) => {
 
   try {
     const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     await runTransaction(db, async (transaction) => {
-      const userRef = doc(db, 'users', userId);
+      const userRef = doc(db, 'users_v2', userId);
       const userDoc = await transaction.get(userRef);
-      
+
       if (!userDoc.exists()) {
         throw new Error('User document not found');
       }
 
       const userData = userDoc.data();
-      const userNoteIds = userData.d?.n || [];
+      const userNotes = Array.isArray(userData.d?.n) ? userData.d.n : [];
 
-      const noteRef = doc(db, 'profile_notes', noteId);
+      const noteRef = doc(db, 'profile_notes_v2', noteId);
       transaction.set(noteRef, {
         n: content.trim(),
         p: profileId,
         lu: Date.now()
       });
 
+      // Create the new note object to add to the array
+      const newNoteObject = {
+        id: noteId,
+        t: 'owned',
+        ca: Date.now()
+      };
+
       transaction.update(userRef, {
-        'd.n': [...userNoteIds, noteId]
+        'd.n': [...userNotes, newNoteObject]
       });
     });
 
@@ -233,7 +249,7 @@ export const updateNote = async (noteId, content, userId, db) => {
 
   try {
     await runTransaction(db, async (transaction) => {
-      const noteRef = doc(db, 'profile_notes', noteId);
+      const noteRef = doc(db, 'profile_notes_v2', noteId);
       const noteDoc = await transaction.get(noteRef);
 
       if (!noteDoc.exists()) {

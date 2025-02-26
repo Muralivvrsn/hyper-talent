@@ -96,7 +96,7 @@ const FeedbackDashboard = () => {
 
   const getUserData = async (userId) => {
     try {
-      const userDocRef = doc(db, 'users', userId);
+      const userDocRef = doc(db, 'users_v2', userId);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
         const userData = userDoc.data();

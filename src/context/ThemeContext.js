@@ -56,7 +56,7 @@ export const ThemeProvider = ({ children }) => {
         ll: new Date().toISOString()
       };
       
-      const userSettingsRef = doc(db, 'users', user.uid);
+      const userSettingsRef = doc(db, 'users_v2', user.uid);
       await setDoc(userSettingsRef, updatedSettings);
       setSettings(updatedSettings);
       return updatedSettings;
@@ -101,7 +101,7 @@ export const ThemeProvider = ({ children }) => {
         
         // Always fetch initial User Data if user is logged in
         if (user) {
-          const userSettingsRef = doc(db, 'users', user.uid);
+          const userSettingsRef = doc(db, 'users_v2', user.uid);
           const settingsSnap = await getDoc(userSettingsRef);
           
           if (settingsSnap.exists()) {
@@ -126,7 +126,11 @@ export const ThemeProvider = ({ children }) => {
                 l: [],
                 n: [],
                 s: [],
-                sl: [],
+                sd: {
+                  ca: "",
+                  id: "",
+                  ls: "",
+                },
               },
               e: user.email || '',
               lg: 'en',
@@ -135,11 +139,7 @@ export const ThemeProvider = ({ children }) => {
               ne: true,
               p: "free",
               pe: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-              sd: {
-                ca: "",
-                id: "",
-                ls: "",
-              },
+              t: [],
               th: localTheme || systemTheme,
             };
             await saveSettings(initialSettings);

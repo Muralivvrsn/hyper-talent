@@ -14,13 +14,9 @@ import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
-import { useOtherUsers } from './context/OtherUsersContext';
 const MainLayout = ({ children }) => {
   const { user, signOut } = useAuth();
   const { currentPage, setCurrentPage } = useProfileNote();
-
-
-
 
   const ADMIN_EMAILS = ['murali.g@hyperverge.co', 'satish.d@hyperverge.co', 'muralivvrsn75683@gmail.com'];
 

@@ -12,7 +12,7 @@ export default function ProfilePage() {
     getLabelProfiles,
     loading: labelsLoading
   } = useLabels();
-  const { notes, getNoteWithProfile, loading: notesLoading } = useNotes();
+  const { notes, sharedNotes, getNoteWithProfile, loading: notesLoading } = useNotes();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLabels, setSelectedLabels] = useState([]);
   const [filterMode, setFilterMode] = useState('any');
@@ -122,8 +122,47 @@ export default function ProfilePage() {
       }
     });
 
+    Object.entries(sharedNotes).forEach(([noteId, noteData]) => {
+      if (noteData.profileId) {
+        const sharedNoteWithProfile = getNoteWithProfile(noteId);
+        if (sharedNoteWithProfile?.profile) {
+          // Create profile entry if it doesn't exist
+          if (!profileMap.has(noteData.profileId)) {
+            profileMap.set(noteData.profileId, {
+              profile: {
+                id: noteData.profileId,
+                name: sharedNoteWithProfile.profile.name,
+                url: sharedNoteWithProfile.profile.url,
+                image: sharedNoteWithProfile.profile.image,
+                code: sharedNoteWithProfile.profile.code,
+                lastUpdated: sharedNoteWithProfile.profile.lastUpdated,
+                username: sharedNoteWithProfile.profile.username
+              },
+              labels: [],
+              note: null,
+              sharedNotes: []
+            });
+          }
+          
+          // Push the shared note to the profile's sharedNotes array
+          const sharedNoteItem = {
+            id: noteId,
+            content: noteData.content,
+            sbn: noteData.sbn || (noteData.sa ? noteData.sa : null) // Include shared by name if available
+          };
+          
+          // Initialize sharedNotes array if it doesn't exist
+          if (!profileMap.get(noteData.profileId).sharedNotes) {
+            profileMap.get(noteData.profileId).sharedNotes = [];
+          }
+          
+          profileMap.get(noteData.profileId).sharedNotes.push(sharedNoteItem);
+        }
+      }
+    });
+
     return Array.from(profileMap.values());
-  }, [labels, activeSharedLabels, notes, getLabelProfiles, getNoteWithProfile]);
+  }, [labels, activeSharedLabels, notes, sharedNotes, getLabelProfiles, getNoteWithProfile]);
 
   const filteredProfiles = useMemo(() => {
     return profilesData.filter(({ profile, labels, note }) => {
@@ -199,12 +238,13 @@ export default function ProfilePage() {
       />
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3">
-        {filteredProfiles.map(({ profile, labels, note }) => (
+        {filteredProfiles.map(({ profile, labels, note, sharedNotes }) => (
           <ProfileCard
             key={profile.id}
             profile={profile}
             labels={labels}
             note={note}
+            sharedNotes={sharedNotes}
           />
         ))}
       </div>

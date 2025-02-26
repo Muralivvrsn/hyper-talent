@@ -491,7 +491,7 @@ async function syncProfileData(row, headerIndices, userId, labels, notes) {
 
       if (existingNote) {
         if (notes[existingNote].content !== notesData) {
-          await updateDoc(doc(db, 'profile_notes', existingNote), {
+          await updateDoc(doc(db, 'profile_notes_v2', existingNote), {
             n: notesData,
             lu: new Date().toISOString()
           });
@@ -499,12 +499,12 @@ async function syncProfileData(row, headerIndices, userId, labels, notes) {
       } else {
         const newNoteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         await Promise.all([
-          setDoc(doc(db, 'profile_notes', newNoteId), {
+          setDoc(doc(db, 'profile_notes_v2', newNoteId), {
             n: notesData,
             p: profileId,
             lu: new Date().toISOString()
           }),
-          updateDoc(doc(db, 'users', userId), {
+          updateDoc(doc(db, 'users_v2', userId), {
             'd.n': arrayUnion(newNoteId)
           })
         ]);
@@ -529,13 +529,13 @@ async function syncProfileData(row, headerIndices, userId, labels, notes) {
 
           if (hasProfile && !isInSheet) {
             // Remove profile from label if not in sheet
-            await updateDoc(doc(db, 'profile_labels', labelId), {
+            await updateDoc(doc(db, 'profile_labels_v2', labelId), {
               p: arrayRemove(profileId),
               lu: new Date().toISOString()
             });
           } else if (!hasProfile && isInSheet) {
             // Add profile to label if in sheet but not in label
-            await updateDoc(doc(db, 'profile_labels', labelId), {
+            await updateDoc(doc(db, 'profile_labels_v2', labelId), {
               p: arrayUnion(profileId),
               lu: new Date().toISOString()
             });
@@ -552,7 +552,7 @@ async function syncProfileData(row, headerIndices, userId, labels, notes) {
         await Promise.all(newLabelNames.map(async name => {
           const newLabelId = await createLabel(name, userId, db);
           if (newLabelId) {
-            await updateDoc(doc(db, 'profile_labels', newLabelId), {
+            await updateDoc(doc(db, 'profile_labels_v2', newLabelId), {
               p: arrayUnion(profileId),
               lu: new Date().toISOString()
             });
@@ -580,7 +580,7 @@ async function syncMessagesToDB(row, token, headerIndices, userId, messages, spr
 
     if (messageId && messages[messageId]) {
       if (messages[messageId].title !== title || messages[messageId].content !== content) {
-        await updateDoc(doc(db, 'message_templates', messageId), {
+        await updateDoc(doc(db, 'message_templates_v2', messageId), {
           t: title,
           n: content,
           lu: timestamp
@@ -594,12 +594,12 @@ async function syncMessagesToDB(row, token, headerIndices, userId, messages, spr
     } else {
       const newId = `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await Promise.all([
-        setDoc(doc(db, 'message_templates', newId), {
+        setDoc(doc(db, 'message_templates_v2', newId), {
           t: title,
           n: content,
           lu: timestamp
         }),
-        updateDoc(doc(db, 'users', userId), {
+        updateDoc(doc(db, 'users_v2', userId), {
           'd.s': arrayUnion(newId)
         })
       ]);
@@ -697,7 +697,7 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
         .map(l => l.toUpperCase());
 
       for (const labelName of labelNames) {
-        const userRef = doc(db, 'users', userId);
+        const userRef = doc(db, 'users_v2', userId);
         const userData = (await getDoc(userRef)).data();
         const userLabelIds = userData?.d?.l || [];
 
@@ -706,7 +706,7 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
 
         if (userLabelIds.length > 0) {
           const labelDocs = await Promise.all(
-            userLabelIds.map(id => getDoc(doc(db, 'profile_labels', id)))
+            userLabelIds.map(id => getDoc(doc(db, 'profile_labels_v2', id)))
           );
 
           const existingLabel = labelDocs.find(doc =>
@@ -724,7 +724,7 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
         }
 
         if (labelId) {
-          const labelRef = doc(db, 'profile_labels', labelId);
+          const labelRef = doc(db, 'profile_labels_v2', labelId);
           await updateDoc(labelRef, {
             p: arrayUnion(profileId),
             lu: new Date().toISOString()

@@ -116,7 +116,7 @@
                 this.cleanupSubscription();
                 this.setLoading(true);
 
-                const userRef = db.collection('users').doc(userId);
+                const userRef = db.collection('users_v2').doc(userId);
                 const unsubscribe = userRef.onSnapshot(
                     (doc) => {
                         try {
@@ -202,7 +202,7 @@
                     throw new Error('Firebase not initialized');
                 }
 
-                await db.collection('users').doc(currentUser.uid).update({
+                await db.collection('users_v2').doc(currentUser.uid).update({
                     'd.th': newTheme
                 });
 
