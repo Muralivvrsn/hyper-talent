@@ -31,7 +31,7 @@ export const OtherUsersProvider = ({ children }) => {
     }
 
     try {
-      const usersRef = collection(db, 'users');
+      const usersRef = collection(db, 'users_v2');
 
       // Set up a real-time listener for all users
       const unsubscribe = onSnapshot(usersRef, (querySnapshot) => {

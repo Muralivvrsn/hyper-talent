@@ -8,7 +8,6 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
-import { onSnapshot } from 'firebase/firestore';
 
 const DataContext = createContext(null);
 
@@ -21,82 +20,60 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const db = getFirestore();
 
   useEffect(() => {
-    let unsubscribe = null;
-
-    const fetchUserTemplates = async () => {
-      if (!user?.uid) {
+    const fetchTemplateDetails = async () => {
+      if (!user?.uid || !userProfile?.data?.shortcuts?.length) {
         setTemplates([]);
         setLoading(false);
         return;
       }
 
+      setLoading(true);
       try {
-        const userDocRef = doc(db, 'users', user.uid);
-        
-        // Set up real-time listener for user document
-        unsubscribe = onSnapshot(userDocRef, async (userDocSnap) => {
-          if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            const templateIds = userData.d?.s || []; // Get template IDs
+        // Get template IDs from userProfile
+        const shortcutItems = userProfile.data.shortcuts;
 
-            // Fetch template details from message_template collection
-            if (templateIds.length > 0) {
-              const templatePromises = templateIds.map(async (templateId) => {
-                const templateDocRef = doc(db, 'message_templates', templateId);
-                const templateDocSnap = await getDoc(templateDocRef);
-                
-                if (templateDocSnap.exists()) {
-                  const templateData = templateDocSnap.data();
-                  return {
-                    id: templateId,
-                    title: templateData.t,
-                    content: templateData.n,
-                    lastUpdated: templateData.lu
-                  };
-                }
-                return null;
-              });
-
-              const fetchedTemplates = await Promise.all(templatePromises);
-              // // Filter out any null values (in case a template was not found)
-              setTemplates(fetchedTemplates.filter(Boolean).sort((a, b) => 
-                new Date(b.lastUpdated) - new Date(a.lastUpdated)
-              ));
-            } else {
-              setTemplates([]);
-            }
-          } else {
-            setTemplates([]);
+        // Fetch template details from message_template collection
+        const templatePromises = shortcutItems.map(async (shortcut) => {
+          const templateId = shortcut.id;
+          const templateDocRef = doc(db, 'message_templates_v2', templateId);
+          const templateDocSnap = await getDoc(templateDocRef);
+          
+          if (templateDocSnap.exists()) {
+            const templateData = templateDocSnap.data();
+            return {
+              id: templateId,
+              title: templateData.t,
+              content: templateData.n,
+              lastUpdated: templateData.lu,
+              type: shortcut.t || null,
+              sharedBy: shortcut.sb || null,
+              sharedByName: shortcut.sbn || null
+            };
           }
-          setLoading(false);
-        }, (err) => {
-          setError('Failed to fetch templates');
-          console.error('Fetch error:', err);
-          setLoading(false);
+          return null;
         });
+
+        const fetchedTemplates = await Promise.all(templatePromises);
+        setTemplates(fetchedTemplates.filter(Boolean).sort((a, b) => 
+          new Date(b.lastUpdated) - new Date(a.lastUpdated)
+        ));
       } catch (err) {
-        setError('Failed to initialize templates');
-        console.error('Init error:', err);
+        setError('Failed to fetch templates');
+        console.error('Fetch error:', err);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchUserTemplates();
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [user]);
+    fetchTemplateDetails();
+  }, [user, userProfile?.data?.shortcuts, db]);
 
   const addTemplate = async (newTemplate) => {
     try {
@@ -104,7 +81,7 @@ export const DataProvider = ({ children }) => {
       const templateId = `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       // Add template to message_template collection
-      const templateDocRef = doc(db, 'message_templates', templateId);
+      const templateDocRef = doc(db, 'message_templates_v2', templateId);
       await setDoc(templateDocRef, {
         t: newTemplate.title,
         n: newTemplate.content,
@@ -112,14 +89,30 @@ export const DataProvider = ({ children }) => {
       });
 
       // Update user's template list
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(db, 'users_v2', user.uid);
       const userDocSnap = await getDoc(userDocRef);
       const userData = userDocSnap.data();
       
-      const updatedTemplateIds = [...(userData.d?.s || []), templateId];
+      // Create the template object for the user profile
+      const templateObject = {
+        id: templateId,
+        t: 'owned',
+        ca: new Date().getTime(), // Created at timestamp
+        a: null,
+        ps: null,
+        sa: null,
+        sb: null,
+        sbn: null
+      };
       
+      // Get current shortcuts array or create new one
+      const currentShortcuts = Array.isArray(userData.d?.s) 
+        ? userData.d.s 
+        : [];
+      
+      // Add new template to shortcuts
       await updateDoc(userDocRef, {
-        'd.s': updatedTemplateIds
+        'd.s': [...currentShortcuts, templateObject]
       });
 
       return true;
@@ -133,7 +126,7 @@ export const DataProvider = ({ children }) => {
   const editTemplate = async (id, editedTemplate) => {
     try {
       // Update template in message_template collection
-      const templateDocRef = doc(db, 'message_templates', id);
+      const templateDocRef = doc(db, 'message_templates_v2', id);
       await updateDoc(templateDocRef, {
         t: editedTemplate.title,
         n: editedTemplate.content,
@@ -151,18 +144,21 @@ export const DataProvider = ({ children }) => {
   const deleteTemplate = async (id) => {
     try {
       // Remove template from message_template collection
-      const templateDocRef = doc(db, 'message_template', id);
+      const templateDocRef = doc(db, 'message_templates_v2', id);
       await deleteDoc(templateDocRef);
   
-      // Remove template ID from user's template list
-      const userDocRef = doc(db, 'users', user.uid);
+      // Remove template from user's shortcuts list
+      const userDocRef = doc(db, 'users_v2', user.uid);
       const userDocSnap = await getDoc(userDocRef);
       const userData = userDocSnap.data();
       
-      const updatedTemplateIds = (userData.d?.s || []).filter(templateId => templateId !== id);
+      // Filter out the template from shortcuts
+      const updatedShortcuts = (userData.d?.s || []).filter(shortcut => 
+        typeof shortcut === 'string' ? shortcut !== id : shortcut.id !== id
+      );
       
       await updateDoc(userDocRef, {
-        'd.s': updatedTemplateIds
+        'd.s': updatedShortcuts
       });
   
       return true;

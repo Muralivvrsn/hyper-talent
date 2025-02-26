@@ -47,21 +47,69 @@ const formatUserProfile = (profileData) => ({
   createdAt: profileData.ca || null,
   lastLogin: profileData.ll || null,
   theme: profileData.th || 'light',
+  team: profileData.t || [],
   language: profileData.lg || 'en',
   notifications: profileData.ne || false,
   plan: profileData.p || 'free',
   planExpiry: profileData.pe || null,
   data: {
-    labelIds: profileData.d?.l || [],
-    noteIds: profileData.d?.n || [],
-    shortcutIds: profileData.d?.s || [],
-    sharedLabels: profileData.d?.sl || []
+    labels: Array.isArray(profileData.d?.l) 
+      ? profileData.d.l.map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return {
+              a: item.a || null,
+              ps: item.ps || null,
+              sa: item.sa || null,
+              sb: item.sb || null,
+              sbn: item.sbn || null,
+              ca: item.ca || null,
+              id: item.id || '',
+              t: item.t || ''
+            };
+          }
+          return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
+        }) 
+      : [],
+    notes: Array.isArray(profileData.d?.n) 
+      ? profileData.d.n.map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return {
+              a: item.a || null,
+              ps: item.ps || null,
+              sa: item.sa || null,
+              sb: item.sb || null,
+              sbn: item.sbn || null,
+              ca: item.ca || null,
+              id: item.id || '',
+              t: item.t || ''
+            };
+          }
+          return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
+        }) 
+      : [],
+    shortcuts: Array.isArray(profileData.d?.s) 
+      ? profileData.d.s.map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return {
+              a: item.a || null,
+              ps: item.ps || null,
+              sa: item.sa || null,
+              sb: item.sb || null,
+              sbn: item.sbn || null,
+              ca: item.ca || null,
+              id: item.id || '',
+              t: item.t || ''
+            };
+          }
+          return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
+        }) 
+      : [],
+    spreadsheet: {
+      id: profileData.d?.sd?.id || null,
+      createdAt: profileData.d?.sd?.ca || null,
+      lastSynced: profileData.d?.sd?.ls || null
+    }
   },
-  spreadsheet: {
-    id: profileData.sd?.id || null,
-    createdAt: profileData.sd?.ca || null,
-    lastSynced: profileData.sd?.ls || null
-  }
 });
 
 export const AuthProvider = ({ children }) => {
@@ -76,13 +124,13 @@ export const AuthProvider = ({ children }) => {
 
   // Check token status and validity
   const checkAuthStatus = async () => {
-    console.log('checkAuthStatus')
+    // console.log('checkAuthStatus')
     try {
       const response = await new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ type: 'GET_TOKEN' }, (response) => {
-          console.log(response)
+          // console.log(response)
           if (chrome.runtime.lastError) {
-            console.log(chrome.runtime.lastError)
+            // console.log(chrome.runtime.lastError)
             reject(new Error(chrome.runtime.lastError.message));
             return;
           }
@@ -90,7 +138,7 @@ export const AuthProvider = ({ children }) => {
         });
       });
 
-      console.log(response)
+      // console.log(response)
       if (response.type === 'logged_in' && response.data?.accessToken) {
         const credential = GoogleAuthProvider.credential(null, response.data.accessToken);
         await signInWithCredential(auth, credential);
@@ -145,7 +193,7 @@ export const AuthProvider = ({ children }) => {
           }
 
           profileUnsubscribe = onSnapshot(
-            doc(db, 'users', firebaseUser.uid),
+            doc(db, 'users_v2', firebaseUser.uid),
             updateUserProfile
           );
 
@@ -287,12 +335,12 @@ const handleSignOut = async () => {
       })
     ]);
 
-    console.log({
-      status: 'logged_out',
-      user: null,
-      userProfile: null,
-      error: null
-    })
+    // console.log({
+    //   status: 'logged_out',
+    //   user: null,
+    //   userProfile: null,
+    //   error: null
+    // })
 
     setAuthState({
       status: 'logged_out',

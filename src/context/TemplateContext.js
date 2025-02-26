@@ -21,7 +21,7 @@ export const TemplateProvider = ({ children }) => {
 
   // Fetch and subscribe to templates when userProfile?.data changes
   useEffect(() => {
-    if (!userProfile?.data?.shortcutIds?.length) {
+    if (!userProfile?.data?.shortcuts?.length) {
       setTemplates({});
       setLoading(false);
       return;
@@ -30,10 +30,15 @@ export const TemplateProvider = ({ children }) => {
     setLoading(true);
     const unsubscribers = [];
 
+    // Get template IDs from shortcuts array in the new structure
+    const templateIds = userProfile?.data?.shortcuts
+      .filter(shortcut => shortcut.t !== 'shared') // Filter out shared shortcuts if needed
+      .map(shortcut => shortcut.id);
+
     // Subscribe to each template
-    userProfile?.data.shortcutIds.forEach(templateId => {
+    templateIds.forEach(templateId => {
       const unsubscribe = onSnapshot(
-        doc(db, 'message_templates', templateId),
+        doc(db, 'message_templates_v2', templateId),
         (doc) => {
           if (doc.exists()) {
             const templateData = doc.data();
@@ -46,6 +51,13 @@ export const TemplateProvider = ({ children }) => {
                 lastUpdated: templateData.lu
               }
             }));
+          } else {
+            // If template doesn't exist, remove it from state
+            setTemplates(prev => {
+              const updated = { ...prev };
+              delete updated[templateId];
+              return updated;
+            });
           }
         },
         (error) => {
@@ -62,7 +74,7 @@ export const TemplateProvider = ({ children }) => {
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
     };
-  }, [userProfile?.data?.shortcutIds]);
+  }, [userProfile?.data, db]);
 
   const getTemplateById = (templateId) => {
     const template = templates[templateId];
@@ -90,7 +102,7 @@ export const TemplateProvider = ({ children }) => {
         lastUpdated: template.lastUpdated
       }));
   };
-
+  console.log("templates: ", templates)
   const value = {
     templates,
     loading,

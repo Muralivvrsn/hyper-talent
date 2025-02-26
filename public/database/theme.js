@@ -161,7 +161,7 @@
                 this.cleanupSubscription();
                 this.setLoading(true);
 
-                const userRef = db.collection('users').doc(userId);
+                const userRef = db.collection('users_v2').doc(userId);
                 
                 // First check if the document exists, create it if it doesn't
                 const docSnapshot = await userRef.get();
@@ -282,7 +282,7 @@
                 const currentUser = window.firebaseService.currentUser;
                 
                 // Update theme directly at top level
-                await db.collection('users').doc(currentUser.uid).update({
+                await db.collection('users_v2').doc(currentUser.uid).update({
                     'th': newTheme,
                     'updatedAt': firebase.firestore.FieldValue.serverTimestamp()
                 });

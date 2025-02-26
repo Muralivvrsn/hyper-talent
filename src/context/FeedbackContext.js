@@ -221,7 +221,7 @@ export const FeedbackProvider = ({ children }) => {
   
     try {
       // First, get all users to match emails
-      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const usersSnapshot = await getDocs(collection(db, 'users_v2'));
       const userEmailMap = {};
       usersSnapshot.forEach(doc => {
         userEmailMap[doc.data().e] = doc.id;
