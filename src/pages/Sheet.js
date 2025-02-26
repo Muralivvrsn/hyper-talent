@@ -94,7 +94,7 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => (
 
 const SheetPage = () => {
   const { user } = useAuth();
-  const { sheetData, setSheetData, getGoogleToken } = useSheet();
+  const { sheetData, getGoogleToken } = useSheet();
   const [loadingStates, setLoadingStates] = useState({
     create: false,
     syncSheet: false,
@@ -128,8 +128,6 @@ const SheetPage = () => {
       await updateDoc(userDocRef, {
         'd.sd': newSheetData
       });
-      
-      setSheetData(newSheetData);
 
       window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
     } catch (error) {
@@ -160,18 +158,11 @@ const SheetPage = () => {
         await syncDatabase(sheetData.id, token, user.uid, data);
       }
 
-      const updatedSheetData = {
-        ...sheetData,
-        ls: new Date().toISOString()
-      };
-
-      // Update user document with updated spreadsheet data
       const userDocRef = doc(db, 'users_v2', user.uid);
       await updateDoc(userDocRef, {
-        'd.sd': updatedSheetData
+        'd.sd.ls': new Date().toISOString()
       });
 
-      setSheetData(updatedSheetData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -209,17 +200,10 @@ const SheetPage = () => {
       );
 
       if (updatedRowCount > 0) {
-        const updatedSheetData = {
-          ...sheetData,
-          ls: new Date().toISOString()
-        };
-
         const userDocRef = doc(db, 'users_v2', user.uid);
         await updateDoc(userDocRef, {
-          'd.sd': updatedSheetData
+          'd.sd.ls': new Date().toISOString()
         });
-        
-        setSheetData(updatedSheetData);
       }
 
     } catch (error) {
@@ -229,12 +213,11 @@ const SheetPage = () => {
     }
   };
 
-
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="text-lg font-semibold mb-2">Sheet Manager</h1>
       <span className="text-muted-foreground mb-2">
-        Sync and manage your LinkedIn connections using Google Sheets. {sheetData && <b>Last synced: {formatDate(sheetData.lastSynced)}</b> }
+        Sync and manage your LinkedIn connections using Google Sheets. {sheetData?.lastSynced && <b>Last synced: {formatDate(sheetData?.lastSynced)}</b>}
       </span>
       <div>
         {!sheetData ? (

@@ -28,8 +28,6 @@ const StandardizedReplies = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [pendingChanges, setPendingChanges] = useState(null);
 
-  console.log("templates: ", templates)
-
   const handleFormClose = (formData) => {
     const hasChanges = editingMessage
       ? (formData.title !== editingMessage.title || formData.content !== editingMessage.content)

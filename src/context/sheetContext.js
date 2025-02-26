@@ -15,11 +15,11 @@ export const SheetProvider = ({ children }) => {
 
   const initializeSheetData = async () => {
     try {
-        if (userProfile?.data?.spreadsheet?.id) {
-          setSheetData(userProfile?.data?.spreadsheet);
-        } else {
-          setSheetData(null);
-        }
+      if (userProfile?.data?.spreadsheet?.id) {
+        setSheetData(userProfile?.data?.spreadsheet);
+      } else {
+        setSheetData(null);
+      }
     } catch (error) {
       console.error('Error fetching sheet data:', error);
     } finally {
@@ -34,7 +34,6 @@ export const SheetProvider = ({ children }) => {
 
   const contextValue = {
     sheetData,
-    setSheetData,
     isLoading,
     getGoogleToken
   };

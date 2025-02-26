@@ -705,14 +705,9 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
         let labelExists = false;
 
         if (userLabelIds.length > 0) {
-          console.log(userLabelIds)
           const labelDocs = await Promise.all(
             userLabelIds.map(async (id) => {
               try {
-                // Log the ID being processed
-                console.log('Processing ID:', id);
-                
-                // Check if ID is valid
                 if (!id) {
                   throw new Error(`Invalid ID: ${id}`);
                 }

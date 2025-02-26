@@ -20,7 +20,6 @@ export const ThemeProvider = ({ children }) => {
 
   const { user } = useAuth();
   const db = getFirestore();
-  console.log("before settings: ", settings)
 
   const getSystemTheme = () => {
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -173,7 +172,6 @@ export const ThemeProvider = ({ children }) => {
 
             // Check if we needed to add any missing fields
             if (JSON.stringify(updatedSettings) !== JSON.stringify(dbSettings)) {
-              console.log("Updating user settings with missing fields");
               // Only update if there were actually missing fields
               await setDoc(userSettingsRef, updatedSettings);
             }
