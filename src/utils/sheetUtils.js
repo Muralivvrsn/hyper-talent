@@ -302,27 +302,7 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
 };
 
 export const createSheet = async (token, title) => {
-  // Validate inputs
-  if (!token) {
-    throw new Error('Authentication token is required');
-  }
-  
-  if (!title) {
-    throw new Error('Sheet title is required');
-  }
-
-  if (!HEADERS || Object.keys(HEADERS).length === 0) {
-    throw new Error('HEADERS object is not properly defined');
-  }
-
-  const sheetNames = ['Profile Data', 'Messages'];
-  const headerKeys = Object.keys(HEADERS);
-  if (!sheetNames.every(name => headerKeys.includes(name))) {
-    throw new Error('Sheet names do not match HEADERS keys');
-  }
-
   try {
-    // Create the spreadsheet
     const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
       method: 'POST',
       headers: {
@@ -331,68 +311,26 @@ export const createSheet = async (token, title) => {
       },
       body: JSON.stringify({
         properties: { title },
-        sheets: sheetNames.map(title => ({ properties: { title } }))
+        sheets: [
+          { properties: { title: 'Profile Data' } },
+          { properties: { title: 'Messages' } }
+        ]
       })
     });
 
-    // Handle HTTP errors
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Sheet creation failed: ${response.status} - ${errorData.error?.message || response.statusText}`);
-    }
-
+    if (!response.ok) throw new Error('Sheet creation failed');
     const sheet = await response.json();
 
-    // Create headers with retry logic
-    const retryCount = 3;
-    for (let attempt = 1; attempt <= retryCount; attempt++) {
-      try {
-        await Promise.all(
-          Object.keys(HEADERS).map(sheetName =>
-            ensureHeaders(sheet.spreadsheetId, token, sheetName)
-          )
-        );
-        break; // Success - exit retry loop
-      } catch (headerError) {
-        if (attempt === retryCount) {
-          // All retries failed
-          // Optionally delete the created sheet
-          try {
-            await deleteSheet(sheet.spreadsheetId, token);
-          } catch (deleteError) {
-            console.error('Failed to delete sheet after header creation failure:', deleteError);
-          }
-          throw new Error(`Failed to create headers after ${retryCount} attempts: ${headerError.message}`);
-        }
-        // Wait before retrying (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-      }
-    }
+    await Promise.all(
+      Object.keys(HEADERS).map(sheetName =>
+        ensureHeaders(sheet.spreadsheetId, token, sheetName)
+      )
+    );
 
-    return {
-      ...sheet,
-      created: new Date().toISOString()
-    };
+    return sheet;
   } catch (error) {
     console.error('Error creating sheet:', error);
     throw error;
-  }
-};
-
-const deleteSheet = async (spreadsheetId, token) => {
-  const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
-    {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(`Failed to delete sheet: ${response.status} - ${errorData.error?.message || response.statusText}`);
   }
 };
 

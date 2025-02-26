@@ -113,7 +113,7 @@ const StandardizedReplies = () => {
         {templates.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="space-y-3">
+          <div className="h-[80vh] overflow-auto space-y-3">
             {templates.map((message) => (
               <MessageCard
                 key={message.id}

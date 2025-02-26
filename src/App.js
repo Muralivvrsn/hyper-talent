@@ -114,7 +114,7 @@ function AppContent() {
     }
   }, [status, themeLoading, dataLoading]);
 
-  if (initialLoad || status==='in_progress' || themeLoading || dataLoading) {
+  if (initialLoad || status==='in_progress') {
     return <LoadingScreen />;
   }
 

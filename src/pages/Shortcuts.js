@@ -166,7 +166,7 @@ const Shortcuts = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto pb-4 space-y-4">
+      <div className="flex-1 overflow-auto space-y-4">
         {Object.keys(filteredCategories).length > 0 ? (
           Object.entries(filteredCategories).map(([key, category]) => (
             <ShortcutCategory 

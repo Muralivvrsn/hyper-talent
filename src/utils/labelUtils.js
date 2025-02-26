@@ -56,7 +56,6 @@ export const createLabel = async (labelName, userId, db) => {
       const labelRef = doc(db, 'profile_labels_v2', labelId);
       transaction.set(labelRef, {
         c: color,
-        lc: userId,
         lu: Date.now(),
         n: normalizedLabelName,
         p: [],
@@ -137,9 +136,8 @@ export const deleteLabel = async (labelId, userId, isShared, db) => {
           throw new Error('Label not found');
         }
 
-        const labelData = labelDoc.data();
-
-        if (labelData.lc !== userId) {
+        const matchingLabel = userLabels.find(label => label.id === labelId);
+        if (!matchingLabel || matchingLabel.t !== 'owned') {
           throw new Error('Unauthorized to delete label');
         }
 
@@ -180,7 +178,18 @@ export const removeLabelFromProfile = async (labelId, profileId, userId, db) => 
 
       const labelData = labelDoc.data();
 
-      if (labelData.lc !== userId) {
+      const userRef = doc(db, 'users_v2', userId);
+      const userDoc = await transaction.get(userRef);
+
+      if (!userDoc.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const userData = userDoc.data();
+      const userLabels = Array.isArray(userData.d?.l) ? userData.d.l : [];
+      const matchingLabel = userLabels.find(label => label.id === labelId);
+
+      if (!matchingLabel || matchingLabel.t !== 'owned') {
         throw new Error('Unauthorized to modify label');
       }
 

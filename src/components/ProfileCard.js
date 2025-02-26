@@ -56,11 +56,27 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
     }));
   };
 
+  const getProfileInitials = (profile) => {
+    if (profile.name) {
+      return profile.name.split(' ')
+        .map(part => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+    }
+    return '??';
+  };
+
   return (
     <div className="flex items-start gap-3 p-4 border-b-[1px] hover:bg-muted/50 transition-colors group relative">
       <Avatar className="h-12 w-12 ring-1 ring-border">
-        <AvatarImage src={profile.image} alt={profile.name} className="object-cover" />
-        <AvatarFallback className="text-sm font-medium">{initials}</AvatarFallback>
+        {profile.image && !profile.image.startsWith('data') ? (
+          <AvatarImage src={profile.image} alt={profile.name} className="object-cover" />
+        ) : (
+          <AvatarFallback className="text-sm font-medium">
+            {getProfileInitials(profile)}
+          </AvatarFallback>
+        )}
       </Avatar>
 
       <div className="flex-1 min-w-0">
@@ -121,10 +137,10 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
                 key={label.id}
                 className="group/label relative inline-flex items-center text-[10px] px-3 py-0.5 rounded-full transition-all duration-200 font-semibold"
                 style={{
-                  backgroundColor: theme === "dark" ? `${label.color}60` : `${label.color}20`,
-                  borderWidth: theme === "dark" ? "1px" : "0px",
+                  backgroundColor: theme === "dark" ? `${label.color}` : `transparent`,
+                  borderWidth: theme === "dark" ? "0px" : "1px",
                   borderStyle: "solid",
-                  borderColor: theme === "dark" ? label.color : "transparent",
+                  borderColor: theme === "dark" ? "transparent" : `${label.color}`,
                   color: theme === "dark" ? "#FFFFFF" : label.color,
                 }}
               >
@@ -145,7 +161,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
             ))}
           </div>
         )}
-        
+
         {/* Primary note */}
         {note && (
           <div>
@@ -179,8 +195,8 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
         {/* Shared notes section */}
         {sharedNotes?.length > 0 && (
           <div className="mt-2 border-t pt-2">
-            <div 
-              className="flex items-center gap-1 cursor-pointer" 
+            <div
+              className="flex items-center gap-1 cursor-pointer"
               onClick={() => setSharedNotesExpanded(!sharedNotesExpanded)}
             >
               {sharedNotesExpanded ? (
@@ -192,7 +208,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
                 Shared Notes ({sharedNotes.length})
               </h4>
             </div>
-            
+
             {sharedNotesExpanded && (
               <div className="pl-4 mt-1 space-y-2">
                 {sharedNotes.map((sharedNote) => (
@@ -200,7 +216,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
                     <p className={`text-sm text-muted-foreground ${expandedSharedNotes[sharedNote.id] ? '' : 'line-clamp-2'}`}>
                       {sharedNote.content}
                     </p>
-                    
+
                     {sharedNote.content.length > 100 && (
                       <button
                         onClick={() => toggleSharedNoteExpanded(sharedNote.id)}
@@ -219,7 +235,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
                         )}
                       </button>
                     )}
-                    
+
                     {sharedNote.sbn && (
                       <p className="text-xs italic text-muted-foreground mt-1">
                         Shared by: {sharedNote.sbn}
