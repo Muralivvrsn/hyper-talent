@@ -323,6 +323,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   sendResponse({ received: true });
   return true;
   }
+
+  if(message.type === 'HYPER_TALENT_LOGGIN'){
+
+    chrome.sidePanel.open({
+      windowId: windowId,
+    });
+
+    // chrome.sidePanel.close({windowId:windowId})
+
+  }
 });
 
 const handleAsyncMessage = (asyncFn, sendResponse) => {

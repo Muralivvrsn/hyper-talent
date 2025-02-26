@@ -404,25 +404,43 @@ class LabelManager {
 
         if (this.state.status === 'in_progress') {
             contentContainer.innerHTML = '<div class="loading_message">Loading labels...</div>';
+        } else if (this.state.status === 'logged_out') {
+            // Show login prompt for logged out users
+            contentContainer.innerHTML = `
+            <div class="login_container">
+                <p class="login_message">Please login through the extension to access your labels</p>
+                <button class="login_button">Login</button>
+            </div>
+        `;
+
+            // Add event listener to the login button
+            setTimeout(() => {
+                const loginButton = contentContainer.querySelector('.login_button');
+                if (loginButton) {
+                    loginButton.addEventListener('click', () => {
+                        chrome.runtime.sendMessage({ type: 'HYPER_TALENT_LOGGIN' });
+                    });
+                }
+            }, 0);
         } else {
             // Group labels by type
             const owned = this.state.labels.filter(l => l.type === 'owned');
             const shared = this.state.labels.filter(l => l.type === 'shared');
 
             contentContainer.innerHTML = `
-            ${owned.length ? `
-                <div class="label_section">
-                    <div class="section_header">Owned</div>
-                    ${owned.map(label => this.createLabelElement(label)).join('')}
-                </div>
-            ` : ''}
-            ${shared.length ? `
-                <div class="label_section">
-                    <div class="section_header">Shared</div>
-                    ${shared.map(label => this.createLabelElement(label)).join('')}
-                </div>
-            ` : ''}
-            ${!owned.length && !shared.length ?
+        ${owned.length ? `
+            <div class="label_section">
+                <div class="section_header">Owned</div>
+                ${owned.map(label => this.createLabelElement(label)).join('')}
+            </div>
+        ` : ''}
+        ${shared.length ? `
+            <div class="label_section">
+                <div class="section_header">Shared</div>
+                ${shared.map(label => this.createLabelElement(label)).join('')}
+            </div>
+        ` : ''}
+        ${!owned.length && !shared.length ?
                     '<div class="no_labels">No labels available</div>' : ''
                 }
         `;
@@ -475,34 +493,86 @@ class LabelManager {
                 break;
         }
     }
-
     async handleDeleteLabel(deleteButton, labelId) {
-        await window.labelsDatabase.deleteLabel(labelId);
+        const label = this.state.labels.find(l => l.label_id === labelId);
+        if (!label) return;
+
+        // Store reference to label element
         const labelElement = deleteButton.closest('.label_item');
-        if (!labelElement) return;
 
-        // Disable the entire label item
-        labelElement.classList.add('deleting');
-        labelElement.style.pointerEvents = 'none';
+        // Show confirmation dialog
+        window.alertDialog.show({
+            title: 'Delete Label',
+            message: `Are you sure you want to delete the label "${label.label_name}"?`,
+            confirmText: 'Delete',
+            confirmStyle: 'danger',
+            onConfirm: async () => {
+                try {
+                    // Show loading state
+                    labelElement.classList.add('deleting');
+                    labelElement.style.pointerEvents = 'none';
+                    deleteButton.innerHTML = '<div class="loading_spinner"></div>';
+                    deleteButton.disabled = true;
 
-        // Show loading spinner
-        const originalContent = deleteButton.innerHTML;
-        deleteButton.innerHTML = '<div class="loading_spinner"></div>';
-        deleteButton.disabled = true;
-        labelElement.remove();
+                    // Delete from database
+                    await window.labelsDatabase.deleteLabel(labelId);
+
+                    // Remove from UI with animation
+                    labelElement.style.opacity = '0';
+                    labelElement.style.transform = 'translateX(10px)';
+                    labelElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+
+                    setTimeout(() => {
+                        labelElement.remove();
+                    }, 300);
+                } catch (error) {
+                    console.error('Error deleting label:', error);
+                    // Restore button state on error
+                    deleteButton.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                `;
+                    deleteButton.disabled = false;
+                    labelElement.classList.remove('deleting');
+                    labelElement.style.pointerEvents = '';
+
+                    // Show error message
+                    window.alertDialog.show({
+                        title: 'Error',
+                        message: 'Failed to delete label. Please try again.',
+                        confirmText: 'OK',
+                        confirmStyle: 'danger'
+                    });
+                }
+            }
+        });
     }
 
     async handleEditLabel(labelElement, label, labelId) {
+        // Get elements
         const labelName = labelElement.querySelector('.label_name');
         const actionsContainer = labelElement.querySelector('.label_actions');
 
-        // Create input
+        // Store original content
+        const originalContent = labelElement.innerHTML;
+
+        // Create input container with specific class
+        const inputContainer = document.createElement('div');
+        inputContainer.className = 'label-edit-container';
+
+        // Create input field
         const input = document.createElement('input');
         input.type = 'text';
         input.value = label.label_name;
         input.className = 'label_edit_input';
 
-        // Create save button with loading state
+        // Add input to container
+        inputContainer.appendChild(input);
+
+        // Create save button
         const saveButton = document.createElement('button');
         saveButton.className = 'action_btn save_btn';
         saveButton.innerHTML = `
@@ -511,55 +581,87 @@ class LabelManager {
             </svg>
         `;
 
-        // Store original content
-        const originalContent = labelElement.innerHTML;
-
-        // Replace label with input
-        labelName.replaceWith(input);
-        input.focus();
-
-        // Store original actions
+        // Replace elements
+        labelName.replaceWith(inputContainer);
         actionsContainer.innerHTML = '';
         actionsContainer.appendChild(saveButton);
 
-        const handleSave = async () => {
+        // Track editing state
+        let isEditing = true;
+
+        // Save changes function
+        const saveChanges = async () => {
             const newName = input.value.trim();
-            if (newName && newName !== label.label_name) {
-                await window.labelsDatabase.editLabelName(labelId, newName);
+            if (!newName || newName === label.label_name) {
+                exitEditMode();
+                return;
+            }
+
+            try {
                 saveButton.innerHTML = '<div class="loading_spinner"></div>';
                 saveButton.disabled = true;
-                restoreLabel();
-                this.attachLabelEventListeners(labelElement);
-            } else {
-                restoreLabel();
+                await window.labelsDatabase.editLabelName(labelId, newName);
+                exitEditMode();
+
+                // Show success state
+                const nameElement = labelElement.querySelector('.label_name');
+                if (nameElement) {
+                    nameElement.textContent = newName;
+                    nameElement.style.backgroundColor = 'rgba(52, 199, 89, 0.2)';
+                    setTimeout(() => {
+                        nameElement.style.backgroundColor = 'transparent';
+                    }, 1500);
+                }
+            } catch (error) {
+                console.error('Error updating label:', error);
+                exitEditMode();
             }
         };
 
-        const restoreLabel = () => {
+        // Handle outside clicks
+        const handleClickOutside = (e) => {
+            // Don't handle click events on the input or save button
+            if (input === e.target || saveButton === e.target || inputContainer === e.target) {
+                return;
+            }
+
+            // Exit edit mode if clicking outside the label element
+            if (!labelElement.contains(e.target)) {
+                exitEditMode();
+            }
+        };
+
+        // Exit edit mode function
+        function exitEditMode() {
+            if (!isEditing) return;
+            isEditing = false;
+            document.removeEventListener('mousedown', handleClickOutside);
             labelElement.innerHTML = originalContent;
-            // Reattach event listeners after restore
             this.attachLabelEventListeners(labelElement);
-        };
+        }
 
-        const handleKeydown = (e) => {
+        // Add event listeners
+        document.addEventListener('mousedown', handleClickOutside);
+
+        input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                handleSave();
+                e.preventDefault();
+                saveChanges();
             } else if (e.key === 'Escape') {
-                restoreLabel();
+                e.preventDefault();
+                exitEditMode();
             }
-            e.stopPropagation(); // Prevent keyboard navigation while editing
-        };
+        });
 
-        // Event listeners
-        input.addEventListener('keydown', handleKeydown);
-        input.addEventListener('blur', () => {
-            // Small delay to allow save button click to register
-            setTimeout(restoreLabel, 200);
-        });
         saveButton.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
-            handleSave();
+            saveChanges();
         });
+
+        // Focus input
+        input.focus();
+        input.select();
     }
 
     // Helper method to reattach event listeners
@@ -809,6 +911,11 @@ class LabelManager {
 
     handleOutsideClick(event) {
         if (!this.state.isOpen) return;
+
+        // Don't close dropdown if we're editing a label
+        if (this.elements.dropdown?.classList.contains('editing-mode')) {
+            return;
+        }
 
         if (!this.elements.dropdown?.contains(event.target) &&
             !this.elements.button?.contains(event.target)) {

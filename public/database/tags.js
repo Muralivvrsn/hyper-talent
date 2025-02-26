@@ -48,7 +48,8 @@ class LinkedInLabelsDatabase {
 
                 // Process each label and setup individual listeners
                 await this.setupLabelListeners(labelsList);
-                this._updateStatus('logged_in');
+                console.log('sending message to listenrs')
+                await this._updateStatus('logged_in');
             }, error => {
                 console.error('[LinkedInLabels] User document sync error:', error);
                 // this._updateStatus('logged_out');
@@ -97,27 +98,45 @@ class LinkedInLabelsDatabase {
     }
     
     async setupLabelListeners(labelsList) {
+        console.log("[setupLabelListeners] Initializing label listeners...");
+    
         const db = window.firebaseService.db;
+        let firsttime = true;
         const currentLabels = new Set();
+    
+        console.log("[setupLabelListeners] Received labelsList:", labelsList);
     
         labelsList.forEach(labelData => {
             const labelId = labelData.id;
+            console.log(`[setupLabelListeners] Processing label: ${labelId}`);
+    
             currentLabels.add(labelId);
     
             // Skip if listener already exists
-            if (this.state.subscriptions.has(`label_${labelId}`)) return;
+            if (this.state.subscriptions.has(`label_${labelId}`)) {
+                console.warn(`[setupLabelListeners] Listener already exists for label ${labelId}, skipping.`);
+                return;
+            }
     
-            // Setup individual label listener
+            console.log(`[setupLabelListeners] Setting up listener for label: ${labelId}`);
             const labelRef = db.collection('profile_labels_v2').doc(labelId);
+    
             const labelUnsubscribe = labelRef.onSnapshot(async (labelDoc) => {
+                console.log(`[onSnapshot] Snapshot received for label ${labelId}`);
+    
                 if (!labelDoc.exists) {
+                    console.warn(`[onSnapshot] Label ${labelId} does not exist. Removing from state.`);
                     this.removeLabel(labelId);
                     return;
                 }
     
                 const label = labelDoc.data();
+                console.log(`[onSnapshot] Label data for ${labelId}:`, label);
+    
                 // Get profile details for each profile ID
+                console.log(`[onSnapshot] Fetching profile details for label ${labelId}`);
                 const profileDetails = await this.getProfileDetails(label.p || []);
+                console.log(`[onSnapshot] Profile details fetched for label ${labelId}:`, profileDetails);
     
                 const labelInfo = {
                     label_id: labelId,
@@ -134,25 +153,42 @@ class LinkedInLabelsDatabase {
                     })
                 };
     
-                this.updateLabel(labelInfo);
+                console.log(`[onSnapshot] Constructed labelInfo for ${labelId}:`, labelInfo);
+    
+                // if (!firsttime) {
+                //     console.log(`[onSnapshot] Updating label ${labelId}`);
+                    this.updateLabel(labelInfo, firsttime);
+                // } else {
+                //     console.log(`[onSnapshot] First-time execution, skipping update for ${labelId}`);
+                // }
             }, error => {
-                console.error(`[LinkedInLabels] Label ${labelId} sync error:`, error);
+                console.error(`[onSnapshot] Label ${labelId} sync error:`, error);
             });
     
             this.state.subscriptions.set(`label_${labelId}`, labelUnsubscribe);
+            firsttime = false;
+            console.log(`[setupLabelListeners] Listener added for label: ${labelId}`);
         });
     
+       
+        console.log("[setupLabelListeners] First-time flag set to false.");
+    
         // Cleanup listeners for removed labels
+        console.log("[setupLabelListeners] Checking for removed labels...");
         for (const [key, unsubscribe] of this.state.subscriptions.entries()) {
             if (key.startsWith('label_')) {
                 const labelId = key.replace('label_', '');
                 if (!currentLabels.has(labelId)) {
+                    console.warn(`[setupLabelListeners] Label ${labelId} is no longer in labelsList. Cleaning up.`);
                     unsubscribe();
                     this.state.subscriptions.delete(key);
                     this.removeLabel(labelId);
+                    console.log(`[setupLabelListeners] Unsubscribed and removed label: ${labelId}`);
                 }
             }
         }
+    
+        console.log("[setupLabelListeners] Completed label listener setup.");
     }
     
     async removeProfileFromLabel(labelId, profileId) {
@@ -197,14 +233,19 @@ class LinkedInLabelsDatabase {
         }
     }
 
-    updateLabel(newLabel) {
-        const index = this.state.labels.findIndex(l => l.label_id === newLabel.label_id);
-        if (index === -1) {
-            this.state.labels.push(newLabel);
-        } else {
-            this.state.labels[index] = newLabel;
+    updateLabel(newLabel, firsttime) {
+        this.state.labels = this.state.labels.map(label =>
+            label.label_id === newLabel.label_id ? newLabel : label
+        );
+    
+        // If the label is new, add it
+        if (!this.state.labels.some(label => label.label_id === newLabel.label_id)) {
+            this.state.labels = [...this.state.labels, newLabel]; // ✅ Replaces array
         }
-        this.notifyListeners();
+    
+        if (!firsttime) {
+            this.notifyListeners(); // ✅ UI should update now
+        }
     }
 
     removeLabel(labelId) {
@@ -228,7 +269,9 @@ class LinkedInLabelsDatabase {
         this.notifyListeners();
     }
 
-    _updateStatus(newStatus) {
+    async _updateStatus(newStatus) {
+        console.log(this.state.status);
+        console.log(newStatus)
         if (this.state.status !== newStatus) {
             this.state.status = newStatus;
             this.notifyListeners();
@@ -252,12 +295,15 @@ class LinkedInLabelsDatabase {
     }
 
     notifyListeners() {
+        this.state.labels = [...this.state.labels]; // ✅ Ensure new object reference
+    
         this.state.listeners.forEach(callback => {
+            console.log("Notifying listeners with labels:", this.state.labels);
             try {
                 callback({
                     type: 'status',
                     status: this.state.status,
-                    labels: this.state.labels,
+                    labels: [...this.state.labels], // ✅ Ensure new array reference
                     timestamp: new Date().toISOString()
                 });
             } catch (error) {

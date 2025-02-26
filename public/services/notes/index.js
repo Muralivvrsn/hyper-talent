@@ -77,7 +77,7 @@ class ProfileNotes {
                 
                 const id = this.extractProfileId(url);
                 if (!id) return null;
-                // console.log(id)
+                
                 return { 
                     profileId: id,
                     url: url,
@@ -97,215 +97,381 @@ class ProfileNotes {
     }
 }
 
-
 class LabelProfileNotes {
     constructor() {
         this.currentProfileInfo = null;
         this.noteBox = null;
-        this.currentNote = null;
+        this.currentNotes = [];
+        this.selectedNoteIndex = 0;
         this.initialNoteText = '';
+        this.status = 'in_progress';
         this.handleKeyPress = this.handleKeyPress.bind(this);
         this.handleClickOutside = this.handleClickOutside.bind(this);
         this.handleKeyboardShortcuts = this.handleKeyboardShortcuts.bind(this);
+        this.notesDatabaseListener = this.notesDatabaseListener.bind(this);
+    }
+
+    notesDatabaseListener(data) {
+        if (data && data.status !== this.status) {
+            this.status = data.status;
+            // If the note box is open, update its content based on the new status
+            if (this.noteBox && this.noteBox.container.parentNode) {
+                this.updateNoteBoxContent();
+            }
+        }
+    }
+
+    injectStyles() {
+        if (!document.querySelector('link[href*="fonts.googleapis.com/css2?family=Poppins"]')) {
+            const fontLink = document.createElement('link');
+            fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap';
+            fontLink.rel = 'stylesheet';
+            document.head.appendChild(fontLink);
+        }
     }
 
     createNoteBox() {
-        const fontLink = document.createElement('link');
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap';
-        fontLink.rel = 'stylesheet';
-        document.head.appendChild(fontLink);
+        this.injectStyles();
         
         const box = document.createElement('div');
         box.className = 'note-box-container';
-        box.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #FFFFFF;
-            color: #000000;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1), 0px 1px 3px rgba(0, 0, 0, 0.08);
-            z-index: 10000;
-            width: 400px;
-            font-family: 'Poppins', sans-serif;
-            font-size: 13px;
-            border: 1px solid #E5E7EB;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-        `;
 
-        const header = document.createElement('div');
-        header.style.cssText = `
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            gap: 12px;
-        `;
-
-        const titleContainer = document.createElement('div');
-        titleContainer.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        `;
-
-        const noteIcon = document.createElement('span');
-        noteIcon.style.cssText = `
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-        `;
-        noteIcon.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12.6667 13.3333H3.33333C2.97971 13.3333 2.64057 13.1928 2.39052 12.9428C2.14048 12.6927 2 12.3536 2 12V4C2 3.64638 2.14048 3.30724 2.39052 3.05719C2.64057 2.80714 2.97971 2.66667 3.33333 2.66667H10.6667L14 6V12C14 12.3536 13.8595 12.6927 13.6095 12.9428C13.3594 13.1928 13.0203 13.3333 12.6667 13.3333Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M10.6667 2.66667V6H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        `;
-
-        const title = document.createElement('div');
-        title.style.cssText = `
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        `;
-
-        const titleText = document.createElement('h3');
-        titleText.textContent = 'Notes for Profile';
-        titleText.style.cssText = `
-            margin: 0;
-            font-size: 14px;
-            font-weight: 500;
-            color: #000000;
-            line-height: 1;
-        `;
-
-        const shortcutText = document.createElement('span');
-        shortcutText.textContent = '⌘ + S to save';
-        shortcutText.style.cssText = `
-            font-size: 11px;
-            color: #6B7280;
-            font-weight: 400;
-        `;
-
-        const closeBtn = document.createElement('button');
-        closeBtn.style.cssText = `
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            color: #6B7280;
-            border-radius: 4px;
-            line-height: 0;
-            transition: color 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-        `;
-        closeBtn.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-        `;
-        closeBtn.onmouseover = () => closeBtn.style.color = '#000000';
-        closeBtn.onmouseout = () => closeBtn.style.color = '#6B7280';
-        closeBtn.onclick = () => this.closeNoteBox();
-
-        const textarea = document.createElement('textarea');
-        textarea.style.cssText = `
-            width: 100%;
-            min-height: 160px;
-            padding: 12px;
-            border: 1px solid #E5E7EB;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            font-size: 13px;
-            resize: vertical;
-            font-family: 'Poppins', sans-serif;
-            line-height: 1.5;
-            color: #000000;
-            background: #FFFFFF;
-            transition: border-color 0.2s ease;
-        `;
-        textarea.placeholder = 'Write your notes for this profile...';
-        textarea.onfocus = () => textarea.style.borderColor = '#000000';
-        textarea.onblur = () => textarea.style.borderColor = '#E5E7EB';
-
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.cssText = `
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        `;
-
-        const saveBtn = document.createElement('button');
-        saveBtn.style.cssText = `
-            background: #000000;
-            color: #FFFFFF;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            font-family: 'Poppins', sans-serif;
-            transition: background-color 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            height: 32px;
-            line-height: 1;
-        `;
-        saveBtn.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M11.6667 13H2.33333C1.97971 13 1.64057 12.8595 1.39052 12.6095C1.14048 12.3594 1 12.0203 1 11.6667V2.33333C1 1.97971 1.14048 1.64057 1.39052 1.39052C1.64057 1.14048 1.97971 1 2.33333 1H9.66667L13 4.33333V11.6667C13 12.0203 12.8595 12.3594 12.6095 12.6095C12.3594 12.8595 12.0203 13 11.6667 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9.66667 1V4.33333H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Save Note
-        `;
-        saveBtn.onmouseover = () => saveBtn.style.backgroundColor = '#1a1a1a';
-        saveBtn.onmouseout = () => saveBtn.style.backgroundColor = '#000000';
-
-        title.appendChild(titleText);
-        title.appendChild(shortcutText);
-        titleContainer.appendChild(noteIcon);
-        titleContainer.appendChild(title);
-        header.appendChild(titleContainer);
-        header.appendChild(closeBtn);
-        buttonContainer.appendChild(saveBtn);
-
-        box.appendChild(header);
-        box.appendChild(textarea);
-        box.appendChild(buttonContainer);
-
+        // Initial content will be updated based on status
         this.noteBox = {
             container: box,
-            textarea,
-            saveBtn
+            textarea: null,
+            saveBtn: null,
+            noteTabs: null
         };
 
+        this.updateNoteBoxContent();
+
         return box;
+    }
+    
+    createNoteTabs() {
+        if (!this.currentNotes || this.currentNotes.length <= 0) {
+            return null;
+        }
+        
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'note-tabs-container';
+        
+        this.currentNotes.forEach((note, index) => {
+            const tab = document.createElement('div');
+            tab.className = `note-tab ${index === this.selectedNoteIndex ? 'note-tab-active' : ''}`;
+            
+            // Create icon based on note type (owned or shared)
+            const isShared = note.metadata && note.metadata.type === 'shared';
+            const tabIcon = document.createElement('span');
+            tabIcon.className = 'note-tab-icon';
+            
+            if (isShared) {
+                tabIcon.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4C12 5.10457 11.1046 6 10 6C8.89543 6 8 5.10457 8 4C8 2.89543 8.89543 2 10 2C11.1046 2 12 2.89543 12 4Z" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M6 8C6 9.10457 5.10457 10 4 10C2.89543 10 2 9.10457 2 8C2 6.89543 2.89543 6 4 6C5.10457 6 6 6.89543 6 8Z" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M12 12C12 13.1046 11.1046 14 10 14C8.89543 14 8 13.1046 8 12C8 10.8954 8.89543 10 10 10C11.1046 10 12 10.8954 12 12Z" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M5.5 7L9 5" stroke="currentColor" stroke-width="1.5"/>
+                        <path d="M5.5 9L9 11" stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                `;
+            } else {
+                tabIcon.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11.6667 13H2.33333C1.97971 13 1.64057 12.8595 1.39052 12.6095C1.14048 12.3594 1 12.0203 1 11.6667V2.33333C1 1.97971 1.14048 1.64057 1.39052 1.39052C1.64057 1.14048 1.97971 1 2.33333 1H9.66667L13 4.33333V11.6667C13 12.0203 12.8595 12.3594 12.6095 12.6095C12.3594 12.8595 12.0203 13 11.6667 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9.66667 1V4.33333H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+            }
+            
+            const tabLabel = document.createElement('span');
+            tabLabel.className = 'note-tab-label';
+            
+            if (isShared) {
+                tabLabel.textContent = `Shared by ${note.metadata.sharedByName || 'teammate'}`;
+            } else {
+                tabLabel.textContent = 'My Note';
+            }
+            
+            tab.appendChild(tabIcon);
+            tab.appendChild(tabLabel);
+            
+            tab.addEventListener('click', () => {
+                this.selectedNoteIndex = index;
+                this.updateNoteBoxContent();
+            });
+            
+            tabsContainer.appendChild(tab);
+        });
+        
+        return tabsContainer;
+    }
+    
+    createSharedNote(note) {
+        if (!note.metadata || note.metadata.type !== 'shared') {
+            return null;
+        }
+        
+        const sharedContainer = document.createElement('div');
+        sharedContainer.className = 'note-shared-container';
+        
+        const sharedHeader = document.createElement('div');
+        sharedHeader.className = 'note-shared-header';
+        
+        const sharedIcon = document.createElement('span');
+        sharedIcon.className = 'note-shared-icon';
+        sharedIcon.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4C12 5.10457 11.1046 6 10 6C8.89543 6 8 5.10457 8 4C8 2.89543 8.89543 2 10 2C11.1046 2 12 2.89543 12 4Z" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M6 8C6 9.10457 5.10457 10 4 10C2.89543 10 2 9.10457 2 8C2 6.89543 2.89543 6 4 6C5.10457 6 6 6.89543 6 8Z" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M12 12C12 13.1046 11.1046 14 10 14C8.89543 14 8 13.1046 8 12C8 10.8954 8.89543 10 10 10C11.1046 10 12 10.8954 12 12Z" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M5.5 7L9 5" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M5.5 9L9 11" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+        `;
+        
+        const sharedInfo = document.createElement('div');
+        sharedInfo.className = 'note-shared-info';
+        
+        const sharedBy = document.createElement('div');
+        sharedBy.className = 'note-shared-by';
+        sharedBy.innerHTML = `<span>Shared by </span><strong>${note.metadata.sharedByName || 'a teammate'}</strong>`;
+        
+        const permissionInfo = document.createElement('div');
+        permissionInfo.className = 'note-permission-info';
+        permissionInfo.textContent = note.metadata.permission === 'edit' ? 'You can edit this note' : 'Read only';
+        
+        sharedInfo.appendChild(sharedBy);
+        sharedInfo.appendChild(permissionInfo);
+        
+        sharedHeader.appendChild(sharedIcon);
+        sharedHeader.appendChild(sharedInfo);
+        
+        sharedContainer.appendChild(sharedHeader);
+        
+        return sharedContainer;
+    }
+    
+    updateNoteBoxContent() {
+        if (!this.noteBox || !this.noteBox.container) return;
+        
+        const container = this.noteBox.container;
+        
+        // Clear existing content
+        container.innerHTML = '';
+        
+        // Display content based on status
+        switch (this.status) {
+            case 'in_progress':
+                container.innerHTML = `
+                    <div class="note-loading-container">
+                        <div class="note-loading-spinner"></div>
+                        <div class="note-loading-text">Loading your notes...</div>
+                    </div>
+                `;
+                break;
+                
+            case 'logged_out':
+                container.innerHTML = `
+                    <div class="note-login-container">
+                        <div class="note-login-message">Please login through the extension to access your notes</div>
+                        <button class="note-login-button">Login</button>
+                    </div>
+                `;
+                
+                // Add event listener to the login button
+                setTimeout(() => {
+                    const loginButton = container.querySelector('.note-login-button');
+                    if (loginButton) {
+                        loginButton.addEventListener('click', () => {
+                            chrome.runtime.sendMessage({ type: 'HYPER_TALENT_LOGGIN' });
+                        });
+                    }
+                }, 0);
+                break;
+                
+            case 'logged_in':
+                // Create regular note UI
+                const header = document.createElement('div');
+                header.className = 'note-box-header';
+
+                const titleContainer = document.createElement('div');
+                titleContainer.className = 'note-title-container';
+
+                const noteIcon = document.createElement('span');
+                noteIcon.className = 'note-icon';
+                noteIcon.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12.6667 13.3333H3.33333C2.97971 13.3333 2.64057 13.1928 2.39052 12.9428C2.14048 12.6927 2 12.3536 2 12V4C2 3.64638 2.14048 3.30724 2.39052 3.05719C2.64057 2.80714 2.97971 2.66667 3.33333 2.66667H10.6667L14 6V12C14 12.3536 13.8595 12.6927 13.6095 12.9428C13.3594 13.1928 13.0203 13.3333 12.6667 13.3333Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M10.6667 2.66667V6H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+
+                const title = document.createElement('div');
+                title.className = 'note-title';
+
+                const titleText = document.createElement('h3');
+                titleText.textContent = 'Notes for Profile';
+                titleText.className = 'note-title-text';
+
+                const shortcutText = document.createElement('span');
+                shortcutText.textContent = '⌘ + S to save';
+                shortcutText.className = 'note-shortcut-text';
+
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'note-close-btn';
+                closeBtn.innerHTML = `
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                `;
+                closeBtn.onclick = () => this.closeNoteBox();
+
+                title.appendChild(titleText);
+                title.appendChild(shortcutText);
+                titleContainer.appendChild(noteIcon);
+                titleContainer.appendChild(title);
+                header.appendChild(titleContainer);
+                header.appendChild(closeBtn);
+                
+                container.appendChild(header);
+                
+                // Add tabs if there are multiple notes
+                if (this.currentNotes.length > 1) {
+                    const tabsContainer = this.createNoteTabs();
+                    if (tabsContainer) {
+                        container.appendChild(tabsContainer);
+                    }
+                }
+                
+                // Get the current selected note
+                const currentNote = this.currentNotes[this.selectedNoteIndex] || null;
+                
+                // If there's a current note
+                if (currentNote) {
+                    // Check if it's a shared note
+                    const isShared = currentNote.metadata && currentNote.metadata.type === 'shared';
+                    const isReadOnly = isShared && currentNote.metadata.permission === 'read';
+                    
+                    // Add shared note banner for shared notes
+                    if (isShared) {
+                        const sharedContainer = this.createSharedNote(currentNote);
+                        if (sharedContainer) {
+                            container.appendChild(sharedContainer);
+                        }
+                    }
+                    
+                    // Create textarea for the note content
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'note-textarea';
+                    textarea.placeholder = 'Write your notes for this profile...';
+                    textarea.value = currentNote.note || '';
+                    textarea.readOnly = isReadOnly;
+                    
+                    if (isReadOnly) {
+                        textarea.className += ' note-readonly';
+                    }
+                    
+                    container.appendChild(textarea);
+                    
+                    // Save the initial text value for comparison later
+                    this.initialNoteText = textarea.value;
+                    
+                    // Add button container
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'note-button-container';
+                    
+                    // Only show save button if note is editable
+                    if (!isReadOnly) {
+                        const saveBtn = document.createElement('button');
+                        saveBtn.className = 'note-save-btn';
+                        saveBtn.innerHTML = `
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M11.6667 13H2.33333C1.97971 13 1.64057 12.8595 1.39052 12.6095C1.14048 12.3594 1 12.0203 1 11.6667V2.33333C1 1.97971 1.14048 1.64057 1.39052 1.39052C1.64057 1.14048 1.97971 1 2.33333 1H9.66667L13 4.33333V11.6667C13 12.0203 12.8595 12.3594 12.6095 12.6095C12.3594 12.8595 12.0203 13 11.6667 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M9.66667 1V4.33333H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Save Note
+                        `;
+                        saveBtn.onclick = () => this.saveNote();
+                        buttonContainer.appendChild(saveBtn);
+                        
+                        this.noteBox.saveBtn = saveBtn;
+                    }
+                    
+                    container.appendChild(buttonContainer);
+                    
+                    // Update reference to textarea
+                    this.noteBox.textarea = textarea;
+                    
+                    // Focus on textarea if it's not read-only
+                    if (!isReadOnly) {
+                        setTimeout(() => {
+                            textarea.focus();
+                        }, 10);
+                    }
+                } else {
+                    // Create empty state for new note
+                    const textarea = document.createElement('textarea');
+                    textarea.className = 'note-textarea';
+                    textarea.placeholder = 'Write your notes for this profile...';
+                    textarea.value = '';
+                    
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'note-button-container';
+                    
+                    const saveBtn = document.createElement('button');
+                    saveBtn.className = 'note-save-btn';
+                    saveBtn.innerHTML = `
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.6667 13H2.33333C1.97971 13 1.64057 12.8595 1.39052 12.6095C1.14048 12.3594 1 12.0203 1 11.6667V2.33333C1 1.97971 1.14048 1.64057 1.39052 1.39052C1.64057 1.14048 1.97971 1 2.33333 1H9.66667L13 4.33333V11.6667C13 12.0203 12.8595 12.3594 12.6095 12.6095C12.3594 12.8595 12.0203 13 11.6667 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M9.66667 1V4.33333H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Save Note
+                    `;
+                    saveBtn.onclick = () => this.saveNote();
+                    buttonContainer.appendChild(saveBtn);
+                    
+                    container.appendChild(textarea);
+                    container.appendChild(buttonContainer);
+                    
+                    // Update references
+                    this.noteBox.textarea = textarea;
+                    this.noteBox.saveBtn = saveBtn;
+                    
+                    // Focus on textarea
+                    setTimeout(() => {
+                        textarea.focus();
+                    }, 10);
+                    
+                    // Initialize empty text
+                    this.initialNoteText = '';
+                }
+                break;
+        }
     }
 
     async getNotes(profileId) {
         try {
-            const notes = await window.notesDatabase.getNotes(profileId);
-            return notes;
+            return await window.notesDatabase.getNotesByProfileId(profileId) || [];
         } catch (error) {
             window.show_error('Unable to load existing notes. Please try again.', 3000);
             console.error('Error fetching notes:', error);
-            return null;
+            return [];
         }
     }
 
     async showNoteBox(profileInfo) {
         this.currentProfileInfo = profileInfo;
+        
+        // Reset selected note index
+        this.selectedNoteIndex = 0;
+        
+        // Get current status from notesDatabase
+        this.status = window.notesDatabase?.status || 'in_progress';
+        
+        // Add listener for status changes
+        window.notesDatabase.addListener(this.notesDatabaseListener);
         
         if (!this.noteBox) {
             const box = this.createNoteBox();
@@ -318,6 +484,7 @@ class LabelProfileNotes {
                 box.style.transform = 'translateY(0)';
             });
         } else {
+            this.updateNoteBoxContent();
             document.body.appendChild(this.noteBox.container);
             // Trigger reflow
             this.noteBox.container.offsetHeight;
@@ -328,23 +495,47 @@ class LabelProfileNotes {
             });
         }
 
-        try {
-            this.currentNote = await this.getNotes(profileInfo.profileId);
-            this.noteBox.textarea.value = this.currentNote ? this.currentNote.note : '';
-            this.initialNoteText = this.noteBox.textarea.value;
-            this.noteBox.saveBtn.onclick = () => this.saveNote();
-
-            // Add keyboard shortcut listener
-            document.addEventListener('keydown', this.handleKeyboardShortcuts);
-
-            requestAnimationFrame(() => {
-                this.noteBox.textarea.focus();
-            });
-
-            document.addEventListener('mousedown', this.handleClickOutside);
-        } catch (error) {
-            window.show_error('Error initializing notes. Please refresh and try again.', 3000);
-            console.error(error);
+        // Only fetch notes and set up interaction if logged in
+        if (this.status === 'logged_in') {
+            try {
+                const notes = await this.getNotes(profileInfo.profileId);
+                this.currentNotes = Array.isArray(notes) ? notes : (notes ? [notes] : []);
+                
+                // Sort notes - owned notes first, then shared notes by shared date
+                this.currentNotes.sort((a, b) => {
+                    // If one is owned and the other is shared, owned comes first
+                    if (a.metadata?.type === 'owned' && b.metadata?.type === 'shared') return -1;
+                    if (a.metadata?.type === 'shared' && b.metadata?.type === 'owned') return 1;
+                    
+                    // If both are shared, sort by shared date (newest first)
+                    if (a.metadata?.type === 'shared' && b.metadata?.type === 'shared') {
+                        return new Date(b.metadata.sharedAt) - new Date(a.metadata.sharedAt);
+                    }
+                    
+                    // If both are owned, sort by last updated (newest first)
+                    return new Date(b.lastUpdated) - new Date(a.lastUpdated);
+                });
+                
+                // Update the note box content with the sorted notes
+                this.updateNoteBoxContent();
+                
+                // Get current note
+                const currentNote = this.currentNotes[this.selectedNoteIndex];
+                const isReadOnly = currentNote && 
+                                  currentNote.metadata && 
+                                  currentNote.metadata.type === 'shared' && 
+                                  currentNote.metadata.permission === 'read';
+                
+                // Add keyboard shortcut listener only if the note is editable or there's no note yet
+                if (!currentNote || !isReadOnly) {
+                    document.addEventListener('keydown', this.handleKeyboardShortcuts);
+                }
+                
+                document.addEventListener('mousedown', this.handleClickOutside);
+            } catch (error) {
+                window.show_error('Error initializing notes. Please refresh and try again.', 3000);
+                console.error(error);
+            }
         }
     }
 
@@ -358,10 +549,20 @@ class LabelProfileNotes {
 
     handleClickOutside(event) {
         if (this.noteBox && !this.noteBox.container.contains(event.target)) {
-            const currentText = this.noteBox.textarea.value;
-            if (currentText !== this.initialNoteText) {
-                if (confirm('You have unsaved changes. Do you want to save them before closing?')) {
-                    this.saveNote();
+            const currentNote = this.currentNotes[this.selectedNoteIndex];
+            const isReadOnly = currentNote && 
+                              currentNote.metadata && 
+                              currentNote.metadata.type === 'shared' && 
+                              currentNote.metadata.permission === 'read';
+            
+            if (this.status === 'logged_in' && this.noteBox.textarea && !isReadOnly) {
+                const currentText = this.noteBox.textarea.value;
+                if (currentText !== this.initialNoteText) {
+                    if (confirm('You have unsaved changes. Do you want to save them before closing?')) {
+                        this.saveNote();
+                    } else {
+                        this.closeNoteBox();
+                    }
                 } else {
                     this.closeNoteBox();
                 }
@@ -372,8 +573,32 @@ class LabelProfileNotes {
     }
 
     async saveNote() {
+        if (this.status !== 'logged_in') {
+            window.show_error('You must be logged in to save notes.', 3000);
+            return;
+        }
+        
         if (!this.currentProfileInfo) {
             window.show_error('Unable to save note. Profile information is missing.', 3000);
+            return;
+        }
+
+        if (!this.noteBox.textarea) {
+            window.show_error('Unable to save note. Text area not found.', 3000);
+            return;
+        }
+        
+        // Get current note if available
+        const currentNote = this.currentNotes[this.selectedNoteIndex];
+        
+        // Check if the note is read-only
+        const isReadOnly = currentNote && 
+                          currentNote.metadata && 
+                          currentNote.metadata.type === 'shared' && 
+                          currentNote.metadata.permission === 'read';
+        
+        if (isReadOnly) {
+            window.show_warning('This note is read-only. You cannot make changes.', 3000);
             return;
         }
 
@@ -391,20 +616,28 @@ class LabelProfileNotes {
         }
 
         try {
-            if (this.currentNote) {
-                await window.notesDatabase.updateNote(this.currentNote.id, noteText, this.currentProfileInfo.profileId, this.currentProfileInfo);
-                window.show_success('Your note has been successfully updated.', 3000);
+            if (currentNote) {
+                // Handle based on note type
+                if (currentNote.metadata && currentNote.metadata.type === 'shared') {
+                    // This is a shared note that the user can edit
+                    await window.notesDatabase.updateNote(currentNote.id, noteText);
+                    window.show_success('Your changes to the shared note have been saved.', 3000);
+                } else {
+                    // This is the user's own note
+                    await window.notesDatabase.updateNote(currentNote.id, noteText);
+                    window.show_success('Your note has been updated.', 3000);
+                }
             } else {
+                // Create a new note
                 await window.notesDatabase.createNote(this.currentProfileInfo.profileId, noteText, this.currentProfileInfo);
-                window.show_success('Your note has been successfully saved.', 3000);
+                window.show_success('Your new note has been saved.', 3000);
             }
-            window.userActionsDatabase.addAction("notes_saved")
+            window.userActionsDatabase?.addAction("notes_saved");
 
-            this.currentNote = null;
             this.closeNoteBox();
         } catch (error) {
             window.show_error('Unable to save your note. Please try again.', 3000);
-            window.userActionsDatabase.addAction("notes_saved_failed")
+            window.userActionsDatabase?.addAction("notes_saved_failed");
             console.error(error);
         }
     }
@@ -413,6 +646,8 @@ class LabelProfileNotes {
         if (this.noteBox) {
             document.removeEventListener('mousedown', this.handleClickOutside);
             document.removeEventListener('keydown', this.handleKeyboardShortcuts);
+            window.notesDatabase.removeListener(this.notesDatabaseListener);
+            
             this.noteBox.container.style.opacity = '0';
             this.noteBox.container.style.transform = 'translateY(-10px)';
 
@@ -421,6 +656,10 @@ class LabelProfileNotes {
                     this.noteBox.container.parentNode.removeChild(this.noteBox.container);
                 }
             }, 200);
+            
+            // Reset current notes
+            this.currentNotes = [];
+            this.selectedNoteIndex = 0;
         }
     }
 
@@ -436,6 +675,7 @@ class LabelProfileNotes {
             
             try {
                 const profileInfo = window.profileNotes.getProfileInfo();
+                console.log(profileInfo);
                 
                 if (profileInfo) {
                     this.showNoteBox(profileInfo);
@@ -459,6 +699,7 @@ class LabelProfileNotes {
         document.removeEventListener('keydown', this.handleKeyPress);
         document.removeEventListener('mousedown', this.handleClickOutside);
         document.removeEventListener('keydown', this.handleKeyboardShortcuts);
+        window.notesDatabase.removeListener(this.notesDatabaseListener);
         this.closeNoteBox();
     }
 }

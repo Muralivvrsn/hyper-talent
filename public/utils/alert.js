@@ -2,26 +2,39 @@ class AlertDialog {
     constructor() {
         this.dialog = null;
         this.isShowing = false;
+        this.onConfirmCallback = null;
+        this.onCancelCallback = null;
         this.initialize();
     }
 
     initialize() {
         // Create dialog element
         this.dialog = document.createElement('div');
-        this.dialog.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-        `;
-
+        
+        
+        // Add classes to dialog
+        this.dialog.className = 'alert-dialog-overlay';
+        
         document.body.appendChild(this.dialog);
+        
+        // Handle keydown globally when dialog is shown
+        document.addEventListener('keydown', this.handleKeydown.bind(this));
+    }
+    
+    handleKeydown(event) {
+        if (!this.isShowing) return;
+        
+        if (event.key === 'Enter') {
+            // Simulate clicking the confirm button
+            event.preventDefault();
+            this.hide();
+            this.onConfirmCallback?.();
+        } else if (event.key === 'Escape' || event.key === 'Backspace' || event.key === 'Delete') {
+            // Simulate clicking the cancel button
+            event.preventDefault();
+            this.hide();
+            this.onCancelCallback?.();
+        }
     }
 
     show(options) {
@@ -36,20 +49,26 @@ class AlertDialog {
         } = options;
 
         if (this.isShowing) return;
+        
+        // Store callbacks for keyboard event handling
+        this.onConfirmCallback = onConfirm;
+        this.onCancelCallback = onCancel;
 
-        const confirmClass = confirmStyle === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700';
+        const confirmClass = confirmStyle === 'danger' ? 'alert-dialog-danger' : 'alert-dialog-success';
 
         this.dialog.innerHTML = `
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">${title}</h3>
-                    <p class="text-gray-600 dark:text-gray-300">${message}</p>
+            <div class="alert-dialog-container">
+                <div class="alert-dialog-header">
+                    <h3 class="alert-dialog-title">${title}</h3>
                 </div>
-                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end gap-3">
-                    <button class="cancel-btn px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none">
+                <div class="alert-dialog-body">
+                    <p>${message}</p>
+                </div>
+                <div class="alert-dialog-footer">
+                    <button class="alert-dialog-button alert-dialog-cancel">
                         ${cancelText}
                     </button>
-                    <button class="confirm-btn px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none ${confirmClass}">
+                    <button class="alert-dialog-button ${confirmClass}">
                         ${confirmText}
                     </button>
                 </div>
@@ -57,11 +76,17 @@ class AlertDialog {
         `;
 
         this.dialog.style.display = 'flex';
+        
+        // Trigger reflow to ensure transition works
+        this.dialog.offsetHeight;
+        
+        // Add visible class for animation
+        this.dialog.classList.add('visible');
         this.isShowing = true;
 
         // Add event listeners
-        const confirmBtn = this.dialog.querySelector('.confirm-btn');
-        const cancelBtn = this.dialog.querySelector('.cancel-btn');
+        const confirmBtn = this.dialog.querySelector(`.${confirmClass}`);
+        const cancelBtn = this.dialog.querySelector('.alert-dialog-cancel');
 
         confirmBtn.addEventListener('click', () => {
             this.hide();
@@ -83,14 +108,24 @@ class AlertDialog {
     }
 
     hide() {
-        this.dialog.style.display = 'none';
-        this.isShowing = false;
+        if (!this.isShowing) return;
+        
+        this.dialog.classList.remove('visible');
+        
+        // Wait for animation to complete
+        setTimeout(() => {
+            this.dialog.style.display = 'none';
+            this.isShowing = false;
+            this.onConfirmCallback = null;
+            this.onCancelCallback = null;
+        }, 250);
     }
 
     destroy() {
         if (this.dialog) {
             this.dialog.remove();
             this.dialog = null;
+            document.removeEventListener('keydown', this.handleKeydown.bind(this));
         }
     }
 }

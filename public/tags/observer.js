@@ -8,6 +8,7 @@ const stylish = {
             flex-wrap: wrap;
             gap: 4px;
             padding: 4px 0;
+            width: 60% !important;
             min-height: 24px;
         }
 
