@@ -26,11 +26,11 @@ export const SheetProvider = ({ children }) => {
       setSheetData(null);
       setIsLoading(false);
     }
-  }, [userProfile?.data]);
+  }, [userProfile?.data?.spreadsheet]);
 
   const getGoogleToken = async () => {
     const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
-    return response.token;
+    return response.data.accessToken;
   };
 
   const contextValue = {

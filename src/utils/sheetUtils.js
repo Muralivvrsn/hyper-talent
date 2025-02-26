@@ -302,7 +302,27 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
 };
 
 export const createSheet = async (token, title) => {
+  // Validate inputs
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+  
+  if (!title) {
+    throw new Error('Sheet title is required');
+  }
+
+  if (!HEADERS || Object.keys(HEADERS).length === 0) {
+    throw new Error('HEADERS object is not properly defined');
+  }
+
+  const sheetNames = ['Profile Data', 'Messages'];
+  const headerKeys = Object.keys(HEADERS);
+  if (!sheetNames.every(name => headerKeys.includes(name))) {
+    throw new Error('Sheet names do not match HEADERS keys');
+  }
+
   try {
+    // Create the spreadsheet
     const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
       method: 'POST',
       headers: {
@@ -311,26 +331,68 @@ export const createSheet = async (token, title) => {
       },
       body: JSON.stringify({
         properties: { title },
-        sheets: [
-          { properties: { title: 'Profile Data' } },
-          { properties: { title: 'Messages' } }
-        ]
+        sheets: sheetNames.map(title => ({ properties: { title } }))
       })
     });
 
-    if (!response.ok) throw new Error('Sheet creation failed');
+    // Handle HTTP errors
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Sheet creation failed: ${response.status} - ${errorData.error?.message || response.statusText}`);
+    }
+
     const sheet = await response.json();
 
-    await Promise.all(
-      Object.keys(HEADERS).map(sheetName =>
-        ensureHeaders(sheet.spreadsheetId, token, sheetName)
-      )
-    );
+    // Create headers with retry logic
+    const retryCount = 3;
+    for (let attempt = 1; attempt <= retryCount; attempt++) {
+      try {
+        await Promise.all(
+          Object.keys(HEADERS).map(sheetName =>
+            ensureHeaders(sheet.spreadsheetId, token, sheetName)
+          )
+        );
+        break; // Success - exit retry loop
+      } catch (headerError) {
+        if (attempt === retryCount) {
+          // All retries failed
+          // Optionally delete the created sheet
+          try {
+            await deleteSheet(sheet.spreadsheetId, token);
+          } catch (deleteError) {
+            console.error('Failed to delete sheet after header creation failure:', deleteError);
+          }
+          throw new Error(`Failed to create headers after ${retryCount} attempts: ${headerError.message}`);
+        }
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
 
-    return sheet;
+    return {
+      ...sheet,
+      created: new Date().toISOString()
+    };
   } catch (error) {
     console.error('Error creating sheet:', error);
     throw error;
+  }
+};
+
+const deleteSheet = async (spreadsheetId, token) => {
+  const response = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
+    {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Failed to delete sheet: ${response.status} - ${errorData.error?.message || response.statusText}`);
   }
 };
 
@@ -705,9 +767,34 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
         let labelExists = false;
 
         if (userLabelIds.length > 0) {
+          console.log(userLabelIds)
           const labelDocs = await Promise.all(
-            userLabelIds.map(id => getDoc(doc(db, 'profile_labels_v2', id)))
-          );
+            userLabelIds.map(async (id) => {
+              try {
+                // Log the ID being processed
+                console.log('Processing ID:', id);
+                
+                // Check if ID is valid
+                if (!id) {
+                  throw new Error(`Invalid ID: ${id}`);
+                }
+          
+                const docRef = doc(db, 'profile_labels_v2', id);
+                const docSnap = await getDoc(docRef);
+                
+                // Check if document exists
+                if (!docSnap.exists()) {
+                  console.log(`Document does not exist: ${id}`);
+                  return null;
+                }
+                
+                return docSnap;
+              } catch (error) {
+                console.error(`Error fetching document ${id}:`, error);
+                return null;
+              }
+            })
+          ).then(results => results.filter(Boolean)); // Remove null results
 
           const existingLabel = labelDocs.find(doc =>
             doc.exists() && doc.data().n.toUpperCase() === labelName

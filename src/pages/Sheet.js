@@ -94,7 +94,7 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => (
 
 const SheetPage = () => {
   const { user } = useAuth();
-  const { sheetData, setSheetData, isLoading: contextLoading, getGoogleToken } = useSheet();
+  const { sheetData, setSheetData, getGoogleToken } = useSheet();
   const [loadingStates, setLoadingStates] = useState({
     create: false,
     syncSheet: false,
@@ -229,13 +229,6 @@ const SheetPage = () => {
     }
   };
 
-  if (contextLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-4xl">
