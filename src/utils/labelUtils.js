@@ -13,7 +13,7 @@ export const getRandomColor = () => {
 export const createLabel = async (labelName, userId, db) => {
   if (!userId || !labelName.trim()) return null;
 
-  const normalizedLabelName = labelName.trim().toUpperCase();
+  const normalizedLabelName = labelName.trim();
 
   try {
     return await runTransaction(db, async (transaction) => {
@@ -40,7 +40,7 @@ export const createLabel = async (labelName, userId, db) => {
         const labelExists = labelDocs.some(labelDoc => {
           if (labelDoc.exists()) {
             const labelData = labelDoc.data();
-            return labelData.n.toUpperCase() === normalizedLabelName;
+            return labelData.n === normalizedLabelName;
           }
           return false;
         });
