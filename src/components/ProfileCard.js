@@ -16,7 +16,6 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
   const [sharedNotesExpanded, setSharedNotesExpanded] = useState(false);
   const [expandedSharedNotes, setExpandedSharedNotes] = useState({});
   const [actionType, setActionType] = useState(null);
-  const initials = profile.name?.slice(0, 2).toUpperCase() || '??';
   const [removingLabels, setRemovingLabels] = useState(false);
   const { user } = useAuth();
   const { theme } = useTheme();
