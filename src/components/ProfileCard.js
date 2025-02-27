@@ -167,7 +167,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
             <p className={`text-sm text-muted-foreground ${expanded ? '' : 'line-clamp-2'}`}>
               {note.content}
             </p>
-            {note.content.length > 100 && (
+            {note.content.length > 60 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -216,7 +216,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
                       <p className={`text-sm text-muted-foreground ${expandedSharedNotes[sharedNote.id] ? '' : 'line-clamp-2'}`}>
                         {sharedNote.content}
                       </p>
-                      {sharedNote.content.length > 55 && (
+                      {sharedNote.content.length > 60 && (
                         <button
                           onClick={() => toggleSharedNoteExpanded(sharedNote.id)}
                           className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
