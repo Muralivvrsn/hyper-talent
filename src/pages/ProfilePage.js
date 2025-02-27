@@ -237,7 +237,7 @@ export default function ProfilePage() {
         onNotesFilterChange={handleNotesFilterChange}
       />
 
-      <div className="h-[70vh] overflow-auto grid md:grid-cols-2 lg:grid-cols-3">
+      <div className="max-h-[70vh] overflow-auto grid md:grid-cols-2 lg:grid-cols-3">
         {filteredProfiles.map(({ profile, labels, note, sharedNotes }) => (
           <ProfileCard
             key={profile.id}

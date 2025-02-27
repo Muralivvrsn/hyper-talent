@@ -212,36 +212,36 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
             {sharedNotesExpanded && (
               <div className="pl-4 mt-1 space-y-2">
                 {sharedNotes.map((sharedNote) => (
-                  <div key={sharedNote.id} className="border-l-2 border-muted pl-2">
-                    <p className={`text-sm text-muted-foreground ${expandedSharedNotes[sharedNote.id] ? '' : 'line-clamp-2'}`}>
-                      {sharedNote.content}
-                    </p>
-
-                    {sharedNote.content.length > 100 && (
-                      <button
-                        onClick={() => toggleSharedNoteExpanded(sharedNote.id)}
-                        className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
-                      >
-                        {expandedSharedNotes[sharedNote.id] ? (
-                          <>
-                            Show less
-                            <ChevronUp className="h-3 w-3" />
-                          </>
-                        ) : (
-                          <>
-                            Show more
-                            <ChevronDown className="h-3 w-3" />
-                          </>
-                        )}
-                      </button>
-                    )}
-
+                  <>
+                    <div key={sharedNote.id} className="border-l-2 border-b border-muted pl-2">
+                      <p className={`text-sm text-muted-foreground ${expandedSharedNotes[sharedNote.id] ? '' : 'line-clamp-2'}`}>
+                        {sharedNote.content}
+                      </p>
+                      {sharedNote.content.length > 55 && (
+                        <button
+                          onClick={() => toggleSharedNoteExpanded(sharedNote.id)}
+                          className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
+                        >
+                          {expandedSharedNotes[sharedNote.id] ? (
+                            <>
+                              Show less
+                              <ChevronUp className="h-3 w-3" />
+                            </>
+                          ) : (
+                            <>
+                              Show more
+                              <ChevronDown className="h-3 w-3" />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                     {sharedNote.sbn && (
                       <p className="text-xs italic text-muted-foreground mt-1">
                         Shared by: {sharedNote.sbn}
                       </p>
                     )}
-                  </div>
+                  </>
                 ))}
               </div>
             )}
