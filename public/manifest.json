@@ -47,6 +47,8 @@
         "tags/index.js",
         "tags/keyboard.js",
         "tags/observer.js",
+        "tags/filter.js",
+        "tags/filtering-ui.js",
 
 
 

@@ -73,12 +73,13 @@ class LabelFilterCore {
         }, 2000);
     }
 
-    async handleLabelsUpdate(labels) {
-        if(labels.length <= 0)
+    async handleLabelsUpdate(data) {
+        console.log(data)
+        if(data.labels.length <= 0)
             return;
-        this.updateLabelsCache(labels);
+        this.updateLabelsCache(data.labels);
         
-        window.labelFilterUI?.updateLabelsDropdown(labels);
+        window.labelFilterUI?.updateLabelsDropdown(data.labels);
         window.labelFilterUI?.updateSelectedLabels();
         this.updateAllowedLabels();
     }
@@ -296,58 +297,6 @@ class LabelFilterCore {
     }
 }
 
-// console.log('[LabelFilterCore] Creating instance');
+
 window.labelFilterCore = new LabelFilterCore();
 
-
-// const initLabelManager = () => {
-//     let lastUrl = '';
-//     let checkInterval = null;
-    
-//     const tryInitialize = () => {
-//       const container = document.querySelector('.msg-cross-pillar-inbox-top-bar-wrapper__container');
-//       if (container) {
-//         window.labelFilterCore = new LabelFilterCore();
-//         if (checkInterval) {
-//           clearInterval(checkInterval);
-//           checkInterval = null;
-//         }
-//       }
-//     };
-  
-//     const observer = new MutationObserver(async () => {
-//       const currentUrl = window.location.href;
-//       if (currentUrl !== lastUrl) {
-//         lastUrl = currentUrl;
-        
-//         // Clean up existing instance and interval
-//         if (window.labelFilterCore) {
-//           window.labelFilterCore.destroy();
-//           window.labelFilterCore = null;
-//         }
-//         if (checkInterval) {
-//           clearInterval(checkInterval);
-//           checkInterval = null;
-//         }
-  
-//         // Initialize only on messaging pages
-//         if (currentUrl.includes('messaging/thread/')) {
-//           tryInitialize();
-//           checkInterval = setInterval(tryInitialize, 2000);
-//         }
-//       }
-//     });
-  
-//     observer.observe(document.body, {
-//       childList: true,
-//       subtree: true
-//     });
-  
-//     // Initial check
-//     if (window.location.href.includes('messaging/thread/')) {
-//       tryInitialize();
-//       checkInterval = setInterval(tryInitialize, 2000);
-//     }
-//   };
-  
-//   initLabelManager();

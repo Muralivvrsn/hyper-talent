@@ -213,16 +213,16 @@ class LinkedInLabelsDatabase {
             const labelData = labelDoc.data();
             
             console.log(profileId)
-            console.log(profileInfo.profile_id);
+            // console.log(profileInfo.profile_id);
 
             // Check if profile exists in the profiles array
-            if (!labelData.p || !labelData.p.includes(profileInfo.profile_id)) {
+            if (!labelData.p || !labelData.p.includes(profileId)) {
                 throw new Error('Profile not found in label');
             }
     
             // Remove profile from the profiles array
             await labelRef.update({
-                p: firebase.firestore.FieldValue.arrayRemove(profileInfo.profile_id),
+                p: firebase.firestore.FieldValue.arrayRemove(profileId),
                 lu: new Date().toISOString() // Update last updated timestamp
             });
     
