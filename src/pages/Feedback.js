@@ -77,12 +77,12 @@ const getStatusBadge = (status) => {
 
 const StatusBadge = ({ status }) => {
   const statusInfo = statusConfig[status] || statusConfig.ns;
-  
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger>
-          <Badge 
+          <Badge
             className={`${getStatusBadge(status)} hover:bg-background-800`}
           >
             {statusInfo.label}
@@ -115,9 +115,9 @@ const FeedbackItem = ({ data, id }) => {
         </div>
         <StatusBadge status={data.s || 'ns'} />
       </div>
-      
+
       <p className="text-sm text-foreground">{data.d}</p>
-      
+
       {data.u && data.u.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
           {data.u.map((url, index) => (
@@ -167,8 +167,8 @@ const FilePreview = ({ file, onRemove }) => {
     <div className="relative flex items-center p-2 bg-background rounded-md border border-gray-200">
       {isImage ? (
         <div className="w-12 h-12 flex-shrink-0">
-          <img 
-            src={preview} 
+          <img
+            src={preview}
             alt={file.name}
             className="w-full h-full object-cover rounded"
           />
@@ -207,13 +207,13 @@ const Feedback = () => {
   const [selectedType, setSelectedType] = useState('Bug');
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  
-  const { 
-    feedbackItems, 
-    isLoading, 
-    submitFeedback, 
-    validateFile, 
-    ALLOWED_FILE_TYPES 
+
+  const {
+    feedbackItems,
+    isLoading,
+    submitFeedback,
+    validateFile,
+    ALLOWED_FILE_TYPES
   } = useFeedback();
 
   const handleSubmit = async () => {
@@ -223,7 +223,7 @@ const Feedback = () => {
     }
 
     setIsSubmitting(true);
-    
+
     try {
       await submitFeedback(selectedType, feedback, files);
       setFeedback('');
@@ -251,7 +251,7 @@ const Feedback = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
+
     try {
       const newFiles = Array.from(e.dataTransfer.files);
       newFiles.forEach(file => validateFile(file));
@@ -279,7 +279,7 @@ const Feedback = () => {
   return (
     <div>
       <h1 className="text-lg font-semibold mb-4">Feedback</h1>
-      
+
       <div className="mb-4">
         <Select value={selectedType} onValueChange={setSelectedType}>
           <SelectTrigger className="w-full">
@@ -295,7 +295,7 @@ const Feedback = () => {
         </Select>
       </div>
 
-      <div 
+      <div
         className={`relative space-y-4 ${isDragging ? 'after:absolute after:inset-0 after:bg-blue-50 after:bg-opacity-50 after:border-2 after:border-dashed after:border-blue-300 after:rounded-lg' : ''}`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -303,14 +303,14 @@ const Feedback = () => {
         onDrop={handleDrop}
       >
         <div className="relative">
-          <Textarea 
+          <Textarea
             className="min-h-32 pr-12 text-sm"
             placeholder={feedbackTypes.find(t => t.value === selectedType)?.placeholder}
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             disabled={isSubmitting}
           />
-          <div 
+          <div
             className="absolute right-2 bottom-2 cursor-pointer"
             onClick={() => document.getElementById('file-input').click()}
           >
@@ -331,9 +331,9 @@ const Feedback = () => {
       {files.length > 0 && (
         <div className="mt-2 space-y-2">
           {files.map((file, index) => (
-            <FilePreview 
-              key={`${file.name}-${index}`} 
-              file={file} 
+            <FilePreview
+              key={`${file.name}-${index}`}
+              file={file}
               onRemove={removeFile}
             />
           ))}
@@ -341,8 +341,8 @@ const Feedback = () => {
       )}
 
       <div className="mt-4">
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
           onClick={handleSubmit}
           disabled={isSubmitting || !feedback.trim()}
         >
@@ -358,30 +358,29 @@ const Feedback = () => {
       </div>
 
       <div className="mt-8">
-    <h2 className="text-base font-medium pr-4 mb-4">Your Feedback History</h2>
-    
-    <ScrollArea className="h-[calc(100vh-12rem)]">
-      {isLoading ? (
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
-      ) : feedbackItems.length === 0 ? (
-        <div className="text-sm text-muted-foreground py-4 px-4">
-          No feedback submitted yet
-        </div>
-      ) : (
-        <div className="divide-y divide-border">
-          {feedbackItems.map((item) => (
-            <FeedbackItem 
-              key={item.id} 
-              data={item} 
-              id={item.id}
-            />
-          ))}
-        </div>
-      )}
-    </ScrollArea>
-  </div>
+        <h2 className="text-base font-medium pr-4 mb-4">Your Feedback History</h2>
+        <ScrollArea className="h-[calc(100vh-12rem)]">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : feedbackItems.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-4 px-4">
+              No feedback submitted yet
+            </div>
+          ) : (
+            <div className="h-[50vh] overflow-auto divide-y divide-border">
+              {feedbackItems.map((item) => (
+                <FeedbackItem
+                  key={item.id}
+                  data={item}
+                  id={item.id}
+                />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
     </div>
   );
 };

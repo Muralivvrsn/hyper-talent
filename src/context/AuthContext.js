@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithCredential, 
-  signOut, 
-  onAuthStateChanged 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithCredential,
+  signOut,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -53,56 +53,56 @@ const formatUserProfile = (profileData) => ({
   plan: profileData.p || 'free',
   planExpiry: profileData.pe || null,
   data: {
-    labels: Array.isArray(profileData.d?.l) 
+    labels: Array.isArray(profileData.d?.l)
       ? profileData.d.l.map(item => {
-          if (typeof item === 'object' && item !== null) {
-            return {
-              a: item.a || null,
-              ps: item.ps || null,
-              sa: item.sa || null,
-              sb: item.sb || null,
-              sbn: item.sbn || null,
-              ca: item.ca || null,
-              id: item.id || '',
-              t: item.t || ''
-            };
-          }
-          return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
-        }) 
+        if (typeof item === 'object' && item !== null) {
+          return {
+            a: item.a || null,
+            ps: item.ps || null,
+            sa: item.sa || null,
+            sb: item.sb || null,
+            sbn: item.sbn || null,
+            ca: item.ca || null,
+            id: item.id || '',
+            t: item.t || ''
+          };
+        }
+        return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
+      })
       : [],
-    notes: Array.isArray(profileData.d?.n) 
+    notes: Array.isArray(profileData.d?.n)
       ? profileData.d.n.map(item => {
-          if (typeof item === 'object' && item !== null) {
-            return {
-              a: item.a || null,
-              ps: item.ps || null,
-              sa: item.sa || null,
-              sb: item.sb || null,
-              sbn: item.sbn || null,
-              ca: item.ca || null,
-              id: item.id || '',
-              t: item.t || ''
-            };
-          }
-          return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
-        }) 
+        if (typeof item === 'object' && item !== null) {
+          return {
+            a: item.a || null,
+            ps: item.ps || null,
+            sa: item.sa || null,
+            sb: item.sb || null,
+            sbn: item.sbn || null,
+            ca: item.ca || null,
+            id: item.id || '',
+            t: item.t || ''
+          };
+        }
+        return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
+      })
       : [],
-    shortcuts: Array.isArray(profileData.d?.s) 
+    shortcuts: Array.isArray(profileData.d?.s)
       ? profileData.d.s.map(item => {
-          if (typeof item === 'object' && item !== null) {
-            return {
-              a: item.a || null,
-              ps: item.ps || null,
-              sa: item.sa || null,
-              sb: item.sb || null,
-              sbn: item.sbn || null,
-              ca: item.ca || null,
-              id: item.id || '',
-              t: item.t || ''
-            };
-          }
-          return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
-        }) 
+        if (typeof item === 'object' && item !== null) {
+          return {
+            a: item.a || null,
+            ps: item.ps || null,
+            sa: item.sa || null,
+            sb: item.sb || null,
+            sbn: item.sbn || null,
+            ca: item.ca || null,
+            id: item.id || '',
+            t: item.t || ''
+          };
+        }
+        return { id: item || '', q: '', ps: null, sa: null, sb: null, sbn: null, ca: null, t: '' };
+      })
       : [],
     spreadsheet: {
       id: profileData.d?.sd?.id || null,
@@ -157,13 +157,13 @@ export const AuthProvider = ({ children }) => {
   const updateUserProfile = (snapshot) => {
     if (snapshot.exists()) {
       const formattedProfile = formatUserProfile(snapshot.data());
-      setAuthState(prev => ({ 
-        ...prev, 
+      setAuthState(prev => ({
+        ...prev,
         userProfile: formattedProfile
       }));
     } else {
-      setAuthState(prev => ({ 
-        ...prev, 
+      setAuthState(prev => ({
+        ...prev,
         userProfile: null
       }));
     }
@@ -231,17 +231,17 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const handleSignIn = async () => {
-    setAuthState(prev => ({ 
-      ...prev, 
+    setAuthState(prev => ({
+      ...prev,
       status: 'in_progress',
-      error: null 
+      error: null
     }));
 
     try {
       const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
       const clientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET;
       const redirectUri = chrome.identity.getRedirectURL();
-      
+
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
       authUrl.searchParams.append('client_id', clientId);
       authUrl.searchParams.append('redirect_uri', redirectUri);
@@ -286,8 +286,8 @@ export const AuthProvider = ({ children }) => {
 
       const { access_token, refresh_token, expires_in } = await tokenResponse.json();
 
-      await chrome.runtime.sendMessage({ 
-        type: 'STORE_TOKEN', 
+      await chrome.runtime.sendMessage({
+        type: 'STORE_TOKEN',
         token: access_token,
         refreshToken: refresh_token,
         expiresIn: expires_in,
@@ -301,8 +301,8 @@ export const AuthProvider = ({ children }) => {
 
     } catch (error) {
       console.error('Sign in failed:', error);
-      setAuthState(prev => ({ 
-        ...prev, 
+      setAuthState(prev => ({
+        ...prev,
         status: 'logged_out',
         error: 'Authentication failed'
       }));
@@ -310,53 +310,51 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-// ... rest of the code remains the same ...
-
-const handleSignOut = async () => {
-  setAuthState(prev => ({ 
-    ...prev, 
-    status: 'in_progress',
-    error: null 
-  }));
-
-  try {
-    // First notify background about signout
-    await chrome.runtime.sendMessage({ type: 'SIGNED_OUT' });
-
-    // Then clear all tokens and state
-    await Promise.all([
-      chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' }),
-      signOut(auth),
-      chrome.storage.local.clear(),
-      new Promise(resolve => {
-        localStorage.clear();
-        sessionStorage.clear();
-        resolve();
-      })
-    ]);
-
-    // console.log({
-    //   status: 'logged_out',
-    //   user: null,
-    //   userProfile: null,
-    //   error: null
-    // })
-
-    setAuthState({
-      status: 'logged_out',
-      user: null,
-      userProfile: null,
+  const handleSignOut = async () => {
+    setAuthState(prev => ({
+      ...prev,
+      status: 'in_progress',
       error: null
-    });
-  } catch (error) {
-    console.error('Sign out failed:', error);
-    // setAuthState(prev => ({ 
-    //   ...prev, 
-    //   status: 'logged_out',
-    //   error: 'Sign out failed'
-    // }));
-  }
-};
+    }));
+
+    try {
+      // First notify background about signout
+      await chrome.runtime.sendMessage({ type: 'SIGNED_OUT' });
+
+      // Then clear all tokens and state
+      await Promise.all([
+        chrome.runtime.sendMessage({ type: 'CLEAR_TOKEN' }),
+        signOut(auth),
+        chrome.storage.local.clear(),
+        new Promise(resolve => {
+          localStorage.clear();
+          sessionStorage.clear();
+          resolve();
+        })
+      ]);
+
+      // console.log({
+      //   status: 'logged_out',
+      //   user: null,
+      //   userProfile: null,
+      //   error: null
+      // })
+
+      setAuthState({
+        status: 'logged_out',
+        user: null,
+        userProfile: null,
+        error: null
+      });
+    } catch (error) {
+      console.error('Sign out failed:', error);
+      // setAuthState(prev => ({ 
+      //   ...prev, 
+      //   status: 'logged_out',
+      //   error: 'Sign out failed'
+      // }));
+    }
+  };
 
   const contextValue = {
     status: authState.status,

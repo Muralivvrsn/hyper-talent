@@ -10,23 +10,22 @@ export const SheetProvider = ({ children }) => {
   const chrome = window.chrome;
 
   useEffect(() => {
-    if (userProfile?.data) {
-      try {
-        if (userProfile?.data?.spreadsheet?.id) {
-          setSheetData(userProfile.data.spreadsheet);
-        } else {
-          setSheetData(null);
-        }
-      } catch (error) {
-        console.error('Error fetching sheet data:', error);
-      } finally {
-        setIsLoading(false);
+    if (userProfile?.data?.spreadsheet) initializeSheetData();
+  }, [userProfile?.data?.spreadsheet]);
+
+  const initializeSheetData = async () => {
+    try {
+      if (userProfile?.data?.spreadsheet?.id) {
+        setSheetData(userProfile?.data?.spreadsheet);
+      } else {
+        setSheetData(null);
       }
-    } else {
-      setSheetData(null);
+    } catch (error) {
+      console.error('Error fetching sheet data:', error);
+    } finally {
       setIsLoading(false);
     }
-  }, [userProfile?.data?.spreadsheet]);
+  };
 
   const getGoogleToken = async () => {
     const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
@@ -35,7 +34,6 @@ export const SheetProvider = ({ children }) => {
 
   const contextValue = {
     sheetData,
-    setSheetData,
     isLoading,
     getGoogleToken
   };

@@ -102,7 +102,6 @@ export const TemplateProvider = ({ children }) => {
         lastUpdated: template.lastUpdated
       }));
   };
-  console.log("templates: ", templates)
   const value = {
     templates,
     loading,

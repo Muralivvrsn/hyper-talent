@@ -76,7 +76,6 @@ const LoadingScreen = () => (
 
 function AppContent() {
   const { user, status } = useAuth();
-  console.log(status)
   const { loading: themeLoading } = useTheme();
   const { loading: dataLoading } = useData();
   const [initialLoad, setInitialLoad] = useState(true);
@@ -114,7 +113,7 @@ function AppContent() {
     }
   }, [status, themeLoading, dataLoading]);
 
-  if (initialLoad || status==='in_progress' || themeLoading || dataLoading) {
+  if (initialLoad || status==='in_progress') {
     return <LoadingScreen />;
   }
 

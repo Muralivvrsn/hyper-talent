@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext(null);
@@ -17,7 +17,7 @@ export const ThemeProvider = ({ children }) => {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const { user } = useAuth();
   const db = getFirestore();
 
@@ -49,19 +49,27 @@ export const ThemeProvider = ({ children }) => {
 
   const saveSettings = async (newSettings) => {
     if (!user) return;
-    
+
     try {
-      const updatedSettings = {
-        ...newSettings,
+      const updates = {
+        th: newSettings.th,
         ll: new Date().toISOString()
       };
-      
+
       const userSettingsRef = doc(db, 'users_v2', user.uid);
-      await setDoc(userSettingsRef, updatedSettings);
-      setSettings(updatedSettings);
-      return updatedSettings;
+      await updateDoc(userSettingsRef, updates);
+
+      setSettings(prev => ({
+        ...prev,
+        ...updates
+      }));
+
+      return {
+        ...settings,
+        ...updates
+      };
     } catch (err) {
-      console.error('Error saving users:', err);
+      console.error('Error saving settings:', err);
       setError(err.message);
       throw err;
     }
@@ -87,62 +95,105 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     if (!theme) return;
-    
+
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  const getRequiredFields = (user, localTheme, systemTheme) => ({
+    av: "",
+    ca: new Date().toISOString(),
+    d: {
+      l: [],
+      n: [],
+      s: [],
+      sd: {
+        ca: "",
+        id: "",
+        ls: "",
+      },
+    },
+    e: user?.email || '',
+    lg: 'en',
+    ll: new Date().toISOString(),
+    n: user?.displayName || '',
+    ne: true,
+    p: "free",
+    pe: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+    t: [],
+    th: localTheme || systemTheme,
+  });
 
   useEffect(() => {
     const initializeTheme = async () => {
       setLoading(true);
-      
+
       try {
         const { th: localTheme, ll } = handleLocalStorage.get();
         const systemTheme = getSystemTheme();
-        
+
         // Always fetch initial User Data if user is logged in
         if (user) {
           const userSettingsRef = doc(db, 'users_v2', user.uid);
           const settingsSnap = await getDoc(userSettingsRef);
-          
+
           if (settingsSnap.exists()) {
             const dbSettings = settingsSnap.data();
-            setSettings(dbSettings);
-            
+
+            // Get required fields using the function
+            const requiredFields = getRequiredFields(user, localTheme, systemTheme);
+
+            // Deep merge function to preserve existing data while adding missing fields
+            const mergeDeep = (target, source) => {
+              const isObject = obj => obj && typeof obj === 'object' && !Array.isArray(obj);
+
+              if (!isObject(target) || !isObject(source)) {
+                return source;
+              }
+
+              const output = { ...target };
+
+              Object.keys(source).forEach(key => {
+                if (isObject(source[key])) {
+                  if (!(key in target)) {
+                    output[key] = source[key];
+                  } else {
+                    output[key] = mergeDeep(target[key], source[key]);
+                  }
+                } else if (!(key in target)) {
+                  output[key] = source[key];
+                }
+              });
+
+              return output;
+            };
+
+            // Merge existing settings with required fields, only adding what's missing
+            const updatedSettings = mergeDeep(dbSettings, requiredFields);
+
+            // Check if we needed to add any missing fields
+            if (JSON.stringify(updatedSettings) !== JSON.stringify(dbSettings)) {
+              // Only update if there were actually missing fields
+              await setDoc(userSettingsRef, updatedSettings);
+            }
+
+            setSettings(updatedSettings);
+
             // If local storage is more recent, prefer it
-            if (localTheme && ll && new Date(ll) > new Date(dbSettings.ll)) {
+            if (localTheme && ll && new Date(ll) > new Date(updatedSettings.ll || 0)) {
               setThemeState(localTheme);
               // Sync the local theme back to database
-              await saveSettings({ ...dbSettings, th: localTheme });
+              await saveSettings({ ...updatedSettings, th: localTheme });
             } else {
-              setThemeState(dbSettings.th);
-              handleLocalStorage.save(dbSettings.th);
+              setThemeState(updatedSettings.th || systemTheme);
+              handleLocalStorage.save(updatedSettings.th || systemTheme);
             }
           } else {
             // Create initial settings for new user
-            const initialSettings = {
-              av: "",
-              ca: new Date().toISOString(),
-              d: {
-                l: [],
-                n: [],
-                s: [],
-                sd: {
-                  ca: "",
-                  id: "",
-                  ls: "",
-                },
-              },
-              e: user.email || '',
-              lg: 'en',
-              ll: new Date().toISOString(),
-              n: user.displayName || '',
-              ne: true,
-              p: "free",
-              pe: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-              t: [],
-              th: localTheme || systemTheme,
-            };
-            await saveSettings(initialSettings);
+            const initialSettings = getRequiredFields(user, localTheme, systemTheme);
+
+            // Create new document for first-time user
+            await setDoc(userSettingsRef, initialSettings);
+            setSettings(initialSettings);
             setThemeState(initialSettings.th);
             handleLocalStorage.save(initialSettings.th);
           }

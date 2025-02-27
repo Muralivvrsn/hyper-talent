@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
 import { ProfileNoteProvider } from './context/ProfileNoteContext';
@@ -15,40 +15,36 @@ import { TemplateProvider } from './context/TemplateContext';
 import { OtherUsersProvider } from './context/OtherUsersContext';
 import { UserActionProvider } from './context/UserActionContext';
 import { GuideProvider } from './context/GuideContext';
-import {FeedbackProvider} from './context/FeedbackContext'
+import { FeedbackProvider } from './context/FeedbackContext'
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
-
     <AuthProvider>
         <DataProvider>
             <MigrationProvider>
-                <SheetProvider>
-                    <OtherUsersProvider>
-
-                        <UserActionProvider>
-                            <ThemeProvider>
-                                <FeedbackProvider>
+                <OtherUsersProvider>
+                    <UserActionProvider>
+                        <ThemeProvider>
+                            <FeedbackProvider>
                                 <GuideProvider>
                                     <LabelProvider>
                                         <NotesProvider>
                                             <TemplateProvider>
                                                 <ProfileNoteProvider>
-                                                    <App />
+                                                    <SheetProvider>
+                                                        <App />
+                                                    </SheetProvider>
                                                 </ProfileNoteProvider>
                                             </TemplateProvider>
                                         </NotesProvider>
                                     </LabelProvider>
                                 </GuideProvider>
-                                </FeedbackProvider>
-                            </ThemeProvider>
-                        </UserActionProvider>
-
-                    </OtherUsersProvider>
-                </SheetProvider>
+                            </FeedbackProvider>
+                        </ThemeProvider>
+                    </UserActionProvider>
+                </OtherUsersProvider>
             </MigrationProvider>
         </DataProvider>
     </AuthProvider>
-
 );
 

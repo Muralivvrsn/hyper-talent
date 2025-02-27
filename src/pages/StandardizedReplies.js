@@ -28,8 +28,6 @@ const StandardizedReplies = () => {
   const [formVisible, setFormVisible] = useState(false);
   const [pendingChanges, setPendingChanges] = useState(null);
 
-  console.log("templates: ", templates)
-
   const handleFormClose = (formData) => {
     const hasChanges = editingMessage
       ? (formData.title !== editingMessage.title || formData.content !== editingMessage.content)
@@ -113,7 +111,7 @@ const StandardizedReplies = () => {
         {templates.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="space-y-3">
+          <div className="h-[80vh] overflow-auto space-y-3">
             {templates.map((message) => (
               <MessageCard
                 key={message.id}
