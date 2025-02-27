@@ -192,7 +192,7 @@ class LinkedInLabelsManager {
             window.themeManager.addListener(this.handleThemeChange.bind(this));
         }
     }
-    getStatusContent() {
+    getStatusContent(labels) {
         const containerDiv = document.createElement('div');
 
         switch (this.status) {
@@ -205,11 +205,14 @@ class LinkedInLabelsManager {
                 containerDiv.innerHTML = '🔒 Please login to view and manage labels';
                 break;
             case 'logged_in':
-                if (!this.labelsData || this.labelsData.length === 0) {
+                if (!labels.length > 0) {
                     containerDiv.className = 'no-labels-state';
                     containerDiv.innerHTML = '✨ Fresh profile discovered! Add labels to categorize and remember this connection';
                 }
                 break;
+            default:
+                containerDiv.className = 'no-labels-state';
+                containerDiv.innerHTML = '✨ Fresh profile discovered! Add labels to categorize and remember this connection';
         }
 
         return containerDiv;
@@ -411,7 +414,7 @@ class LinkedInLabelsManager {
             if (currentUrl !== lastUrl && !isProcessing) {
                 console.log('URL changed:', { from: lastUrl, to: currentUrl });
                 isProcessing = true;
-                
+
 
                 // Add small delay to let LinkedIn's navigation complete
                 await new Promise(resolve => setTimeout(resolve, 300));
@@ -601,7 +604,7 @@ class LinkedInLabelsManager {
             this.labelContainerRef.style.display = 'flex';
         } else {
             // Show "fresh profile" message when logged in but no matching labels
-            const noLabelsMessage = this.getStatusContent();
+            const noLabelsMessage = this.getStatusContent(matchingLabels);
             this.labelContainerRef.appendChild(noLabelsMessage);
             this.labelContainerRef.style.display = 'flex';
         }
