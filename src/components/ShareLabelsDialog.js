@@ -26,10 +26,10 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
   const [labelSearchTerm, setLabelSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [isSharing, setIsSharing] = useState(false);
-  const [sharingType, setSharingType] = useState(null); // 'labels' or 'notes'
+  const [sharingType, setSharingType] = useState('labels');
   const db = getFirestore();
 
-  const { user, userProfile } = useAuth(); // This assumes you're using your AuthContext
+  const { user, userProfile } = useAuth();
 
   const currentUser = {
     uid: user.uid,
@@ -39,10 +39,18 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
   const noteIds = Object.keys(notes || {});
 
   const filteredUsers = searchTerm
-    ? otherUsers.filter(user =>
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    ? otherUsers.filter(user => {
+      if (!user.email) return false;
+
+      const userEmail = user.email.toLowerCase();
+      const searchTermLower = searchTerm.toLowerCase();
+
+      if (searchTerm.includes('@')) {
+        return userEmail === searchTermLower;
+      }
+
+      // return user.name?.toLowerCase() === searchTermLower;
+    })
     : [];
 
   const filteredLabels = labelSearchTerm
@@ -76,15 +84,20 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
 
   const handleOpenDialog = (type) => {
     setSharingType(type);
+
+    if (type === 'notes') {
+      setSelectedLabels([]);
+      setStep('users');
+    } else {
+      setStep('labels');
+    }
+
     setIsOpen(true);
-    setStep(type === 'labels' ? 'labels' : 'users');
   };
 
   const handleBack = () => {
     setStep('labels');
     setSearchTerm('');
-    setSharingType(null)
-    setSelectedUsers([])
   };
 
   const handleCancel = () => {
@@ -93,7 +106,8 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
     setSelectedLabels([]);
     setSelectedUsers([]);
     setSearchTerm('');
-    setSharingType(null);
+    setLabelSearchTerm('');
+    setSharingType('labels');
   };
 
   const handleShare = async () => {
@@ -167,6 +181,14 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
     }
   };
 
+  const getDialogTitle = () => {
+    if (step === 'labels') {
+      return 'Select Labels to Share';
+    } else {
+      return `Select Users to Share ${sharingType === 'labels' ? 'Labels' : 'Notes'}`;
+    }
+  };
+
   return (
     <div className="flex gap-2">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -180,7 +202,7 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {step === 'labels' ? 'Select Labels to Share' : 'Select Users'}
+              {getDialogTitle()}
             </DialogTitle>
           </DialogHeader>
 
@@ -231,7 +253,10 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
               </div>
 
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => handleOpenDialog('notes')}>
+                <Button
+                  variant={sharingType === 'notes' ? 'secondary' : 'outline'}
+                  onClick={() => handleOpenDialog('notes')}
+                >
                   Share Notes
                 </Button>
                 <Button variant="outline" onClick={handleCancel}>
@@ -303,9 +328,11 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
                 <Button variant="outline" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button variant="outline" onClick={handleBack}>
-                  Back
-                </Button>
+                {sharingType === 'labels' && (
+                  <Button variant="outline" onClick={handleBack}>
+                    Back
+                  </Button>
+                )}
                 <Button
                   onClick={handleShare}
                   disabled={selectedUsers.length === 0 || isSharing}

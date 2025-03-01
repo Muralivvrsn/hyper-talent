@@ -113,20 +113,18 @@ const PendingLabelsAlert = () => {
                             {Object.entries(pendingSharedLabels).map(([labelId, label]) => (
                                 <div
                                     key={labelId}
-                                    onClick={() => toggleLabelSelection(labelId)}
                                     className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedLabels.includes(labelId)
                                         ? 'bg-accent'
                                         : 'hover:bg-accent/50'
                                         }`}
+                                    onClick={() => toggleLabelSelection(labelId)}
                                 >
                                     <div className="flex items-center gap-3">
                                         <Checkbox
                                             checked={selectedLabels.includes(labelId)}
-                                            onCheckedChange={(e) => {
-                                                e?.stopPropagation?.();
-                                                toggleLabelSelection(labelId);
-                                            }}
-                                        // onCheckedChange={() => toggleLabelSelection(labelId)}
+                                            onCheckedChange={() => toggleLabelSelection(labelId)}
+                                            id={`label-${labelId}`}
+                                            onClick={(e) => e.stopPropagation()}
                                         />
                                         <span
                                             className="w-3 h-3 rounded-full"

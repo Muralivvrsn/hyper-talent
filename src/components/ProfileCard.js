@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Users, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2, ChevronRight } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2, ChevronRight, Plus } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Button } from './ui/button';
 import ProfileActionManager from './ProfileActionManager';
@@ -11,23 +11,235 @@ import { removeLabelFromProfile } from '../utils/labelUtils';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
 
+const ProfileActionsMenu = ({ onAction, hasNote }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <MoreVertical className="h-4 w-4" />
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-48 p-2" align="end">
+      <div className="flex flex-col gap-1">
+        <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sm" onClick={() => onAction('label')}>
+          <Tag className="h-4 w-4" />
+          Add Label
+        </Button>
+        <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-sm" onClick={() => onAction('note')}>
+          <MessageSquarePlus className="h-4 w-4" />
+          {hasNote ? 'Edit Note' : 'Add Note'}
+        </Button>
+      </div>
+    </PopoverContent>
+  </Popover>
+);
+
+const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
+  if (!labels || labels.length === 0) {
+    return (
+      <div className="flex mt-1.5">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
+          onClick={onAddLabel}
+        >
+          <Plus className="h-3 w-3" /> Add label
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-1.5">
+      {labels.map((label) => (
+        <div
+          key={label.id}
+          className="group/label relative inline-flex items-center text-[10px] px-3 py-0.5 rounded-full transition-all duration-200 font-semibold"
+          style={{
+            backgroundColor: theme === "dark" ? label.color : 'transparent',
+            borderWidth: theme === "dark" ? "0px" : "1px",
+            borderStyle: "solid",
+            borderColor: theme === "dark" ? "transparent" : label.color,
+            color: theme === "dark" ? "#FFFFFF" : label.color,
+          }}
+        >
+          <span className="truncate">{label.name}</span>
+          <div className="ml-1 w-0 group-hover/label:w-2 overflow-hidden transition-all duration-200 flex items-center justify-center z-50">
+            {isRemoving[label.id] ? (
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+            ) : (
+              <button
+                onClick={(e) => onRemove(label.id, e)}
+                className="rounded-full flex items-center justify-center"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+      {/* <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 px-2 text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
+        onClick={onAddLabel}
+      >
+        <Plus className="h-3 w-3" /> Add
+      </Button> */}
+    </div>
+  );
+};
+
+const Note = ({ content, isExpanded, onToggle, isShared = false }) => {
+  if (!content && !isShared) return null;
+
+  const renderContent = () => {
+    if (isShared && !isExpanded) return null;
+
+    const contentElement = (
+      <>
+        <p className={`text-sm text-muted-foreground ${isExpanded || isShared ? '' : 'line-clamp-2'}`}>
+          {content}
+        </p>
+        {!isShared && content?.length > 60 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+            className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
+          >
+            {isExpanded ? (
+              <>
+                Show less
+                <ChevronUp className="h-3 w-3" />
+              </>
+            ) : (
+              <>
+                Show more
+                <ChevronDown className="h-3 w-3" />
+              </>
+            )}
+          </button>
+        )}
+      </>
+    );
+    return contentElement;
+  };
+
+  return renderContent()
+};
+
+const NotesSection = ({
+  note,
+  sharedNotes,
+  expanded,
+  expandedNotes,
+  setExpanded,
+  toggleNoteExpanded,
+  setActionType
+}) => {
+  const [activeTab, setActiveTab] = useState('primary');
+  const hasSharedNotes = sharedNotes?.length > 0;
+  const hasPrimaryNote = !!note?.content;
+
+  // Helper to render primary note or empty state
+  const renderPrimaryNote = () => (
+    <div className="w-full">
+      {hasPrimaryNote && (
+        <Note
+          content={note.content}
+          isExpanded={expanded}
+          onToggle={() => setExpanded(!expanded)}
+        />
+      )}
+    </div>
+  );
+
+  // Helper to render shared notes
+  const renderSharedNotes = () => (
+    <div className="w-full">
+      <div className="space-y-2">
+        {sharedNotes.map((note) => (
+          <div key={note.id} className="overflow-hidden">
+            <div
+              className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/30"
+              onClick={() => toggleNoteExpanded(note.id)}
+            >
+              {expandedNotes[note.id] ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+              <h4 className="text-sm font-medium flex-1">
+                {note.sbn}
+              </h4>
+            </div>
+
+            {expandedNotes[note.id] && (
+              <div className="pl-6 pt-1">
+                <Note
+                  content={note.content}
+                  isExpanded={true}
+                  onToggle={() => { }}
+                  isShared={true}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (!hasSharedNotes) {
+    return renderPrimaryNote();
+  }
+
+  if (!hasPrimaryNote) {
+    return renderSharedNotes();
+  }
+
+  return (
+    <div className="w-full mt-2">
+      <div className="flex  border-b mb-2">
+        <button
+          className={`px-3 py-1 text-sm font-medium ${activeTab === 'primary'
+            ? 'border-b-2 border-primary text-primary'
+            : 'text-muted-foreground hover:text-foreground'}`}
+          onClick={() => setActiveTab('primary')}
+        >
+          My Notes
+        </button>
+        <button
+          className={`px-3 py-1 text-sm font-medium flex items-center gap-1.5 ${activeTab === 'shared'
+            ? 'border-b-2 border-primary text-primary'
+            : 'text-muted-foreground hover:text-foreground'}`}
+          onClick={() => setActiveTab('shared')}
+        >
+          Shared Notes
+          <span className="inline-flex items-center justify-center w-5 h-5 text-xs rounded-full bg-muted">
+            {sharedNotes.length}
+          </span>
+        </button>
+      </div>
+
+      <div className="pt-1">
+        {activeTab === 'primary' ? renderPrimaryNote() : renderSharedNotes()}
+      </div>
+    </div>
+  );
+};
+
 const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
   const [expanded, setExpanded] = useState(false);
-  const [sharedNotesExpanded, setSharedNotesExpanded] = useState(false);
-  const [expandedSharedNotes, setExpandedSharedNotes] = useState({});
+  const [expandedNotes, setExpandedNotes] = useState({});
   const [actionType, setActionType] = useState(null);
-  const [removingLabels, setRemovingLabels] = useState(false);
+  const [removingLabels, setRemovingLabels] = useState({});
   const { user } = useAuth();
   const { theme } = useTheme();
   const db = getFirestore();
 
-  const handleAction = (type) => {
-    setActionType(type);
-  };
-
-  const handleCloseAction = () => {
-    setActionType(null);
-  };
 
   const handleRemoveLabel = async (labelId, e) => {
     e.stopPropagation();
@@ -48,8 +260,8 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
     }
   };
 
-  const toggleSharedNoteExpanded = (noteId) => {
-    setExpandedSharedNotes(prev => ({
+  const toggleNoteExpanded = (noteId) => {
+    setExpandedNotes(prev => ({
       ...prev,
       [noteId]: !prev[noteId]
     }));
@@ -67,191 +279,62 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
   };
 
   return (
-    <div className="flex items-start gap-3 p-4 border-b-[1px] hover:bg-muted/50 transition-colors group relative">
-      <Avatar className="h-12 w-12 ring-1 ring-border">
-        {profile.image && !profile.image.startsWith('data') ? (
-          <AvatarImage src={profile.image} alt={profile.name} className="object-cover" />
-        ) : (
-          <AvatarFallback className="text-sm font-medium">
-            {getProfileInitials(profile)}
-          </AvatarFallback>
-        )}
-      </Avatar>
+    <div className="flex flex-col p-4 border-b-[1px] hover:bg-muted/50 transition-colors group relative">
+      <div className="flex items-start gap-3 w-full mb-3">
+        <Avatar className="h-12 w-12 ring-1 ring-border">
+          {profile.image && !profile.image.startsWith('data') ? (
+            <AvatarImage src={profile.image} alt={profile.name} className="object-cover" />
+          ) : (
+            <AvatarFallback className="text-sm font-medium">
+              {getProfileInitials(profile)}
+            </AvatarFallback>
+          )}
+        </Avatar>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <h3 className="text-base font-medium leading-none truncate flex items-center gap-1.5">
-            <a
-              href={profile.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-            >
-              {profile.name || 'Unknown User'}
-            </a>
-            {labels?.some(label => label.isShared) && (
-              <Users className="h-4 w-4 text-muted-foreground" />
-            )}
-          </h3>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-2" align="end">
-              <div className="flex flex-col gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2 text-sm"
-                  onClick={() => handleAction('label')}
-                >
-                  <Tag className="h-4 w-4" />
-                  Add Label
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start gap-2 text-sm"
-                  onClick={() => handleAction('note')}
-                >
-                  <MessageSquarePlus className="h-4 w-4" />
-                  {note ? 'Edit Note' : 'Add Note'}
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {labels?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-1.5">
-            {labels.map((label) => (
-              <div
-                key={label.id}
-                className="group/label relative inline-flex items-center text-[10px] px-3 py-0.5 rounded-full transition-all duration-200 font-semibold"
-                style={{
-                  backgroundColor: theme === "dark" ? `${label.color}` : `transparent`,
-                  borderWidth: theme === "dark" ? "0px" : "1px",
-                  borderStyle: "solid",
-                  borderColor: theme === "dark" ? "transparent" : `${label.color}`,
-                  color: theme === "dark" ? "#FFFFFF" : label.color,
-                }}
-              >
-                <span className="truncate">{label.name}</span>
-                <div className="ml-1 w-0 group-hover/label:w-2 overflow-hidden transition-all duration-200 flex items-center justify-center z-50">
-                  {removingLabels[label.id] ? (
-                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                  ) : (
-                    <button
-                      onClick={(e) => handleRemoveLabel(label.id, e)}
-                      className="rounded-full flex items-center justify-center"
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Primary note */}
-        {note && (
-          <div>
-            <p className={`text-sm text-muted-foreground ${expanded ? '' : 'line-clamp-2'}`}>
-              {note.content}
-            </p>
-            {note.content.length > 60 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpanded(!expanded);
-                }}
-                className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
-              >
-                {expanded ? (
-                  <>
-                    Show less
-                    <ChevronUp className="h-3 w-3" />
-                  </>
-                ) : (
-                  <>
-                    Show more
-                    <ChevronDown className="h-3 w-3" />
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Shared notes section */}
-        {sharedNotes?.length > 0 && (
-          <div className="mt-2 border-t pt-2">
-            <div
-              className="flex items-center gap-1 cursor-pointer"
-              onClick={() => setSharedNotesExpanded(!sharedNotesExpanded)}
-            >
-              {sharedNotesExpanded ? (
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+        <div className="flex-1 min-w-0">
+          {/* Profile Header */}
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-base font-medium leading-none truncate flex items-center gap-1.5">
+              <a href={profile.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                {profile.name || 'Unknown User'}
+              </a>
+              {labels?.some(label => label.isShared) && (
+                <Users className="h-4 w-4 text-muted-foreground" />
               )}
-              <h4 className="text-xs font-medium text-muted-foreground">
-                Shared Notes ({sharedNotes.length})
-              </h4>
-            </div>
+            </h3>
 
-            {sharedNotesExpanded && (
-              <div className="pl-4 mt-1 space-y-2">
-                {sharedNotes.map((sharedNote) => (
-                  <>
-                    <div key={sharedNote.id} className="border-l-2 border-b border-muted pl-2">
-                      <p className={`text-sm text-muted-foreground ${expandedSharedNotes[sharedNote.id] ? '' : 'line-clamp-2'}`}>
-                        {sharedNote.content}
-                      </p>
-                      {sharedNote.content.length > 60 && (
-                        <button
-                          onClick={() => toggleSharedNoteExpanded(sharedNote.id)}
-                          className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
-                        >
-                          {expandedSharedNotes[sharedNote.id] ? (
-                            <>
-                              Show less
-                              <ChevronUp className="h-3 w-3" />
-                            </>
-                          ) : (
-                            <>
-                              Show more
-                              <ChevronDown className="h-3 w-3" />
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                    {sharedNote.sbn && (
-                      <p className="text-xs italic text-muted-foreground mt-1">
-                        Shared by: {sharedNote.sbn}
-                      </p>
-                    )}
-                  </>
-                ))}
-              </div>
-            )}
+            <ProfileActionsMenu
+              onAction={setActionType}
+              hasNote={!!note}
+            />
           </div>
-        )}
+
+          {/* Labels */}
+          <ProfileLabels
+            labels={labels}
+            onRemove={handleRemoveLabel}
+            isRemoving={removingLabels}
+            theme={theme}
+            onAddLabel={() => setActionType('label')}
+          />
+        </div>
       </div>
+
+      {/* Notes Section */}
+      <NotesSection
+        note={note}
+        sharedNotes={sharedNotes}
+        expanded={expanded}
+        expandedNotes={expandedNotes}
+        setExpanded={setExpanded}
+        toggleNoteExpanded={toggleNoteExpanded}
+        setActionType={setActionType}
+      />
 
       <ProfileActionManager
         isOpen={!!actionType}
         actionType={actionType}
-        onClose={handleCloseAction}
+        onClose={() => setActionType(null)}
         profile={profile}
         existingLabels={labels}
         existingNote={note}
