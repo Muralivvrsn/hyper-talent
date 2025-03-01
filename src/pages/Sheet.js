@@ -75,13 +75,13 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => (
       onClick={() => onSync("Sheet")}
       loading={loadingStates.syncSheet}
     />
-    <ActionButton
+    {/* <ActionButton
       icon={Database}
       label="Update Database"
       description="Sync Google Sheet changes to database"
       onClick={() => onSync("Database")}
       loading={loadingStates.syncDB}
-    />
+    /> */}
     <ActionButton
       icon={Upload}
       label="Upload Labels"
