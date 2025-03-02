@@ -87,6 +87,7 @@ class LabelThemeManager {
                 --lm-destructive-foreground: ${isDark ? 'hsl(210, 40%, 98%)' : 'hsl(210, 40%, 98%)'};
                 --lm-ring: ${isDark ? 'hsl(216, 34%, 17%)' : 'hsl(215, 20.2%, 65.1%)'};
                 --lm-radius: 0.5rem;
+ 
             }
             /* Rest of CSS remains the same */
             .hyper_label_button {
@@ -105,6 +106,18 @@ class LabelThemeManager {
                 box-shadow: var(--lm-shadow);
                 position: relative;
             }
+            .label_search_container {
+                position: relative;
+                width: 100%;
+            }
+            .search-icon{
+                position: absolute;
+                top: 50%;
+                left: 25px;
+                transform: translateY(-50%);
+            }
+
+
             .no_labels{
                 color: var(--lm-text) !important;
                 padding: 20px !important;
@@ -187,6 +200,7 @@ class LabelThemeManager {
                 font-size: 14px !important;
                 outline: none !important;
                 transition: all 0.15s ease !important;
+                padding-left: 35px !important;
             }
     
             .label_search_input::placeholder {
@@ -221,8 +235,7 @@ class LabelThemeManager {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 8px 12px;
-                margin: 2px 0;
+                padding: 2px 10px !important;
                 border-radius: var(--lm-radius);
                 cursor: pointer;
                 transition: background-color 0.15s ease;
@@ -249,7 +262,7 @@ class LabelThemeManager {
             }
     
             .label_name {
-                font-size: 14px !important;
+                font-size: 13px !important;
                 color: var(--lm-text) !important;
                 white-space: nowrap !important;
                 overflow: hidden !important;
@@ -306,7 +319,7 @@ class LabelThemeManager {
             }
     
             .edit_btn:hover {
-                color: var(--lm-action-edit-hover) !important;
+                color: var(--lm-accent-foreground) !important;
             }
     
             .delete_btn:hover {
@@ -597,38 +610,6 @@ class LabelThemeManager {
                 opacity: 0.9 !important;
                 transform: translateY(-2px) !important;
             }
-             .note-box-container {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: var(--lm-bg);
-                color: var(--lm-text);
-                padding: 20px;
-                border-radius: var(--lm-radius);
-                box-shadow: var(--lm-shadow);
-                z-index: 10000;
-                width: 400px;
-                font-family: 'Poppins', sans-serif;
-                font-size: 13px;
-                border: 1px solid var(--lm-border);
-                opacity: 0;
-                transform: translateY(-10px);
-                transition: opacity 0.2s ease, transform 0.2s ease;
-            }
-            
-            .note-box-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 16px;
-                gap: 12px;
-            }
-            
-            .note-title-container {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
             
             .note-icon {
                 display: flex;
@@ -641,70 +622,21 @@ class LabelThemeManager {
             
             .note-title {
                 display: flex;
-                flex-direction: column;
                 gap: 2px;
             }
-            
-            .note-title-text {
-                margin: 0;
-                font-size: 14px;
-                font-weight: 500;
-                color: var(--lm-text);
-                line-height: 1;
-            }
+        
             
             .note-shortcut-text {
                 font-size: 11px;
                 color: var(--lm-category-text);
                 font-weight: 400;
             }
-            
-            .note-close-btn {
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 4px;
-                color: var(--lm-category-text);
-                border-radius: var(--lm-radius);
-                line-height: 0;
-                transition: color 0.2s ease;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 24px;
-                height: 24px;
-            }
-            
-            .note-close-btn:hover {
-                color: var(--lm-text);
-            }
-            
-            .note-textarea {
-                width: 100%;
-                min-height: 160px;
-                padding: 12px;
-                border: 1px solid hsl(214.3, 31.8%, 91.4%) !important;
-                border-radius: var(--lm-radius);
-                margin-bottom: 16px;
-                font-size: 13px;
-                resize: vertical;
-                font-family: 'Poppins', sans-serif;
-                line-height: 1.5;
-                color: var(--lm-text);
-                background: var(--lm-bg);
-                transition: border-color 0.2s ease;
-            }
+        
             
             .note-textarea:focus {
-                border-color: var(--lm-focus);
-                outline: none;
+                outline: none !important;
             }
             
-            .note-button-container {
-                display: flex;
-                gap: 12px;
-                justify-content: flex-end;
-            }
             
             .note-save-btn {
                 background: var(--lm-primary);
@@ -793,56 +725,11 @@ class LabelThemeManager {
                 opacity: 0.9;
                 transform: translateY(-2px);
             }
-            .note-box-container {
-                position: fixed;
-                width: 400px;
-                max-width: 90vw;
-                max-height: 90vh;
-                display: flex;
-                flex-direction: column;
-                background-color: var(--lm-bg);
-                color: var(--lm-text);
-                border-radius: var(--lm-radius);
-                box-shadow: var(--lm-shadow);
-                z-index: 9999;
-                opacity: 0;
-                transition: opacity 0.2s ease, transform 0.2s ease;
-                font-family: 'Poppins', sans-serif;
-                border: 1px solid var(--lm-border);
-                overflow: hidden;
-            }
-
-            /* Note Box Header */
-            .note-box-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 14px 16px;
-                border-bottom: 1px solid var(--lm-border);
-            }
-
-            .note-title-container {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
 
             .note-icon {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: var(--lm-text);
-            }
-
-            .note-title {
-                display: flex;
-                flex-direction: column;
-            }
-
-            .note-title-text {
-                font-size: 16px;
-                font-weight: 600;
-                margin: 0;
                 color: var(--lm-text);
             }
 
@@ -852,52 +739,19 @@ class LabelThemeManager {
                 margin-top: 2px;
             }
 
-            .note-close-btn {
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 4px;
-                color: var(--lm-text);
-                border-radius: var(--lm-radius);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .note-close-btn:hover {
-                background-color: var(--lm-hover);
-            }
-
-            /* Note Tabs */
-            .note-tabs-container {
-                display: flex;
-                padding: 0 16px;
-                border-bottom: 1px solid var(--lm-border);
-                background-color: var(--lm-category-bg);
-                overflow-x: auto;
-                scrollbar-width: thin;
-            }
-
-            .note-tabs-container::-webkit-scrollbar {
-                height: 4px;
-            }
-
-            .note-tabs-container::-webkit-scrollbar-thumb {
-                background-color: var(--lm-focus);
-                border-radius: 4px;
-            }
 
             .note-tab {
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                padding: 10px 12px;
+                padding: 2px 10px;
                 font-size: 13px;
                 cursor: pointer;
                 user-select: none;
                 border-bottom: 2px solid transparent;
                 white-space: nowrap;
                 color: var(--lm-category-text);
+                transition: all 0.2s;
             }
 
             .note-tab:hover {
@@ -967,7 +821,7 @@ class LabelThemeManager {
             /* Note Content */
             .note-textarea {
                 flex: 1;
-                min-height: 150px;
+                height: 100%;
                 max-height: calc(70vh - 110px);
                 padding: 16px;
                 border: none;
@@ -996,9 +850,8 @@ class LabelThemeManager {
             .note-button-container {
                 display: flex;
                 justify-content: flex-end;
-                padding: 12px 16px;
+                padding: 5px;
                 border-top: 1px solid var(--lm-border);
-                background-color: var(--lm-bg);
             }
 
             .note-save-btn {
@@ -1353,6 +1206,7 @@ class LabelThemeManager {
                 font-size: 14px !important;
                 outline: none !important;
                 transition: all 0.15s ease !important;
+                padding-left: 35px !important;
             }
 
             .filter_search_input::placeholder {
@@ -1375,19 +1229,18 @@ class LabelThemeManager {
             }
 
             .section_header {
-                padding: 8px 12px;
-                font-size: 12px;
-                font-weight: 500;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                color: var(--lm-category-text);
+                padding: 2px 10px !important;
+                font-size: 11px !important;
+                font-weight: 500 !impotant;
+                text-transform: uppercase !important;
+                letter-spacing: 0.5px !important;
+                color: var(--lm-category-text) !important;
             }
 
             .filter_item {
                 display: flex;
                 align-items: center;
-                padding: 10px 12px;
-                margin: 2px 0;
+                padding: 5px 12px;
                 border-radius: var(--lm-radius);
                 cursor: pointer;
                 transition: all 0.15s ease;
@@ -1515,6 +1368,847 @@ class LabelThemeManager {
                 right: 70px;
                 z-index: 1000;
             }
+            .profile-labels-container-message,
+            .hypertalent-profile-labels-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 60% !important;
+                height: fit-content !important;
+            }
+            .profile-labels-container-message {
+                width: 100% !important;
+                margin: 3px 0px;
+            }
+            .loading_message {
+                display: flex;
+                text-align: center;
+                color: var(--lm-text) !important;
+                font-size: 13px;
+                width: 100%;
+            }
+            .profile-label {
+                display: inline-flex;
+                align-items: center;
+                padding: 2px 10px;
+                border-radius: 12px;
+                font-size: 11px;
+                cursor: default;
+                position: relative;
+                transition: all 0.2s ease;
+            }
+
+            .profile-label:hover {
+                transform: translateY(-1px);
+                box-shadow: var(--lm-shadow);
+            }
+
+            .profile-label.unverified::after {
+                content: '';
+                position: absolute;
+                top: -2px;
+                right: -2px;
+                width: 8px;
+                height: 8px;
+                background: #f5a623;
+                border-radius: 50%;
+                border: 1px solid var(--lm-bg);
+            }
+
+            .profile-label-remove {
+                display: none;
+                margin-left: 5px !important;
+                cursor: pointer;
+                opacity: 0.7;
+                font-size: 13px !important;
+            }
+
+            .profile-label-remove:hover {
+                opacity: 1;
+                border-radius: 50%;
+            }
+
+            .profile-label:hover .profile-label-remove {
+                display: inline-flex;
+            }
+
+            .profile-label[data-shared-by] {
+                position: relative;
+            }
+
+            .profile-label[data-shared-by]:hover::before {
+                content: attr(data-shared-by);
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--lm-accent);
+                color: var(--lm-accent-foreground);
+                padding: 6px 10px;
+                border-radius: var(--lm-radius);
+                font-size: 12px;
+                white-space: nowrap;
+                margin-bottom: 6px;
+                z-index: 1000;
+                pointer-events: none;
+            }
+
+            .profile-label-shared-icon {
+                margin-left: 6px;
+                font-size: 14px;
+                color: inherit;
+                opacity: 0.8;
+                cursor: help;
+            }
+
+            .profile-label-tooltip {
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--lm-accent);
+                color: var(--lm-accent-foreground);
+                padding: 8px 12px;
+                border-radius: var(--lm-radius);
+                font-size: 12px;
+                white-space: nowrap;
+                margin-bottom: 10px;
+                z-index: 1000;
+                pointer-events: none;
+                display: none;
+            }
+
+            .profile-label:hover .profile-label-tooltip {
+                display: block;
+            }
+
+            .profile-label-container {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+            }
+
+            .hypertalent-profile-labels-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                border-radius: var(--lm-radius);
+                margin-bottom: 10px;
+            }
+
+            .labels-loading-state,
+            .no-labels-state {
+                width: 100%;
+                text-align: center;
+                font-size: 14px;
+                color: var( --lm-text);
+                padding: 10px 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .labels-loading-state {
+                animation: pulse 1.5s infinite;
+            }
+
+            .no-labels-state {
+                color: var( --lm-text);
+                font-style: italic;
+            }
+
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.5; }
+                100% { opacity: 1; }
+            }
+
+            .labels-loading-state {
+                color: var(--lm-category-text);
+            }
+            .note-box-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 90%;
+                max-width: 550px;
+                background: var(--lm-bg);
+                border-radius: 10px;
+                box-shadow: var(--lm-shadow);
+                opacity: 0;
+                transition: all 0.2s ease;
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                max-height: 90vh;
+                border: 1px solid var(--lm-border);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                color: var(--lm-text);
+            }
+
+            .note-box-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0px 16px;
+                border-bottom: 1px solid var(--lm-border);
+                background: var(--lm-bg);
+                border-radius: 10px 10px 0 0;
+            }
+
+            .note-title-text {
+                font-size: 16px;
+                font-weight: 600;
+                color: var(--lm-text);
+                margin: 0;
+            }
+
+            .note-close-btn {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                color: var(--lm-category-text);
+                transition: all 0.2s ease;
+            }
+
+            .theme-toggle-btn:hover, .note-close-btn:hover {
+                background: var(--lm-hover);
+                color: var(--lm-text);
+            }
+
+            .note-tabs-container {
+                display: flex;
+                padding: 8px 16px 8px;
+                gap: 8px;
+                border-bottom: 1px solid var(--lm-border);
+                background-color: var(--lm-category-bg);
+                overflow-x: auto;
+            }
+
+            .note-tab {
+                display: flex;
+                align-items: center;
+                padding: 6px 10px;
+                gap: 6px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-size: 13px;
+                font-weight: 500;
+                color: var(--lm-category-text);
+                background: transparent;
+            }
+
+            .note-tab:hover {
+                background: var(--lm-hover);
+            }
+
+            .note-tab-active {
+                background: var(--lm-bg);
+                color: var(--lm-text);
+                box-shadow: var(--lm-shadow);
+                border: 1px solid var(--lm-border);
+            }
+
+            .note-avatar {
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: var(--lm-accent);
+                color: var(--lm-accent-foreground);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                font-weight: 500;
+            }
+
+            .note-readonly-banner {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 16px;
+                background-color: var(--lm-category-bg);
+                border-bottom: 1px solid var(--lm-border);
+                font-size: 12px;
+                color: var(--lm-category-text);
+            }
+
+            .note-textarea {
+                flex: 1;
+                padding: 16px;
+                border: none;
+                resize: none;
+                font-family: inherit;
+                font-size: 14px;
+                line-height: 1.6;
+                color: var(--lm-text);
+                background: var(--lm-input-bg);
+                outline: none;
+                overflow-y: auto;
+            }
+
+            .note-textarea:focus {
+                box-shadow: 0 0 0 2px var(--lm-ring) inset;
+            }
+
+            .note-textarea.note-readonly {
+                background-color: var(--lm-category-bg);
+                color: var(--lm-category-text);
+                cursor: default;
+            }
+
+            .note-textarea::placeholder {
+                color: var(--lm-category-text);
+                opacity: 0.7;
+            }
+
+            .note-action-bar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 16px;
+                border-top: 1px solid var(--lm-border);
+            }
+
+            .note-shortcut-hint {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                background: var(--lm-category-bg);
+                font-size: 11px;
+                color: var(--lm-category-text);
+            }
+
+            .note-shortcut-hint span {
+                font-weight: 500;
+                color: var(--lm-text);
+            }
+
+            .note-save-btn {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 12px;
+                border-radius: 6px;
+                background: var(--lm-primary);
+                color: var(--lm-primary-foreground);
+                font-weight: 500;
+                font-size: 13px;
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+
+            .note-save-btn:hover {
+                opacity: 0.9;
+            }
+
+            .note-save-btn:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .note-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 16px;
+                border-top: 1px solid var(--lm-border);
+                background: var(--lm-category-bg);
+                font-size: 11px;
+                color: var(--lm-category-text);
+                border-radius: 0 0 10px 10px;
+            }
+
+            .note-loading-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 40px;
+                gap: 16px;
+            }
+
+            .note-loading-spinner {
+                width: 32px;
+                height: 32px;
+                border: 3px solid var(--lm-category-bg);
+                border-top: 3px solid var(--lm-primary);
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+            .note-loading-text {
+                font-size: 14px;
+                color: var(--lm-category-text);
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            .note-box-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 90%;
+    max-width: 550px;
+    background: var(--lm-bg);
+    border-radius: 10px;
+    box-shadow: var(--lm-shadow);
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    border: 1px solid var(--lm-border);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    color: var(--lm-text);
+}
+
+.note-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0px 16px;
+    border-bottom: 1px solid var(--lm-border);
+    background: var(--lm-bg);
+    border-radius: 10px 10px 0 0;
+}
+
+.note-title-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.note-title-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--lm-text);
+    margin: 0;
+}
+
+.note-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--lm-category-text);
+    transition: all 0.2s ease;
+}
+
+.note-close-btn:hover {
+    background: var(--lm-hover);
+    color: var(--lm-text);
+}
+
+.note-tabs-container {
+    display: flex;
+    padding: 8px 16px;
+    gap: 8px;
+    border-bottom: 1px solid var(--lm-border);
+    background: var(--lm-category-bg);
+}
+
+.note-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--lm-category-text);
+}
+
+.note-tab:hover {
+    background: var(--lm-hover);
+}
+
+.note-tab-active {
+    background: var(--lm-bg);
+    color: var(--lm-text);
+    box-shadow: var(--lm-shadow);
+}
+
+.note-content-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 150px;
+}
+
+.note-textarea {
+    flex: 1;
+    resize: none;
+    border: none;
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    background: var(--lm-input-bg);
+    color: var(--lm-text);
+    outline: none;
+}
+
+.shared-note-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--lm-border);
+    cursor: pointer;
+}
+
+.shared-note-item:hover {
+    background: var(--lm-hover);
+}
+
+.note-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--lm-accent);
+    color: var(--lm-accent-foreground);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.note-avatar.small {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
+}
+
+.note-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-top: 1px solid var(--lm-border);
+}
+
+.note-shortcut-hint {
+    font-size: 11px;
+    color: var(--lm-category-text);
+}
+
+.note-shortcut-hint span {
+    color: var(--lm-text);
+    font-weight: 500;
+}
+
+.note-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: var(--lm-primary);
+    color: var(--lm-primary-foreground);
+    font-weight: 500;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-save-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.note-save-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.note-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-top: 1px solid var(--lm-border);
+    background: var(--lm-category-bg);
+    border-radius: 0 0 10px 10px;
+    font-size: 11px;
+    color: var(--lm-category-text);
+}
+
+.note-last-edited {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.shared-note-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--lm-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--lm-bg);
+}
+
+.shared-back-button {
+    padding: 8px 16px;
+    border-top: 1px solid var(--lm-border);
+    background: var(--lm-category-bg);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--lm-text);
+}
+
+.shared-back-button:hover {
+    background: var(--lm-hover);
+}
+
+.read-only-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--lm-badge-bg);
+    color: var(--lm-badge-text);
+    font-size: 11px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+    color: var(--lm-category-text);
+    text-align: center;
+}
+
+.empty-state-icon {
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 14px;
+    margin: 0;
+    color: var(--lm-category-text);
+}
+    .note-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-top: 1px solid var(--lm-border);
+    background-color: var(--lm-category-bg);
+    font-size: 11px;
+    color: var(--lm-category-text);
+    border-radius: 0 0 10px 10px;
+}
+
+.note-last-edited {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.note-avatar.small {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: var(--lm-accent);
+    color: var(--lm-accent-foreground);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 500;
+}
+    .note-content {
+    padding: 16px;
+    flex: 1;
+    overflow: auto;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    color: var(--lm-text);
+    background-color: var(--lm-bg);
+}
+
+.back-button {
+    padding: 8px 16px;
+    border-top: 1px solid var(--lm-border);
+    background-color: var(--lm-category-bg);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--lm-text);
+}
+
+.back-button:hover {
+    background-color: var(--lm-hover);
+}
+
+.note-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-top: 1px solid var(--lm-border);
+    background-color: var(--lm-category-bg);
+}
+
+.note-shortcut-hint {
+    font-size: 11px;
+    color: var(--lm-category-text);
+}
+
+.note-shortcut-hint span {
+    font-weight: 500;
+    color: var(--lm-text);
+}
+
+.note-save-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background-color: var(--lm-primary);
+    color: var(--lm-primary-foreground);
+    font-weight: 500;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-save-btn:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.note-save-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+    .read-only-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: var(--lm-badge-bg);
+    font-size: 11px;
+    color: var(--lm-badge-text);
+}
+
+.shared-note-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--lm-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--lm-bg);
+}
+
+.note-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--lm-accent);
+    color: var(--lm-accent-foreground);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.shared-note-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--lm-border);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.shared-note-item:hover {
+    background-color: var(--lm-hover);
+}
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    padding: 20px;
+    color: var(--lm-category-text);
+}
+
+.note-textarea {
+    flex: 1;
+    resize: none;
+    border: none;
+    padding: 16px;
+    outline: none;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow: auto;
+    background-color: var(--lm-input-bg);
+    color: var(--lm-text);
+}
+
+.note-textarea::placeholder {
+    color: var(--lm-category-text);
+    opacity: 0.7;
+}
+
+.note-textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--lm-ring) inset;
+}
+
+.note-content-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 150px;
+    background-color: var(--lm-bg);
+}
+.no-labels-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background-color: var(--lm-bg);
+    border-radius: 8px;
+}
+
+            
         `;
     }
 

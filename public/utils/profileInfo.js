@@ -169,32 +169,120 @@ window.labelManagerUtils = {
             }, timeout);
         });
     },
-    getRandomColor (){
-        // 20 distinct, visually appealing colors
-        const colors = [
-            '#191970', // midnightBlue
-            '#800020', // burgundy
-            '#36454F', // charcoal
-            '#228B22', // forestGreen
-            '#301934', // deepPurple
-            '#002147', // oxfordBlue
-            '#654321', // darkBrown
-            '#2F4F4F', // darkSlateGray
-            '#4B0082', // indigo
-            '#8B0000', // darkCrimson
-            '#556B2F', // darkOlive
-            '#004D4D', // darkTeal
-            '#555D50', // ebony
-            '#702963', // byzantium
-            '#8B008B', // darkMagenta
-            '#008B8B', // darkCyan
-            '#242124', // raisinBlack
-            '#1F2D1B', // verdunGreen
-            '#003153', // prussianBlue
-            '#3C1414'  // darkSienna
-          ];
-        
-        // Return a random color from the array
-        return colors[Math.floor(Math.random() * colors.length)];
+    hexToHSL(hex) {
+        // Remove the # if present
+        hex = hex.replace(/^#/, '');
+    
+        // Parse the hex values
+        const r = parseInt(hex.substring(0, 2), 16) / 255;
+        const g = parseInt(hex.substring(2, 4), 16) / 255;
+        const b = parseInt(hex.substring(4, 6), 16) / 255;
+    
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+    
+        if (max === min) {
+            h = s = 0; // achromatic
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+    
+        return {
+            h: Math.round(h * 360),
+            s: Math.round(s * 100),
+            l: Math.round(l * 100)
+        };
     },
+
+    parseHSL(hslString) {
+        const matches = hslString.match(/hsl\((\d+),\s*(\d+)%?,\s*(\d+)%?\)/);
+        if (!matches) return null;
+        return {
+            h: parseInt(matches[1]),
+            s: parseInt(matches[2]),
+            l: parseInt(matches[3])
+        };
+    },
+    
+    // Generate a random color that's different from existing colors
+    async generateRandomColor (existingColors = []) {
+        const minDistance = 30; // Minimum hue distance between colors
+        
+        // Convert all existing colors to HSL for comparison
+        const existingHSL = existingColors.map(color => {
+            if (color.startsWith('#')) {
+                return this.hexToHSL(color);
+            } else {
+                return this.parseHSL(color);
+            }
+        });
+    
+        let attempts = 0;
+        const maxAttempts = 50;
+    
+        while (attempts < maxAttempts) {
+            const hue = Math.floor(Math.random() * 360);
+            const saturation = Math.floor(Math.random() * (80 - 60) + 60); // Random saturation between 60-80%
+            const lightness = Math.floor(Math.random() * (85 - 25) + 25);  // Random lightness between 25-85%
+    
+            // Check if this color is far enough from existing colors
+            const isFarEnough = existingHSL.every(existing => {
+                if (!existing) return true;
+                const hueDiff = Math.min(
+                    Math.abs(hue - existing.h),
+                    360 - Math.abs(hue - existing.h)
+                );
+                return hueDiff > minDistance;
+            });
+    
+            if (isFarEnough || attempts === maxAttempts - 1) {
+                return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            }
+    
+            attempts++;
+        }
+    
+        // Fallback if we couldn't find a distinct color
+        const hue = Math.floor(Math.random() * 360);
+        const saturation = Math.floor(Math.random() * (80 - 60) + 60);
+        const lightness = Math.floor(Math.random() * (85 - 25) + 25);
+        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    },
+    
+    // Generate appropriate text color (black or white) based on background color
+    generateTextColor (backgroundColor) {
+        let h, s, l;
+    
+        if (backgroundColor.startsWith('#')) {
+            const hsl = this.hexToHSL(backgroundColor);
+            h = hsl.h;
+            s = hsl.s;
+            l = hsl.l;
+        } else {
+            const hslValues = this.parseHSL(backgroundColor);
+            if (!hslValues) return '#000000'; // Default to black if parsing fails
+            h = hslValues.h;
+            s = hslValues.s;
+            l = hslValues.l;
+        }
+    
+        // For very light colors (high lightness), use black text
+        // For darker colors, use white text
+        // We can also consider saturation in the calculation
+        const threshold = 65; // Adjust this value to fine-tune the switch point
+        
+        // If the color is very light (high lightness) or has very low saturation, use black
+        if (l > threshold || (l > 60 && s < 15)) {
+            return '#000000';
+        }
+        return '#FFFFFF';
+    }
 };

@@ -57,6 +57,109 @@ class NotesDatabase {
         });
     }
 
+
+
+    // Modify the setupNoteListeners method in NotesDatabase class to emit note update events
+
+    async setupNoteListeners(db, noteItems) {
+        let loadedNotes = 0;
+        const totalNotes = noteItems.length;
+
+        noteItems.forEach(noteItem => {
+            const noteId = noteItem.id;
+
+            const noteUnsubscribe = db.collection('profile_notes_v2')
+                .doc(noteId)
+                .onSnapshot(
+                    async (noteDoc) => {
+                        try {
+                            if (!noteDoc.exists) {
+                                loadedNotes++;
+                                return;
+                            }
+
+                            const noteData = noteDoc.data();
+                            const previousNote = this.notes[noteId];
+
+                            this.notes[noteId] = {
+                                id: noteDoc.id,
+                                note: noteData.n,
+                                lastUpdated: noteData.lu,
+                                profileId: noteData.p,
+                                // Add the metadata from user document
+                                metadata: {
+                                    createdAt: noteItem.ca,
+                                    type: noteItem.t,
+                                    // Include sharing info if available
+                                    ...(noteItem.t === 'shared' && {
+                                        sharedAt: noteItem.sa,
+                                        sharedByName: noteItem.sbn,
+                                        permission: noteItem.ps,
+                                        accepted: noteItem.a
+                                    })
+                                }
+                            };
+
+                            if (previousNote && noteData) {
+                                this.listeners.forEach(callback => {
+                                    try {
+                                        callback({
+                                            type: 'status_changed',  // New event type
+                                            noteId: noteId,
+                                            profileId: noteData.p,
+                                            note: this.notes[noteId],
+                                            lastUpdated: noteData.lu,  // Important for time updates
+                                            status: this.status,
+                                            notes: this.notes
+                                        });
+                                    } catch (error) {
+                                        console.error('[NotesDB] Error in status update callback:', error);
+                                    }
+                                });
+                            }
+
+                            // Emit note update event if this is an update (not initial load)
+                            if (previousNote && (previousNote.note !== noteData.n || previousNote.lastUpdated !== noteData.lu)) {
+                                this.listeners.forEach(callback => {
+                                    try {
+                                        callback({
+                                            type: 'note_updated',
+                                            noteId: noteId,
+                                            profileId: noteData.p,
+                                            note: this.notes[noteId],
+                                            status: this.status,
+                                            notes: this.notes
+                                        });
+                                    } catch (error) {
+                                        console.error('[NotesDB] Error in note update callback:', error);
+                                    }
+                                });
+                            }
+
+                            loadedNotes++;
+                            if (loadedNotes >= totalNotes) {
+                                this._updateStatus('logged_in');
+                            }
+                        } catch (error) {
+                            console.error(`[NotesDB] Note processing error:`, error);
+                            this._notifyError('note_processing_failed', error.message);
+                        }
+                    },
+                    error => {
+                        console.error(`[NotesDB] Note listener error:`, error);
+                        this._notifyError('note_listener_failed', error.message);
+                        loadedNotes++;
+                        if (loadedNotes >= totalNotes) {
+                            this._updateStatus('logged_in');
+                        }
+                    }
+                );
+
+            this.currentSubscriptionBatch.add(noteUnsubscribe);
+        });
+    }
+
+    // Add a listener function for the user document to detect changes in the notes list
     async loadNotes() {
         try {
             const db = window.firebaseService.db;
@@ -85,6 +188,58 @@ class NotesDatabase {
                         }
 
                         const noteItems = userDoc.data()?.d?.n || [];
+
+                        // Store previous note IDs to detect changes
+                        const previousNoteIds = Object.keys(this.notes);
+                        const currentNoteIds = noteItems.map(item => item.id);
+
+                        // Detect added or removed notes
+                        const addedNotes = currentNoteIds.filter(id => !previousNoteIds.includes(id));
+                        const removedNotes = previousNoteIds.filter(id => !currentNoteIds.includes(id));
+
+                        // Notify about removed notes
+                        if (removedNotes.length > 0) {
+                            removedNotes.forEach(noteId => {
+                                const profileId = this.notes[noteId]?.profileId;
+                                if (profileId) {
+                                    // Notify listeners about note removal
+                                    this.listeners.forEach(callback => {
+                                        try {
+                                            callback({
+                                                type: 'note_removed',
+                                                noteId: noteId,
+                                                profileId: profileId,
+                                                status: this.status,
+                                                notes: this.notes
+                                            });
+                                        } catch (error) {
+                                            console.error('[NotesDB] Error in note removal callback:', error);
+                                        }
+                                    });
+                                }
+
+                                // Remove from local cache
+                                delete this.notes[noteId];
+                            });
+                        }
+
+                        // Emit an event for any changes to the user's notes list
+                        if (addedNotes.length > 0 || removedNotes.length > 0) {
+                            this.listeners.forEach(callback => {
+                                try {
+                                    callback({
+                                        type: 'notes_list_updated',
+                                        addedNotes: addedNotes,
+                                        removedNotes: removedNotes,
+                                        status: this.status,
+                                        notes: this.notes
+                                    });
+                                } catch (error) {
+                                    console.error('[NotesDB] Error in notes list update callback:', error);
+                                }
+                            });
+                        }
+
                         if (noteItems.length === 0) {
                             this.notes = {};
                             this._updateStatus('logged_in');
@@ -114,66 +269,6 @@ class NotesDatabase {
             this.cleanupSubscriptions();
             this._updateStatus('logged_out');
         }
-    }
-
-    async setupNoteListeners(db, noteItems) {
-        let loadedNotes = 0;
-        const totalNotes = noteItems.length;
-
-        noteItems.forEach(noteItem => {
-            const noteId = noteItem.id;
-            
-            const noteUnsubscribe = db.collection('profile_notes_v2')
-                .doc(noteId)
-                .onSnapshot(
-                    async (noteDoc) => {
-                        try {
-                            if (!noteDoc.exists) {
-                                loadedNotes++;
-                                return;
-                            }
-
-                            const noteData = noteDoc.data();
-                            this.notes[noteId] = {
-                                id: noteDoc.id,
-                                note: noteData.n,
-                                lastUpdated: noteData.lu,
-                                profileId: noteData.p,
-                                // Add the metadata from user document
-                                metadata: {
-                                    createdAt: noteItem.ca,
-                                    type: noteItem.t,
-                                    // Include sharing info if available
-                                    ...(noteItem.t === 'shared' && {
-                                        sharedAt: noteItem.sa,
-                                        sharedByName: noteItem.sbn,
-                                        permission: noteItem.ps,
-                                        accepted: noteItem.a
-                                    })
-                                }
-                            };
-
-                            loadedNotes++;
-                            if (loadedNotes >= totalNotes) {
-                                this._updateStatus('logged_in');
-                            }
-                        } catch (error) {
-                            console.error(`[NotesDB] Note processing error:`, error);
-                            this._notifyError('note_processing_failed', error.message);
-                        }
-                    },
-                    error => {
-                        console.error(`[NotesDB] Note listener error:`, error);
-                        this._notifyError('note_listener_failed', error.message);
-                        loadedNotes++;
-                        if (loadedNotes >= totalNotes) {
-                            this._updateStatus('logged_in');
-                        }
-                    }
-                );
-
-            this.currentSubscriptionBatch.add(noteUnsubscribe);
-        });
     }
 
     addListener(callback) {
@@ -239,27 +334,27 @@ class NotesDatabase {
     }
 
     async createNote(profileId, noteText, profileData = null) {
-        this.setLoading(true);
+        // this.setLoading(true);
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
             if (!db || !currentUser) throw new Error('Not initialized');
-    
+
             const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const noteRef = db.collection('profile_notes_v2').doc(noteId);
-            
+
             // First create the note
             await noteRef.set({
                 n: noteText,
                 lu: new Date().toISOString(),
                 p: profileId
             });
-            
+
             // If profileData is provided, check and update profile
             if (profileData) {
                 const profileRef = db.collection('profiles').doc(profileId);
                 const profileDoc = await profileRef.get();
-                
+
                 if (!profileDoc.exists) {
                     await profileRef.set({
                         n: profileData.name || null,
@@ -271,19 +366,19 @@ class NotesDatabase {
                     }, { merge: true });
                 }
             }
-    
+
             // Create note metadata object
             const noteMetadata = {
                 id: noteId,
                 ca: new Date().toISOString(),
                 t: 'owned'
             };
-    
+
             // Update user document
             await db.collection('users_v2').doc(currentUser.uid).update({
                 'd.n': firebase.firestore.FieldValue.arrayUnion(noteMetadata)
             });
-    
+
             return noteId;
         } catch (error) {
             console.error('[NotesDB] Create note error:', error);
@@ -299,7 +394,7 @@ class NotesDatabase {
     }
 
     async updateNote(noteId, noteText, profileId, profileData) {
-        this.setLoading(true);
+        // this.setLoading(true);
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
@@ -335,7 +430,7 @@ class NotesDatabase {
     }
 
     async deleteNote(noteId) {
-        this.setLoading(true);
+        // this.setLoading(true);
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
@@ -344,13 +439,13 @@ class NotesDatabase {
             // Get the current user's document
             const userDoc = await db.collection('users_v2').doc(currentUser.uid).get();
             if (!userDoc.exists) throw new Error('User document not found');
-            
+
             const userData = userDoc.data();
             const notesArray = userData?.d?.n || [];
-            
+
             // Find and remove the note from the array
             const updatedNotesArray = notesArray.filter(note => note.id !== noteId);
-            
+
             // Update the user document with the filtered array
             await db.collection('users_v2').doc(currentUser.uid).update({
                 'd.n': updatedNotesArray
@@ -392,30 +487,30 @@ class NotesDatabase {
     }
 
     async shareNote(noteId, recipientUserId, permission = 'read', recipientName = null) {
-        this.setLoading(true);
+        // this.setLoading(true);
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
             if (!db || !currentUser) throw new Error('Not initialized');
-            
+
             // Check if note exists and user has permission
             const noteRef = db.collection('profile_notes_v2').doc(noteId);
             const noteDoc = await noteRef.get();
-            
+
             if (!noteDoc.exists) throw new Error('Note does not exist');
-            
+
             // Verify current user owns this note
             const userDoc = await db.collection('users_v2').doc(currentUser.uid).get();
             if (!userDoc.exists) throw new Error('User document not found');
-            
+
             const userData = userDoc.data();
             const notesArray = userData?.d?.n || [];
             const noteMetadata = notesArray.find(note => note.id === noteId);
-            
+
             if (!noteMetadata || noteMetadata.t !== 'owned') {
                 throw new Error('You do not have permission to share this note');
             }
-            
+
             // Create share metadata
             const shareMetadata = {
                 id: noteId,
@@ -426,12 +521,12 @@ class NotesDatabase {
                 ps: permission, // Permission: 'read' or 'edit'
                 a: null // Acceptance status: null (pending), true (accepted), false (rejected)
             };
-            
+
             // Add to recipient's notes list
             await db.collection('users_v2').doc(recipientUserId).update({
                 'd.n': firebase.firestore.FieldValue.arrayUnion(shareMetadata)
             });
-            
+
             return true;
         } catch (error) {
             console.error('[NotesDB] Share note error:', error);
@@ -443,35 +538,35 @@ class NotesDatabase {
     }
 
     async acceptSharedNote(noteId, accept = true) {
-        this.setLoading(true);
+        // this.setLoading(true);
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
             if (!db || !currentUser) throw new Error('Not initialized');
-            
+
             // Get the user's document
             const userDoc = await db.collection('users_v2').doc(currentUser.uid).get();
             if (!userDoc.exists) throw new Error('User document not found');
-            
+
             const userData = userDoc.data();
             const notesArray = userData?.d?.n || [];
-            
+
             // Find the shared note in the array
             const noteIndex = notesArray.findIndex(note => note.id === noteId && note.t === 'shared');
             if (noteIndex === -1) throw new Error('Shared note not found');
-            
+
             // Update the acceptance status
             const updatedNotesArray = [...notesArray];
             updatedNotesArray[noteIndex] = {
                 ...updatedNotesArray[noteIndex],
                 a: accept
             };
-            
+
             // Update the user document
             await db.collection('users_v2').doc(currentUser.uid).update({
                 'd.n': updatedNotesArray
             });
-            
+
             return true;
         } catch (error) {
             console.error('[NotesDB] Accept shared note error:', error);
@@ -483,27 +578,27 @@ class NotesDatabase {
     }
 
     async removeSharedNote(noteId) {
-        this.setLoading(true);
+        // this.setLoading(true);
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
             if (!db || !currentUser) throw new Error('Not initialized');
-            
+
             // Get the user's document
             const userDoc = await db.collection('users_v2').doc(currentUser.uid).get();
             if (!userDoc.exists) throw new Error('User document not found');
-            
+
             const userData = userDoc.data();
             const notesArray = userData?.d?.n || [];
-            
+
             // Filter out the shared note from the array
             const updatedNotesArray = notesArray.filter(note => !(note.id === noteId && note.t === 'shared'));
-            
+
             // Update the user document
             await db.collection('users_v2').doc(currentUser.uid).update({
                 'd.n': updatedNotesArray
             });
-            
+
             return true;
         } catch (error) {
             console.error('[NotesDB] Remove shared note error:', error);

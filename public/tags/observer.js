@@ -1,178 +1,3 @@
-// Unified LinkedIn Labels Manager
-const stylish = {
-    styleId: 'linkedin-labels-styles',
-    css: `
-        .profile-labels-container-message,
-        .hypertalent-profile-labels-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            padding: 4px 0;
-            width: 60% !important;
-            height: fit-content !important;
-        }
-
-        .hypertalent-profile-labels-container {
-            margin-top: 8px;
-            margin-bottom: 8px;
-        }
-
-        .profile-label {
-            display: inline-flex;
-            align-items: center;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            color: white;
-            cursor: default;
-            position: relative;
-            transition: all 0.2s ease;
-            height: 20px;
-            line-height: 20px;
-        }
-
-        .profile-label:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .profile-label.unverified::after {
-            content: '';
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            width: 6px;
-            height: 6px;
-            background: #f5a623;
-            border-radius: 50%;
-            border: 1px solid white;
-        }
-
-        .profile-label-remove {
-            display: none;
-            margin-left: 4px;
-            cursor: pointer;
-            opacity: 0.7;
-            font-size: 12px;
-            padding: 0 2px;
-        }
-
-        .profile-label-remove:hover {
-            opacity: 1;
-            // background: rgba(0,0,0,0.1);
-            border-radius: 50%;
-        }
-
-        .profile-label:hover .profile-label-remove {
-            display: inline-flex;
-        }
-
-        .profile-label[data-shared-by] {
-            position: relative;
-        }
-
-        .profile-label[data-shared-by]:hover::before {
-            content: attr(data-shared-by);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            white-space: nowrap;
-            margin-bottom: 4px;
-            z-index: 1000;
-            pointer-events: none;
-        }
-        .profile-label-shared-icon {
-            margin-left: 4px;
-            font-size: 12px;
-            color: inherit;
-            opacity: 0.8;
-            cursor: help;
-        }
-
-        .profile-label-tooltip {
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 11px;
-            white-space: nowrap;
-            margin-bottom: 8px;
-            z-index: 1000;
-            pointer-events: none;
-            display: none;
-        }
-
-        .profile-label:hover .profile-label-tooltip {
-            display: block;
-        }
-
-        .profile-label-container {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .hypertalent-profile-labels-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            padding: 8px 12px;
-            min-height: 24px;
-            margin: 8px 0;
-            border-radius: 8px;
-            background: rgba(0, 0, 0, 0.02);
-        }
-
-        .labels-loading-state,
-        .no-labels-state {
-            width: 100%;
-            text-align: center;
-            font-size: 12px;
-            color: #666;
-            padding: 8px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .labels-loading-state {
-            animation: pulse 1.5s infinite;
-        }
-
-        .no-labels-state {
-            color: #666;
-            font-style: italic;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        /* Dark theme adjustments */
-        .theme-dark .hypertalent-profile-labels-container {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .theme-dark .no-labels-state,
-        .theme-dark .labels-loading-state {
-            color: #999;
-        }
-            
-    `
-};
 
 class LinkedInLabelsManager {
     constructor() {
@@ -240,15 +65,9 @@ class LinkedInLabelsManager {
                 if (labelData) {
                     const originalColor = labelData.label_color;
 
-                    if (this.currentTheme === 'dark') {
                         label.style.backgroundColor = originalColor;
-                        label.style.color = 'white';
+                        label.style.color = window.labelManagerUtils.generateTextColor(originalColor)
                         label.style.border = 'none';
-                    } else {
-                        label.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                        label.style.color = originalColor;
-                        label.style.border = `1px solid ${originalColor}`;
-                    }
                 }
             });
         });
@@ -265,7 +84,6 @@ class LinkedInLabelsManager {
         }
 
         console.log('Starting initialization');
-        this.injectStyles();
         this.setupDatabaseListener();
         this.setupUrlChangeListener();
 
@@ -305,17 +123,7 @@ class LinkedInLabelsManager {
         // console.log('Element not found within timeout');
         return null;
     }
-
-    injectStyles() {
-        // console.log('Injecting styles');
-        if (!document.getElementById(stylish.styleId)) {
-            const styleSheet = document.createElement('style');
-            styleSheet.id = stylish.styleId;
-            styleSheet.textContent = stylish.css;
-            document.head.appendChild(styleSheet);
-            // console.log('Styles injected successfully');
-        }
-    }
+    
 
     isMessagingPage() {
         return location.pathname.includes('/messaging/thread');
@@ -332,7 +140,7 @@ class LinkedInLabelsManager {
             // console.log('Database listener setup complete');
         }
     }
-    handleLabelsUpdate(data) {
+    async handleLabelsUpdate(data) {
         console.log('Labels update received:', data);
 
         // Check if status is the same as before for in_progress
@@ -363,7 +171,7 @@ class LinkedInLabelsManager {
             this.labelsData = [];
             // For non-logged in states, just update the status display if we're on a profile page
             if (this.isProfilePage() && this.labelContainerRef) {
-                const profileInfo = this.getProfileInfo();
+                const profileInfo = await window.labelManagerUtils.getProfileInfo();
                 if (profileInfo) {
                     this.updateLabelsDisplay(profileInfo);
                 }
@@ -472,37 +280,6 @@ class LinkedInLabelsManager {
     }
 
 
-    async getProfileInfo() {
-        // console.log('Getting profile info');
-        try {
-            const connectionLink = document.querySelector('a[href*="/search/results/people"]');
-            const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
-            const url = connectionLink?.href || mutualConnectionLink?.href || window.location.href;
-
-            const nameElement = document.querySelector('a[aria-label] h1');
-            const name = nameElement?.textContent.trim() || '';
-            const username = this.extractUsername(url);
-            const connectionCode = this.extractConnectionCode(url) || username;
-            const imgElement = document.querySelector('img.pv-top-card-profile-picture__image--show');
-            const imageUrl = imgElement?.getAttribute('src') || '';
-
-            const profileInfo = {
-                url: window.location.href,
-                profileId: connectionCode,
-                name,
-                username,
-                imageUrl,
-                addedAt: new Date().toISOString()
-            };
-
-            // console.log('Profile info collected:', profileInfo);
-            return profileInfo;
-        } catch (error) {
-            // console.error('Error getting profile info:', error);
-            return null;
-        }
-    }
-
     createProfileId(username) {
         return `profile_${username}`;
     }
@@ -546,7 +323,7 @@ class LinkedInLabelsManager {
 
     async processProfilePage() {
         // console.log('Processing profile page');
-        const profileInfo = await this.getProfileInfo();
+        const profileInfo = await window.labelManagerUtils.getProfileInfo();
         if (!profileInfo) return;
 
         const targetElement = await this.waitForElement('section[data-member-id] > .ph5 > div:nth-child(2)');
@@ -586,7 +363,7 @@ class LinkedInLabelsManager {
         }
 
         // Continue with normal label processing for logged_in state with labels
-        const matchingLabels = this.findMatchingLabels(profileInfo.name, profileInfo.imageUrl);
+        const matchingLabels = this.findMatchingLabels(profileInfo.name, profileInfo.image_url);
 
         // If we have matching labels, show them
         if (matchingLabels.length > 0) {
@@ -595,7 +372,7 @@ class LinkedInLabelsManager {
                     label,
                     {
                         name: profileInfo.name,
-                        profile_id: profileInfo.profileId,
+                        profile_id: profileInfo.profile_id,
                         isVerified: true
                     }
                 );
@@ -611,6 +388,8 @@ class LinkedInLabelsManager {
     }
 
     createLabel(labelData, matchingProfile) {
+        console.log(labelData);
+        console.log(matchingProfile)
         const labelContainer = document.createElement('div');
         labelContainer.className = 'profile-label-container';
 
@@ -621,16 +400,10 @@ class LinkedInLabelsManager {
         // Store original color in data attribute for theme switching
         label.dataset.originalColor = labelData.label_color;
 
-        // Apply theme-specific styles
-        if (this.currentTheme === 'dark') {
-            label.style.backgroundColor = labelData.label_color;
-            label.style.color = 'white';
-            label.style.border = 'none';
-        } else {
-            label.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-            label.style.color = labelData.label_color;
-            label.style.border = `1px solid ${labelData.label_color}`;
-        }
+        label.style.backgroundColor = labelData.label_color;
+        label.style.color = window.labelManagerUtils.generateTextColor(labelData.label_color);
+        label.style.border = 'none';
+
 
         // Set label text
         label.innerHTML = labelData.label_name;
@@ -655,22 +428,22 @@ class LinkedInLabelsManager {
         removeBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             try {
-                if (!window.start_action('removing-label', 'Removing Label')) {
-                    return;
-                }
+                // if (!window.start_action('removing-label', 'Removing Label')) {
+                //     return;
+                // }
                 const success = await window.labelsDatabase.removeProfileFromLabel(
                     labelData.label_id,
                     matchingProfile.profile_id
                 );
                 if (success) {
-                    window.complete_action('removing-label', true, `${labelData.label_name} has been removed for ${matchingProfile?.name}`);
+                    // window.complete_action('removing-label', true, `${labelData.label_name} has been removed for ${matchingProfile?.name}`);
                     labelContainer.remove(); // Remove the label from DOM on success
                 } else {
-                    window.complete_action('removing-label', false, 'Something went wrong while removing label');
+                    // window.complete_action('removing-label', false, 'Something went wrong while removing label');
                 }
             } catch (error) {
                 console.error('[LinkedInLabels] Error removing label:', error);
-                window.complete_action('removing-label', false, 'Something went wrong while removing label');
+                // window.complete_action('removing-label', false, 'Something went wrong while removing label');
             }
         });
         label.appendChild(removeBtn);
@@ -836,10 +609,6 @@ class LinkedInLabelsManager {
         }
         if (window.themeManager) {
             window.themeManager.removeListener(this.handleThemeChange);
-        }
-        const styleSheet = document.getElementById(stylish.styleId);
-        if (styleSheet) {
-            styleSheet.remove();
         }
         if (this.labelContainerRef) {
             this.labelContainerRef.remove();

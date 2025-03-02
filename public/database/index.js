@@ -13,7 +13,7 @@ class FirebaseService {
 
         // Bind handlers
         this._handleBackgroundMessages = this._handleBackgroundMessages.bind(this);
-        
+
         // Add message listener
         chrome.runtime.onMessage.addListener(this._handleBackgroundMessages);
 
@@ -120,13 +120,15 @@ class FirebaseService {
             this.auth = firebase.auth();
             this.db = firebase.firestore();
 
+            console.log(firebase)
+
             // Request token
             const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
 
             if (response.type === 'logged_in' && response.data?.accessToken) {
                 // First set to in_progress while verifying
                 // this._updateStatus('in_progress');
-                
+
                 // Verify token with Firebase
                 const isValid = await this._verifyToken(response.data.accessToken);
                 if (isValid) {
@@ -146,15 +148,38 @@ class FirebaseService {
         }
     }
 
+    async callCloudFunction(functionName, data) {
+        try {
+            // Make sure we're initialized and logged in
+            if (!this.db || this.status !== 'logged_in') {
+                console.error('[FirebaseService] Cannot call function - not initialized or logged out');
+                return { error: 'Not authenticated' };
+            }
+
+            // Use the Firebase functions SDK
+            const functions = firebase.functions();
+            const functionRef = functions.httpsCallable(functionName);
+
+            console.log(`[FirebaseService] Calling cloud function: ${functionName}`);
+            const result = await functionRef(data);
+
+            console.log(`[FirebaseService] Function call successful:`, result.data);
+            return result.data;
+        } catch (error) {
+            console.error(`[FirebaseService] Error calling function ${functionName}:`, error);
+            return { error: error.message };
+        }
+    }
+
     startTokenRefresh() {
         // Clear any existing refresh interval
         this.stopTokenRefresh();
-        
+
         // Set up new refresh interval (45 minutes)
         this.refreshInterval = setInterval(async () => {
             try {
                 const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
-                
+
                 if (response.type === 'logged_in' && response.data?.accessToken) {
                     const isValid = await this._verifyToken(response.data.accessToken);
                     if (!isValid) {

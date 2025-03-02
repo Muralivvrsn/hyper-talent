@@ -1,14 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "HyperTalent",
-  "short_name": "HyperTalent",
-  "version": "1.5.4",
+  "name": "LinkAgent",
+  "short_name": "LinkAgent",
+  "version": "1.5.3",
   "description": "An ATS Chrome Extension",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6Yn0Jgl1gLe4x5lfoj6/9Hmh7p3RxVMTLQNtTrzbwJ/aQ5B8RcjGv0twV2jhrhdpCJkWeBGo6Dov+lUMg0APQ301HsvGLLrgU9wL5Cc5uEUpLaJqhEyLeGg3IsCyNOn9a4bzYpUcPHXiHBlczSPa11CS1EVGCVGVyQ5J6Eao5BNmzK1Hv6lgjAy/O5hPWABkQmPOvWCFr9xkURDm1f7HNJwuRkVXlCzBKbirdwpdy9v0qFCVTTuQR2ZDWGwfavdlWQnb5RPckspf/4a1EAQ0EwIkHj5oI0s5/yj2XMkPXJtVRYfcnKuaSBkTK6MG0Jby/BR+4Fi7t/7jna07Px9yQIDAQAB",
   "icons": {
-    "16": "HYPER TALENT.png",
-    "48": "HYPER TALENT.png",
-    "128": "HYPER TALENT.png"
+    "16": "hypertalent.png",
+    "48": "hypertalent.png",
+    "128": "hypertalent.png"
   },
   "side_panel": {
     "default_path": "index.html"
@@ -16,9 +16,9 @@
   "action": {
     "default_popup": "index.html",
     "default_icon": {
-      "16": "HYPER TALENT.png",
-      "48": "HYPER TALENT.png",
-      "128": "HYPER TALENT.png"
+      "16": "hypertalent.png",
+      "48": "hypertalent.png",
+      "128": "hypertalent.png"
     }
   },
   "background": {
@@ -34,6 +34,7 @@
         "firebase-database.js",
         "firebase-auth.js",
         "firebase-firestore.js",
+        "firebase-functions-compat.js",
         "utils/alert.js",
         "utils/notification_system/style.js",
         "utils/notification_system/index.js",
@@ -44,15 +45,12 @@
         "database/theme.js",
         "database/message_templates.js",
         "database/persionalized_notes.js",
+        "utils/autoupdate.js",
         "tags/index.js",
         "tags/keyboard.js",
         "tags/observer.js",
         "tags/filter.js",
         "tags/filtering-ui.js",
-
-
-
-        "label_search.js",
 
         
         "services/templates/index.js",
@@ -68,11 +66,7 @@
     "scripting",
     "sidePanel",
     "identity",
-    "cookies",
-    "tabCapture",
-    "tabs",
-    "downloads",
-    "desktopCapture"
+    "cookies"
   ],
   "web_accessible_resources": [
     {
@@ -81,6 +75,7 @@
         "firebase-database.js",
         "firebase-auth.js",
         "firebase-firestore.js",
+        "firebase-functions-compat.js",
         "logo.png",
         "refresh.png"
       ],
@@ -104,8 +99,6 @@
     "https://www.linkedin.com/*",
     "*://*.googleapis.com/*",
     "*://*.firebasestorage.googleapis.com/*",
-    "https://*.slack.com/*",
-    "http://*/*",
-    "https://*/*"
+    "https://*.slack.com/*"
   ]
 }

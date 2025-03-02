@@ -79,9 +79,9 @@ class FilterManager {
 
     createElements(container) {
         if (!container) return;
-
+    
         this.cleanupElements();
-
+    
         // Create button
         this.elements.button = document.createElement('button');
         this.elements.button.className = 'hyper_filter_button';
@@ -91,38 +91,50 @@ class FilterManager {
         
         // Add count badge if filters are selected
         this.updateFilterCountBadge();
-
+    
         // Create dropdown
         this.elements.dropdown = document.createElement('div');
         this.elements.dropdown.className = 'hyper_filter_dropdown';
         this.elements.dropdown.id = 'hyper_filter_dropdown';
         this.elements.dropdown.style.display = 'none';
-
-        // Add search input
+    
+        // Add search input with icon
         const searchContainer = document.createElement('div');
         searchContainer.className = 'filter_search_container';
-
+        searchContainer.style.position = 'relative'; // For icon positioning
+    
+        // Create search icon
+        const searchIcon = document.createElement('div');
+        searchIcon.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="search-icon">
+                <path d="M7.33333 12.6667C10.2789 12.6667 12.6667 10.2789 12.6667 7.33333C12.6667 4.38781 10.2789 2 7.33333 2C4.38781 2 2 4.38781 2 7.33333C2 10.2789 4.38781 12.6667 7.33333 12.6667Z" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 14L11 11" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+    
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'filter_search_input';
         searchInput.placeholder = 'Search filters...';
+        searchInput.style.paddingLeft = '36px'; // Space for icon
         searchInput.addEventListener('input', this.handleSearchInput.bind(this));
-
-        // Append search input to its container
+    
+        // Append search icon and input to container
+        searchContainer.appendChild(searchIcon);
         searchContainer.appendChild(searchInput);
-
+    
         // Create content container
         const contentContainer = document.createElement('div');
         contentContainer.className = 'dropdown_content';
-
+    
         // Build dropdown structure
         this.elements.dropdown.appendChild(searchContainer);
         this.elements.dropdown.appendChild(contentContainer);
-
-        // Insert into DOM (now both elements exist)
+    
+        // Insert into DOM
         container.appendChild(this.elements.button);
         document.body.appendChild(this.elements.dropdown);
-
+    
         // Update content after structure is ready
         this.updateDropdownContent();
     }

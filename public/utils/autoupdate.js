@@ -2,15 +2,15 @@ window.autoUpdateProfiles = {
     async init() {
         if (!window.location.href.includes('linkedin.com/in/')) return;
         try {
-            const { db, currentUser } = await window.firebaseService.initialize();
-            if (!db || !currentUser) throw new Error('Firebase init failed');
-            await this.startProfileExtraction(db);
+            // Only need to check if Firebase service is available
+            if (!window.firebaseService) throw new Error('Firebase service not available');
+            await this.startProfileExtraction();
         } catch (error) {
             console.error('Init error:', error);
         }
     },
 
-    async startProfileExtraction(db) {
+    async startProfileExtraction() {
         try {
             const username = this.extractUsernameFromURL();
             if (!username) throw new Error('Username extraction failed');
@@ -18,7 +18,8 @@ window.autoUpdateProfiles = {
             const profileCode = await this.extractProfileCode();
             if (!profileCode) throw new Error('Profile code extraction failed');
 
-            await this.updateProfileInDatabase(db, profileCode, username);
+            // Call Cloud Function instead of directly updating database
+            await this.sendProfileToCloudFunction(profileCode, username);
         } catch (error) {
             console.error('Extraction error:', error);
         }
@@ -63,35 +64,47 @@ window.autoUpdateProfiles = {
         return null;
     },
 
-    async updateProfileInDatabase(db, profileCode, username) {
+    async sendProfileToCloudFunction(profileCode, username) {
         try {
-            const usernameRef = db.collection('profiles').doc(username);
-            const usernameDoc = await usernameRef.get();
-            // console.log(profileCode)
-
-            if (usernameDoc.exists) {
-                const oldData = usernameDoc.data();
-                const profileRef = db.collection('profiles').doc(profileCode);
-                
-                await profileRef.set({
-                    ...oldData,
-                    un: username,
-                    c: profileCode,
-                    lu: new Date()
-                });
-                
-                await usernameRef.delete();
-                return;
+            // Create data object to send
+            const profileData = {
+                profileCode: profileCode,
+                username: username,
+                url: window.location.href,
+                title: document.title,
+                timestamp: Date.now()
+            };
+            
+            // Add pageInfo if possible
+            try {
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) {
+                    profileData.description = metaDesc.getAttribute('content');
+                }
+            } catch (e) {
+                // Ignore meta extraction errors
             }
-
-            const profileRef = db.collection('profiles').doc(profileCode);
-            await profileRef.update({
-                un: username,
-                c: profileCode,
-                lu: new Date()
-            });
+            
+            console.log('Sending profile data to Cloud Function:', profileData);
+            
+            // Call the Cloud Function using the Firebase service
+            if (window.firebaseService.callCloudFunction) {
+                const result = await window.firebaseService.callCloudFunction('processData', profileData);
+                console.log('Cloud Function response:', result);
+                return result;
+            } else {
+                // Fallback if the method doesn't exist
+                console.error('Firebase service missing callCloudFunction method');
+                
+                // Try to use Firebase functions directly
+                const functions = firebase.functions();
+                const processData = functions.httpsCallable('processData');
+                const result = await processData(profileData);
+                console.log('Cloud Function response:', result.data);
+                return result.data;
+            }
         } catch (error) {
-            console.error('DB update error:', error);
+            console.error('Error calling Cloud Function:', error);
             throw error;
         }
     }
@@ -99,6 +112,7 @@ window.autoUpdateProfiles = {
 
 window.autoUpdateProfiles.init();
 
+// Re-run when URL changes (SPA navigation)
 let lastUrl = window.location.href;
 new MutationObserver(() => {
     const currentUrl = window.location.href;

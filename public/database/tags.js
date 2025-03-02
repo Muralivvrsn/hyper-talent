@@ -222,6 +222,9 @@ class LinkedInLabelsDatabase {
     }
     
     async removeProfileFromLabel(labelId, profileId) {
+        if(!window.start_action('removing','Peeling label off profile. Painless separation in progress! 📤🩹')){
+            throw Error;
+        }
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
@@ -256,9 +259,11 @@ class LinkedInLabelsDatabase {
                 lu: new Date().toISOString() // Update last updated timestamp
             });
     
+            window.complete_action('removing', true, "Freedom achieved! Profile living its best unlabeled life! 👋🎉")
             return true;
         } catch (error) {
             console.error('[LinkedInLabels] Remove profile from label error:', error);
+            window.complete_action('removing', false, "Label has separation anxiety. Need relationship counseling! 🤨💔")
             throw error;
         }
     }
@@ -343,6 +348,9 @@ class LinkedInLabelsDatabase {
     // Add these methods to the LinkedInLabelsDatabase class
 
     async createLabel(labelName) {
+        if(!window.start_action('creating label', 'Crafting perfect label. Artisanal label-making in progress! ✨🎨')){
+            throw Error;
+        }
         try {
             // Check for duplicates
             const isDuplicate = this.state.labels.some(label =>
@@ -363,17 +371,19 @@ class LinkedInLabelsDatabase {
             // Generate label ID
             const labelId = `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            // Random color generation (light colors)
-            const generateRandomColor = () => {
-                const hue = Math.floor(Math.random() * 360);
-                return `hsl(${hue}, 70%, 75%)`;
-            };
+
 
             // First, create the document in profile_labels_v2
             const labelRef = db.collection('profile_labels_v2').doc(labelId);
+            const getExistingColors = (labels) => {
+                console.log(labels)
+                return labels.map(label => label.label_color);
+            };
+            let labelColor = await window.labelManagerUtils.generateRandomColor(getExistingColors(this.state?.labels));
+            console.log(labelColor)
             await labelRef.set({
                 n: labelName,          // name
-                c: generateRandomColor(), // color
+                c: labelColor,
                 p: [],                 // profiles array
                 lu: new Date().toISOString() // last updated
             });
@@ -389,14 +399,19 @@ class LinkedInLabelsDatabase {
                 })
             });
 
+            window.complete_action('creating label', true, "New label born! Ready to organize your world! 🎉👶");
             return labelId;
         } catch (error) {
             console.error('[LinkedInLabels] Create label error:', error);
+            window.complete_action('creating label', false, "Label stork got lost. Your creation's fashionably late! 🎪🦢");
             throw error;
         }
     }
 
     async deleteLabel(labelId) {
+        if(!window.start_action('deleting label','Sending this label to digital recycling heaven! 🗑️🚀')){
+            throw Error;
+        }
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
@@ -426,8 +441,10 @@ class LinkedInLabelsDatabase {
             await userRef.update({
                 'd.l': firebase.firestore.FieldValue.arrayRemove(labelToRemove)
             });
+            window.complete_action('deleting label', true, "Poof! Label vanished like magic! Workspace getting cleaner! 💨✨")
         } catch (error) {
             console.error('[LinkedInLabels] Delete label error:', error);
+            window.complete_action('deleting label', false, "Label's staging a rebellion. Try bribing with cookies! 🍪🧱")
             throw error;
         }
     }
@@ -464,6 +481,9 @@ class LinkedInLabelsDatabase {
     }
 
     async applyLabel(labelId) {
+        if(!window.start_action('applying label', "Attaching this fancy label... Your profile's getting a makeover! 🏷️✨")){
+            throw Error;
+        }
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
@@ -505,7 +525,7 @@ class LinkedInLabelsDatabase {
                 });
             }
     
-            // Update the label's profiles array
+            // Get the label to check if profile is already attached
             const labelRef = db.collection('profile_labels_v2').doc(labelId);
             const labelDoc = await labelRef.get();
     
@@ -513,11 +533,26 @@ class LinkedInLabelsDatabase {
                 throw new Error('Label not found');
             }
     
-            // Add profile_id to the profiles array if not already present
+            // Check if profile is already in the label's profiles array
+            const labelData = labelDoc.data();
+            if (labelData.p && labelData.p.includes(profileInfo.profile_id)) {
+                // Profile is already labeled, complete action with false and custom message
+                window.complete_action('applying label', false, "Profile already has this label! No double-dipping! 🏷️👀");
+                
+                return {
+                    success: false,
+                    profile_id: profileInfo.profile_id,
+                    message: "Profile already has this label"
+                };
+            }
+    
+            // Add profile_id to the profiles array since it's not already present
             await labelRef.update({
                 p: firebase.firestore.FieldValue.arrayUnion(profileInfo.profile_id),
                 lu: new Date().toISOString()
             });
+    
+            window.complete_action('applying label', true, "Label attached! Your organizing skills are off the charts! 🏆✅");
     
             return {
                 success: true,
@@ -525,6 +560,7 @@ class LinkedInLabelsDatabase {
             };
     
         } catch (error) {
+            window.complete_action('applying label', false, "Label's playing hard to get. Try again later! 🙈🤷‍♀️");
             console.error('[LinkedInLabels] Apply label error:', error);
             throw error;
         }
