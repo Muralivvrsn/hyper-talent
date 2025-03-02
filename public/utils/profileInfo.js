@@ -63,9 +63,9 @@ window.labelManagerUtils = {
     
                 for (const anchor of potentialAnchors) {
                     const href = anchor?.getAttribute('href');
-                    console.log(href)
+                    // console.log(href)
                     if (href) {
-                        console.log(href)
+                        // console.log(href)
                         connectionCode = this.extractConnectionCode(href);
                         if (connectionCode) {
                             break;

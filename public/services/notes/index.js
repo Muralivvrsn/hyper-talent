@@ -1,102 +1,3 @@
-class ProfileNotes {
-    async init() {
-        if (this.initialized) return;
-        this.initialized = true;
-    }
-
-    extractUsername(url) {
-        const match = url.match(/linkedin\.com\/in\/([^/]+)/);
-        return match ? match[1] : '';
-    }
-
-    extractConnectionCode(url) {
-        const match = url.match(/connectionOf=%5B%22(.*?)%22%5D/);
-        if (match) return match[1];
-
-        const directMatch = url.match(/connectionOf=\["([^"]+)"\]/);
-        return directMatch ? directMatch[1] : null;
-    }
-
-    extractConnectionCodeFromMutual(url) {
-        const match = url.match(/facetConnectionOf=%22(.*?)%22/);
-        if (match) return match[1];
-
-        const directMatch = url.match(/facetConnectionOf="([^"]+)"/);
-        return directMatch ? directMatch[1] : null;
-    }
-
-    extractProfileId(url) {
-        const match = url.match(/ACoAA[A-Za-z0-9_-]+/);
-        return match ? match[0] : null;
-    }
-
-    getProfileInfo() {
-        try {
-            const currentUrl = window.location.href;
-
-            // Check if it's a profile page
-            if (currentUrl.includes('linkedin.com/in/')) {
-                const connectionLink = document.querySelector('a[href*="/search/results/people"]');
-                const mutualConnectionLink = document.querySelector('section[data-member-id] > .ph5 > a');
-                const url = connectionLink?.href || mutualConnectionLink?.href || currentUrl;
-                const username = this.extractUsername(currentUrl);
-
-                let name = null;
-                const nameElement = document.querySelector('a[aria-label] h1');
-                if (nameElement) {
-                    name = nameElement.textContent.trim();
-                }
-                let imageUrl = null;
-                const profileImage = document.querySelector('img.pv-top-card-profile-picture__image--show');
-                if (profileImage) {
-                    imageUrl = profileImage.getAttribute('src');
-                }
-                let connectionCode = this.extractConnectionCode(url);
-
-                if (!connectionCode) {
-                    connectionCode = this.extractConnectionCodeFromMutual(url);
-                }
-
-                if (!connectionCode) {
-                    connectionCode = username;
-                }
-
-                return { profileId: connectionCode, username, name, url: currentUrl, imageUrl };
-            }
-
-            // Check if it's a messaging thread
-            if (currentUrl.includes('messaging/thread')) {
-                const profileLink = document.querySelector('.msg-thread__link-to-profile');
-                const name = document.querySelector('#thread-detail-jump-target').textContent.trim();
-                if (!profileLink) return null;
-                const activeConvo = document.querySelector('.msg-conversations-container__convo-item-link--active');
-                const img = activeConvo?.querySelector('img')?.src || null;
-
-                const url = profileLink.href;
-                if (!url) return null;
-
-                const id = this.extractProfileId(url);
-                if (!id) return null;
-
-                return {
-                    profileId: id,
-                    url: url,
-                    name,
-                    username: null,
-                    imageUrl: img,
-                };
-            }
-
-            return null;
-
-        } catch (error) {
-            window.show_error('Unable to retrieve profile information. Please try again.', 3000);
-            console.error(error);
-            return null;
-        }
-    }
-}
-
 class LabelProfileNotes {
     constructor() {
         this.currentProfileInfo = null;
@@ -108,90 +9,101 @@ class LabelProfileNotes {
         this.handleKeyPress = this.handleKeyPress.bind(this);
         this.handleClickOutside = this.handleClickOutside.bind(this);
         this.handleKeyboardShortcuts = this.handleKeyboardShortcuts.bind(this);
-        this.notesDatabaseListener = this.notesDatabaseListener.bind(this);
-        this.isLoading = false;
-        this.hasError = false;
         this.databaseSubscription = null;
     }
 
-    // 1. First fix the setupDatabaseListener to properly handle notes
+    // Database listener - fixed to properly handle notes
     setupDatabaseListener() {
+        // Clear any existing subscription first
+        if (this.databaseSubscription) {
+            window.notesDatabase.removeListener(this.databaseSubscription);
+        }
+    
         this.databaseSubscription = window.notesDatabase.addListener((data) => {
-            if (!this.currentProfileInfo || !data.notes) return;
-            console.log(data)
+            console.log('Database update received:', data);
     
-            // Convert data.notes object into array and filter for current profileId
-            const allNotes = Object.entries(data.notes)
-                .map(([noteId, noteData]) => ({
-                    id: noteId,
-                    note: noteData.note,
-                    lastUpdated: noteData.lastUpdated,
-                    metadata: {
-                        createdAt: noteData.metadata.createdAt,
-                        type: noteData.metadata.type || 'owned',
-                        sharedByName: noteData.metadata.sharedByName,
-                        permission: noteData.metadata.permission
-                    },
-                    profileId: noteData.profileId
-                }))
-                // Only show notes for current profile
-                .filter(note => note.profileId === this.currentProfileInfo.profileId);
+            // Make sure we have profile info before processing
+            if (!this.currentProfileInfo) {
+                console.log('No current profile info, skipping update');
+                return;
+            }
     
-                console.log(this.currentProfileInfo?.profileId)
-                console.log(allNotes)
-            // Update currentNotes with the filtered notes
-            this.currentNotes = allNotes;
-            this.updateNoteBoxContent();
+            // Handle status updates
+            if (data && data.type === 'status') {
+                console.log('Status update:', data.status);
+                this.status = data.status;
+                
+                // Use setTimeout to ensure this runs after current execution completes
+                setTimeout(() => {
+                    this.updateNoteBoxContent();
+                }, 0);
+                return;
+            }
+    
+            // Handle notes updates
+            if (data && data.notes) {
+                console.log('Notes update received');
+    
+                // Get the correct profile ID from current profile
+                const profileId = this.currentProfileInfo.profile_id;
+                console.log('Current profile ID:', profileId);
+    
+                if (!profileId) {
+                    console.log('No profile ID available');
+                    return;
+                }
+    
+                // Convert to array and filter for current profile
+                const profileNotes = Object.entries(data.notes)
+                    .map(([noteId, noteData]) => {
+                        return {
+                            id: noteId,
+                            note: noteData.note,
+                            lastUpdated: noteData.lastUpdated || new Date().toISOString(),
+                            metadata: noteData.metadata || { type: 'owned' },
+                            profileId: noteData.profileId
+                        };
+                    })
+                    .filter(note => note.profileId === profileId);
+    
+                console.log('Filtered notes:', profileNotes);
+    
+                // Create a new array to ensure change detection
+                if (profileNotes.length > 0) {
+                    this.currentNotes = [...profileNotes];
+                } else {
+                    // If no notes found for this profile, ensure at least one empty owned note
+                    this.currentNotes = [{
+                        id: null,
+                        note: '',
+                        lastUpdated: new Date().toISOString(),
+                        metadata: { type: 'owned' },
+                        profileId: profileId
+                    }];
+                }
+    
+                // Use setTimeout to ensure this runs after current execution completes
+                setTimeout(() => {
+                    this.updateNoteBoxContent();
+                }, 0);
+            }
         });
+    
+        console.log('Database listener set up');
     }
 
-    // 2. Fix refreshNotes to properly handle notes
-    async refreshNotes(profileId) {
-        this.isLoading = true;
-        this.updateNoteBoxContent();
-
+    // Fetches notes for a profile
+    async getNotes(profileId) {
         try {
-            const notes = await this.getNotes(profileId);
-
-            // Separate owned and shared notes
-            const ownedNotes = notes.filter(note =>
-                !note.metadata || note.metadata.type === 'owned'
-            );
-
-            const sharedNotes = notes.filter(note =>
-                note.metadata && note.metadata.type === 'shared'
-            );
-
-            // Ensure there's at least one owned note
-            if (ownedNotes.length === 0) {
-                ownedNotes.push({
-                    id: null,
-                    note: '',
-                    metadata: { type: 'owned' }
-                });
-            }
-
-            this.currentNotes = [...ownedNotes, ...sharedNotes];
+            return await window.notesDatabase.getNotesByProfileId(profileId) || [];
         } catch (error) {
-            this.hasError = true;
-            console.error('Error refreshing notes:', error);
-        } finally {
-            this.isLoading = false;
-            this.updateNoteBoxContent();
-        }
-    }
-    // Update the notesDatabaseListener method to be more specific
-    notesDatabaseListener(data) {
-        // Only handle status changes here - other events are handled in setupDatabaseListener
-        if (data && data.type === 'status' && data.status !== this.status) {
-            this.status = data.status;
-            // If the note box is open, update its content based on the new status
-            if (this.noteBox && this.noteBox.container.parentNode) {
-                this.updateNoteBoxContent();
-            }
+            console.error('Error fetching notes:', error);
+            window.show_error('Unable to load existing notes. Please try again.', 3000);
+            return [];
         }
     }
 
+    // Load font styles
     injectStyles() {
         if (!document.querySelector('link[href*="fonts.googleapis.com/css2?family=Poppins"]')) {
             const fontLink = document.createElement('link');
@@ -201,13 +113,12 @@ class LabelProfileNotes {
         }
     }
 
+    // Creates the note box UI
     createNoteBox() {
         this.injectStyles();
-
         const box = document.createElement('div');
         box.className = 'note-box-container';
 
-        // Initial content will be updated based on status
         this.noteBox = {
             container: box,
             textarea: null,
@@ -216,147 +127,18 @@ class LabelProfileNotes {
         };
 
         this.updateNoteBoxContent();
-
         return box;
     }
 
-    createNoteTabs() {
-        if (!this.currentNotes || this.currentNotes.length <= 0) {
-            return null;
-        }
-
-        const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'note-tabs-container';
-
-        this.currentNotes.forEach((note, index) => {
-            const tab = document.createElement('div');
-            tab.className = `note-tab ${index === this.selectedNoteIndex ? 'note-tab-active' : ''}`;
-
-            // Create icon based on note type (owned or shared)
-            const isShared = note.metadata && note.metadata.type === 'shared';
-            const tabIcon = document.createElement('span');
-            tabIcon.className = 'note-tab-icon';
-
-            if (isShared) {
-                tabIcon.innerHTML = `
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 4C12 5.10457 11.1046 6 10 6C8.89543 6 8 5.10457 8 4C8 2.89543 8.89543 2 10 2C11.1046 2 12 2.89543 12 4Z" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M6 8C6 9.10457 5.10457 10 4 10C2.89543 10 2 9.10457 2 8C2 6.89543 2.89543 6 4 6C5.10457 6 6 6.89543 6 8Z" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M12 12C12 13.1046 11.1046 14 10 14C8.89543 14 8 13.1046 8 12C8 10.8954 8.89543 10 10 10C11.1046 10 12 10.8954 12 12Z" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M5.5 7L9 5" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M5.5 9L9 11" stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
-                `;
-            } else {
-                tabIcon.innerHTML = `
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M11.6667 13H2.33333C1.97971 13 1.64057 12.8595 1.39052 12.6095C1.14048 12.3594 1 12.0203 1 11.6667V2.33333C1 1.97971 1.14048 1.64057 1.39052 1.39052C1.64057 1.14048 1.97971 1 2.33333 1H9.66667L13 4.33333V11.6667C13 12.0203 12.8595 12.3594 12.6095 12.6095C12.3594 12.8595 12.0203 13 11.6667 13Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M9.66667 1V4.33333H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                `;
-            }
-
-            const tabLabel = document.createElement('span');
-            tabLabel.className = 'note-tab-label';
-
-            if (isShared) {
-                tabLabel.textContent = `Shared by ${note.metadata.sharedByName || 'teammate'}`;
-            } else {
-                tabLabel.textContent = 'My Note';
-            }
-
-            tab.appendChild(tabIcon);
-            tab.appendChild(tabLabel);
-
-            tab.addEventListener('click', () => {
-                this.selectedNoteIndex = index;
-                this.updateNoteBoxContent();
-            });
-
-            tabsContainer.appendChild(tab);
-        });
-
-        return tabsContainer;
-    }
-
-    createSharedNote(note) {
-        if (!note.metadata || note.metadata.type !== 'shared') {
-            return null;
-        }
-
-        const sharedContainer = document.createElement('div');
-        sharedContainer.className = 'note-shared-container';
-
-        const sharedHeader = document.createElement('div');
-        sharedHeader.className = 'note-shared-header';
-
-        const sharedIcon = document.createElement('span');
-        sharedIcon.className = 'note-shared-icon';
-        sharedIcon.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 4C12 5.10457 11.1046 6 10 6C8.89543 6 8 5.10457 8 4C8 2.89543 8.89543 2 10 2C11.1046 2 12 2.89543 12 4Z" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M6 8C6 9.10457 5.10457 10 4 10C2.89543 10 2 9.10457 2 8C2 6.89543 2.89543 6 4 6C5.10457 6 6 6.89543 6 8Z" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M12 12C12 13.1046 11.1046 14 10 14C8.89543 14 8 13.1046 8 12C8 10.8954 8.89543 10 10 10C11.1046 10 12 10.8954 12 12Z" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M5.5 7L9 5" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M5.5 9L9 11" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-        `;
-
-        const sharedInfo = document.createElement('div');
-        sharedInfo.className = 'note-shared-info';
-
-        const sharedBy = document.createElement('div');
-        sharedBy.className = 'note-shared-by';
-        sharedBy.innerHTML = `<span>Shared by </span><strong>${note.metadata.sharedByName || 'a teammate'}</strong>`;
-
-        const permissionInfo = document.createElement('div');
-        permissionInfo.className = 'note-permission-info';
-        permissionInfo.textContent = note.metadata.permission === 'edit' ? 'You can edit this note' : 'Read only';
-
-        sharedInfo.appendChild(sharedBy);
-        sharedInfo.appendChild(permissionInfo);
-
-        sharedHeader.appendChild(sharedIcon);
-        sharedHeader.appendChild(sharedInfo);
-
-        sharedContainer.appendChild(sharedHeader);
-
-        return sharedContainer;
-    }
-
-    formatTimeAgo(timestamp) {
-        if (!timestamp) return 'Just now';
-
-        const now = new Date();
-        const date = new Date(timestamp);
-        const seconds = Math.floor((now - date) / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-
-        if (seconds < 60) {
-            return 'Just now';
-        } else if (minutes < 60) {
-            return `${minutes}m ago`;
-        } else if (hours < 24) {
-            return `${hours}h ago`;
-        } else if (days < 7) {
-            return `${days}d ago`;
-        } else {
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric'
-            });
-        }
-    }
-
-    // Inside the footer part of updateNoteBoxContent, replace the lastEditedText line with:
-
+    // Update the note box content based on current state
     updateNoteBoxContent() {
         if (!this.noteBox || !this.noteBox.container) return;
 
         const container = this.noteBox.container;
-        container.innerHTML = '';
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+
 
         switch (this.status) {
             case 'in_progress':
@@ -494,7 +276,6 @@ class LabelProfileNotes {
                 const contentArea = document.createElement('div');
                 contentArea.className = 'note-content-area';
 
-
                 // Handle content based on selected tab
                 if (this.selectedNoteIndex === 0) {
                     // My Notes tab
@@ -505,7 +286,6 @@ class LabelProfileNotes {
                     textarea.className = 'note-textarea';
                     textarea.placeholder = 'Write your notes for this profile...';
                     textarea.value = currentNote?.note || '';
-
 
                     contentArea.appendChild(textarea);
 
@@ -647,9 +427,11 @@ class LabelProfileNotes {
                                 // Note content
                                 const noteContent = document.createElement('div');
                                 noteContent.textContent = note.note || 'No content';
+                                noteContent.className = 'note-content';
 
                                 // Back button
                                 const backBtn = document.createElement('div');
+                                backBtn.className = 'shared-back-button';
 
                                 backBtn.innerHTML = `
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -744,11 +526,9 @@ class LabelProfileNotes {
                 const lastEditedInfo = document.createElement('div');
                 lastEditedInfo.className = 'note-last-edited';
 
-
                 // Create avatar for current user or note owner
                 const footerAvatar = document.createElement('div');
                 footerAvatar.className = 'note-avatar small';
-
 
                 // Get profile initials
                 const profileName = this.currentProfileInfo?.name || 'User';
@@ -761,135 +541,145 @@ class LabelProfileNotes {
 
                 footerAvatar.textContent = profileInitials;
 
-                // In updateNoteBoxContent
                 const lastEditedText = document.createElement('span');
-                console.log(this.currentNotes)
                 const currentNote = this.currentNotes[this.selectedNoteIndex];
-                console.log(currentNote)
-                lastEditedText.textContent = `Last edited: ${this.formatTimeAgo(currentNote?.lastUpdated || this.currentProfileInfo?.lastUpdated)}`;
+                lastEditedText.textContent = `Last edited: ${this.formatTimeAgo(currentNote?.lastUpdated)}`;
 
                 lastEditedInfo.appendChild(footerAvatar);
                 lastEditedInfo.appendChild(lastEditedText);
 
-                // const autoSaveText = document.createElement('div');
-                // autoSaveText.className = 'note-autosave-text';
-                // autoSaveText.textContent = 'Auto-saved';
-
                 footer.appendChild(lastEditedInfo);
-                // footer.appendChild(autoSaveText);
-
                 container.appendChild(footer);
                 break;
         }
     }
 
-    async getNotes(profileId) {
-        try {
-            return await window.notesDatabase.getNotesByProfileId(profileId) || [];
-        } catch (error) {
-            window.show_error('Unable to load existing notes. Please try again.', 3000);
-            console.error('Error fetching notes:', error);
-            return [];
+    formatTimeAgo(timestamp) {
+        if (!timestamp) return 'Just now';
+
+        const now = new Date();
+        const date = new Date(timestamp);
+        const seconds = Math.floor((now - date) / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (seconds < 60) {
+            return 'Just now';
+        } else if (minutes < 60) {
+            return `${minutes}m ago`;
+        } else if (hours < 24) {
+            return `${hours}h ago`;
+        } else if (days < 7) {
+            return `${days}d ago`;
+        } else {
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
         }
     }
 
-    async showNoteBox(profileInfo) {
-        this.currentProfileInfo = profileInfo;
-        this.setupDatabaseListener(); // Setup real-time updates
-        await this.refreshNotes(profileInfo.profileId);
+    // Show the note box
+    // Show the note box with improved profile ID handling
+    async showNoteBox() {
+        try {
+            // Get profile info using the window.labelManagerUtils helper
+            const profileInfo = await window.labelManagerUtils.getProfileInfo();
+            console.log('Retrieved profile info:', profileInfo);
 
-        // Reset selected note index
-        this.selectedNoteIndex = 0;
+            if (!profileInfo || !profileInfo.profile_id) {
+                console.error('Invalid profile info:', profileInfo);
+                window.show_error('Unable to access profile information.', 3000);
+                return;
+            }
 
-        // Get current status from notesDatabase
-        this.status = window.notesDatabase?.status || 'in_progress';
+            this.currentProfileInfo = profileInfo;
 
-        // Add listener for status changes
-        window.notesDatabase.addListener(this.notesDatabaseListener);
+            // Get current status
+            this.status = window.notesDatabase?.status || 'in_progress';
+            console.log('Current status:', this.status);
 
-        if (!this.noteBox) {
-            const box = this.createNoteBox();
-            document.body.appendChild(box);
-            // Trigger reflow
-            box.offsetHeight;
-            // Show with animation
-            requestAnimationFrame(() => {
-                box.style.opacity = '1';
-                box.style.transform = 'translateY(0)';
-            });
-        } else {
-            this.updateNoteBoxContent();
-            document.body.appendChild(this.noteBox.container);
-            // Trigger reflow
-            this.noteBox.container.offsetHeight;
-            // Show with animation
-            requestAnimationFrame(() => {
-                this.noteBox.container.style.opacity = '1';
-                this.noteBox.container.style.transform = 'translateY(0)';
-            });
-        }
+            // Setup database listener now that we have profile info
+            this.setupDatabaseListener();
 
-        // Only fetch notes and set up interaction if logged in
-        if (this.status === 'logged_in') {
+            // Try to get notes
             try {
-                const notes = await this.getNotes(profileInfo.profileId);
+                console.log('Fetching notes for profile ID:', this.currentProfileInfo.profile_id);
+                const notes = await this.getNotes(this.currentProfileInfo.profile_id);
+                console.log('Retrieved notes:', notes);
+
                 this.currentNotes = Array.isArray(notes) ? notes : (notes ? [notes] : []);
 
-                // Sort notes - owned notes first, then shared notes by shared date
-                this.currentNotes.sort((a, b) => {
-                    // If one is owned and the other is shared, owned comes first
-                    if (a.metadata?.type === 'owned' && b.metadata?.type === 'shared') return -1;
-                    if (a.metadata?.type === 'shared' && b.metadata?.type === 'owned') return 1;
-
-                    // If both are shared, sort by shared date (newest first)
-                    if (a.metadata?.type === 'shared' && b.metadata?.type === 'shared') {
-                        return new Date(b.metadata.sharedAt) - new Date(a.metadata.sharedAt);
-                    }
-
-                    // If both are owned, sort by last updated (newest first)
-                    return new Date(b.lastUpdated) - new Date(a.lastUpdated);
-                });
-
-                // Update the note box content with the sorted notes
-                this.updateNoteBoxContent();
-
-                // Get current note
-                const currentNote = this.currentNotes[this.selectedNoteIndex];
-                const isReadOnly = currentNote &&
-                    currentNote.metadata &&
-                    currentNote.metadata.type === 'shared' &&
-                    currentNote.metadata.permission === 'read';
-
-                // Add keyboard shortcut listener only if the note is editable or there's no note yet
-                if (!currentNote || !isReadOnly) {
-                    document.addEventListener('keydown', this.handleKeyboardShortcuts);
+                // Ensure there's at least one owned note
+                if (!this.currentNotes.some(note => !note.metadata || note.metadata.type === 'owned')) {
+                    console.log('No owned notes found, adding empty note');
+                    this.currentNotes.unshift({
+                        id: null,
+                        note: '',
+                        lastUpdated: new Date().toISOString(),
+                        metadata: { type: 'owned' },
+                        profileId: this.currentProfileInfo.profile_id
+                    });
                 }
-
-                document.addEventListener('mousedown', this.handleClickOutside);
             } catch (error) {
-                window.show_error('Error initializing notes. Please refresh and try again.', 3000);
-                console.error(error);
+                console.error('Error loading notes:', error);
+
+                // If notes fail to load, ensure we have at least one empty note
+                this.currentNotes = [{
+                    id: null,
+                    note: '',
+                    lastUpdated: new Date().toISOString(),
+                    metadata: { type: 'owned' },
+                    profileId: this.currentProfileInfo.profile_id
+                }];
             }
+
+            // Reset selected note index
+            this.selectedNoteIndex = 0;
+
+            // Create or update note box
+            if (!this.noteBox) {
+                const box = this.createNoteBox();
+                document.body.appendChild(box);
+                // Trigger reflow and show with animation
+                box.offsetHeight;
+                requestAnimationFrame(() => {
+                    box.style.opacity = '1';
+                    box.style.transform = 'translateY(0)';
+                });
+            } else {
+                this.updateNoteBoxContent();
+                document.body.appendChild(this.noteBox.container);
+                // Trigger reflow and show with animation
+                this.noteBox.container.offsetHeight;
+                requestAnimationFrame(() => {
+                    this.noteBox.container.style.opacity = '1';
+                    this.noteBox.container.style.transform = 'translateY(0)';
+                });
+            }
+
+            // Add event listeners
+            document.addEventListener('mousedown', this.handleClickOutside);
+            document.addEventListener('keydown', this.handleKeyboardShortcuts);
+        } catch (error) {
+            console.error('Error in showNoteBox:', error);
+            window.show_error('Unable to display notes. Please try again.', 3000);
         }
     }
 
+    // Handle keyboard shortcuts (Cmd/Ctrl + S)
     handleKeyboardShortcuts(event) {
-        // Check for Command/Control + S
         if ((event.metaKey || event.ctrlKey) && event.key === 's') {
-            event.preventDefault(); // Prevent browser save dialog
+            event.preventDefault();
             this.saveNote();
         }
     }
 
+    // Handle clicking outside the note box
     handleClickOutside(event) {
         if (this.noteBox && !this.noteBox.container.contains(event.target)) {
-            const currentNote = this.currentNotes[this.selectedNoteIndex];
-            const isReadOnly = currentNote &&
-                currentNote.metadata &&
-                currentNote.metadata.type === 'shared' &&
-                currentNote.metadata.permission === 'read';
-
-            if (this.status === 'logged_in' && this.noteBox.textarea && !isReadOnly) {
+            if (this.status === 'logged_in' && this.noteBox.textarea) {
                 const currentText = this.noteBox.textarea.value;
                 if (currentText !== this.initialNoteText) {
                     if (confirm('You have unsaved changes. Do you want to save them before closing?')) {
@@ -906,77 +696,76 @@ class LabelProfileNotes {
         }
     }
 
+    // Save note with improved error handling and profile ID checks
     async saveNote() {
         if (this.status !== 'logged_in') {
+            console.log('Cannot save note: Not logged in');
             window.show_error('You must be logged in to save notes.', 3000);
             this.resetSaveButton();
             return;
         }
 
-        if (!this.currentProfileInfo) {
+        if (!this.currentProfileInfo || !this.currentProfileInfo.profile_id) {
+            console.error('Cannot save note: No profile info or ID');
             window.show_error('Unable to save note. Profile information is missing.', 3000);
             this.resetSaveButton();
             return;
         }
 
-        if (!this.noteBox.textarea) {
+        if (!this.noteBox || !this.noteBox.textarea) {
+            console.error('Cannot save note: No textarea found');
             window.show_error('Unable to save note. Text area not found.', 3000);
             this.resetSaveButton();
             return;
         }
 
         // Get current note if available
-        const currentNote = this.currentNotes[this.selectedNoteIndex];
+        const ownedNotes = this.currentNotes.filter(note =>
+            !note.metadata || note.metadata.type === 'owned'
+        );
 
-        // Check if the note is read-only (shouldn't happen for My Notes tab)
-        const isReadOnly = currentNote &&
-            currentNote.metadata &&
-            currentNote.metadata.type === 'shared' &&
-            currentNote.metadata.permission === 'read';
-
-        if (isReadOnly) {
-            window.show_warning('This note is read-only. You cannot make changes.', 3000);
-            this.resetSaveButton();
-            return;
-        }
-
+        const currentNote = ownedNotes[0];
         const noteText = this.noteBox.textarea.value.trim();
 
+        console.log('Current note:', currentNote);
+        console.log('Note text to save:', noteText);
+
         if (noteText.length === 0) {
+            console.log('Cannot save empty note');
             window.show_warning('Cannot save an empty note. Please add some content.', 3000);
             this.noteBox.textarea.focus();
             this.resetSaveButton();
             return;
         }
 
-        if (noteText === this.initialNoteText) {
-            window.show_warning('No changes detected in the note.', 3000);
-            this.resetSaveButton();
-            return;
-        }
-
         try {
-            if (currentNote && !isReadOnly) {
-                // This is a note we can edit
-                await window.notesDatabase.updateNote(currentNote.id, noteText);
-                window.show_success('Your note has been updated.', 3000);
-            } else {
-                // Create a new note
-                await window.notesDatabase.createNote(this.currentProfileInfo.profileId, noteText, this.currentProfileInfo);
-                window.show_success('Your new note has been saved.', 3000);
-            }
-            window.userActionsDatabase?.addAction("notes_saved");
+            console.log(`Saving note for profile ID: ${this.currentProfileInfo.profile_id}`);
 
+            if (currentNote && currentNote.id) {
+                console.log(`Updating existing note with ID: ${currentNote.id}`);
+                await window.notesDatabase.updateNote(currentNote.id, noteText);
+                // window.show_success('Your note has been updated.', 3000);
+            } else {
+                console.log('Creating new note');
+                await window.notesDatabase.createNote(
+                    this.currentProfileInfo.profile_id,
+                    noteText,
+                    this.currentProfileInfo
+                );
+                // window.show_success('Your new note has been saved.', 3000);
+            }
+
+            window.userActionsDatabase?.addAction("notes_saved");
             this.closeNoteBox();
         } catch (error) {
+            console.error('Error saving note:', error);
             window.show_error('Unable to save your note. Please try again.', 3000);
             window.userActionsDatabase?.addAction("notes_saved_failed");
-            console.error(error);
             this.resetSaveButton();
         }
     }
 
-    // Helper method to reset save button state
+    // Reset save button state
     resetSaveButton() {
         if (this.noteBox && this.noteBox.saveBtn) {
             const btnTextEl = this.noteBox.saveBtn.querySelector('.save-btn-text');
@@ -989,15 +778,16 @@ class LabelProfileNotes {
         }
     }
 
+    // Close the note box
     closeNoteBox() {
         if (this.databaseSubscription) {
             window.notesDatabase.removeListener(this.databaseSubscription);
             this.databaseSubscription = null;
         }
+
         if (this.noteBox) {
             document.removeEventListener('mousedown', this.handleClickOutside);
             document.removeEventListener('keydown', this.handleKeyboardShortcuts);
-            window.notesDatabase.removeListener(this.notesDatabaseListener);
 
             this.noteBox.container.style.opacity = '0';
             this.noteBox.container.style.transform = 'translateY(-10px)';
@@ -1014,6 +804,7 @@ class LabelProfileNotes {
         }
     }
 
+    // Handle keyboard press events
     handleKeyPress(event) {
         if (event.key === 'n') {
             const activeElement = document.activeElement;
@@ -1025,15 +816,7 @@ class LabelProfileNotes {
             }
 
             try {
-                const profileInfo = window.profileNotes.getProfileInfo();
-                console.log('profile info')
-                console.log(profileInfo);
-
-                if (profileInfo) {
-                    this.showNoteBox(profileInfo);
-                } else {
-                    window.show_error('Unable to access profile information. Please try again.', 3000);
-                }
+                this.showNoteBox();
             } catch (error) {
                 console.error('Error in handleKeyPress:', error);
                 window.show_error('Unable to open notes. Please refresh and try again.', 3000);
@@ -1043,19 +826,23 @@ class LabelProfileNotes {
         }
     }
 
+    // Initialize the component
     initialize() {
         document.addEventListener('keydown', this.handleKeyPress);
+        // console.log('LabelProfileNotes initialized');
     }
 
+    // Clean up
     destroy() {
         document.removeEventListener('keydown', this.handleKeyPress);
         document.removeEventListener('mousedown', this.handleClickOutside);
         document.removeEventListener('keydown', this.handleKeyboardShortcuts);
-        window.notesDatabase.removeListener(this.notesDatabaseListener);
+        if (this.databaseSubscription) {
+            window.notesDatabase.removeListener(this.databaseSubscription);
+        }
         this.closeNoteBox();
     }
 }
 
-window.profileNotes = new ProfileNotes();
 window.labelProfileNotes = new LabelProfileNotes();
 window.labelProfileNotes.initialize();

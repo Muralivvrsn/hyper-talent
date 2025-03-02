@@ -97,7 +97,7 @@ class FirebaseService {
             const credential = firebase.auth.GoogleAuthProvider.credential(null, token);
             const userCredential = await this.auth.signInWithCredential(credential);
             this.currentUser = userCredential.user;
-            console.log(userCredential.user)
+            // console.log(userCredential.user)
             return true;
         } catch (error) {
             console.error('[FirebaseService] Token verification failed:', error);
@@ -120,7 +120,7 @@ class FirebaseService {
             this.auth = firebase.auth();
             this.db = firebase.firestore();
 
-            console.log(firebase)
+            // console.log(firebase)
 
             // Request token
             const response = await chrome.runtime.sendMessage({ type: 'GET_TOKEN' });
@@ -150,20 +150,46 @@ class FirebaseService {
 
     async callCloudFunction(functionName, data) {
         try {
-            // Make sure we're initialized and logged in
+            // Check if we're initialized and logged in
             if (!this.db || this.status !== 'logged_in') {
-                console.error('[FirebaseService] Cannot call function - not initialized or logged out');
-                return { error: 'Not authenticated' };
+                console.log('[FirebaseService] Not logged in, waiting for 10 seconds...');
+
+                // Create a promise that will wait for login or timeout after 10 seconds
+                const loginWaitResult = await Promise.race([
+                    // Wait for login status to change
+                    new Promise(resolve => {
+                        const checkInterval = setInterval(() => {
+                            if (this.db && this.status === 'logged_in') {
+                                clearInterval(checkInterval);
+                                resolve(true);
+                            }
+                        }, 500); // Check every 500ms
+                    }),
+                    // Timeout after 10 seconds
+                    new Promise(resolve => {
+                        setTimeout(() => {
+                            resolve(false);
+                        }, 10000);
+                    })
+                ]);
+
+                // If we still aren't logged in after waiting
+                if (!loginWaitResult) {
+                    console.error('[FirebaseService] Timeout waiting for login');
+                    return { error: 'Authentication timeout' };
+                }
+
+                console.log('[FirebaseService] Successfully logged in after waiting');
             }
 
             // Use the Firebase functions SDK
             const functions = firebase.functions();
             const functionRef = functions.httpsCallable(functionName);
 
-            console.log(`[FirebaseService] Calling cloud function: ${functionName}`);
+            // console.log(`[FirebaseService] Calling cloud function: ${functionName}`);
             const result = await functionRef(data);
 
-            console.log(`[FirebaseService] Function call successful:`, result.data);
+            // console.log(`[FirebaseService] Function call successful:`, result.data);
             return result.data;
         } catch (error) {
             console.error(`[FirebaseService] Error calling function ${functionName}:`, error);

@@ -291,7 +291,7 @@ const setupContentEditableHandlers = () => {
     };
 
     window.messageTemplateDatabase.addListener((updatedData) => {
-        console.log('Template data updated:', updatedData);
+        // console.log('Template data updated:', updatedData);
         templates = updatedData.templates || [];
         
         if (floatingPanel?.style.display === 'block') {

@@ -346,7 +346,7 @@ const refreshingToken = async () => {
       'clientId',
       'clientSecret'
     ]);
-    console.log({ refreshToken, clientId, clientSecret })
+    // console.log({ refreshToken, clientId, clientSecret })
     if (!refreshToken || !clientId || !clientSecret) {
       throw new Error('Missing required credentials');
     }
@@ -362,7 +362,7 @@ const refreshingToken = async () => {
       })
     });
 
-    console.log(response)
+    // console.log(response)
     if (!response.ok) {
       throw new Error('Failed to refresh token');
     }

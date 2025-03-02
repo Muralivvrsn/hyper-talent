@@ -83,7 +83,7 @@ class LinkedInLabelsManager {
             return;
         }
 
-        console.log('Starting initialization');
+        // console.log('Starting initialization');
         this.setupDatabaseListener();
         this.setupUrlChangeListener();
 
@@ -141,17 +141,17 @@ class LinkedInLabelsManager {
         }
     }
     async handleLabelsUpdate(data) {
-        console.log('Labels update received:', data);
+        // console.log('Labels update received:', data);
 
         // Check if status is the same as before for in_progress
         if (data.status === 'in_progress' && this.status === 'in_progress') {
-            console.log('Already in progress, skipping update');
+            // console.log('Already in progress, skipping update');
             return;
         }
 
         // Check if status is the same as before for logged_out
         if (data.status === 'logged_out' && this.status === 'logged_out') {
-            console.log('Already logged out, skipping update');
+            // console.log('Already logged out, skipping update');
             return;
         }
 
@@ -189,30 +189,30 @@ class LinkedInLabelsManager {
     }
 
     async initializeCurrentPage() {
-        console.log('Initializing current page');
+        // console.log('Initializing current page');
 
         // Wait for critical elements before proceeding
         if (this.isMessagingPage()) {
             const conversationsList = await this.waitForElement('ul.msg-conversations-container__conversations-list', 10000);
             if (conversationsList) {
-                console.log('Messaging page elements found, processing conversations list');
+                // console.log('Messaging page elements found, processing conversations list');
                 this.processConversationsList();
             } else {
-                console.log('Messaging page elements not found');
+                // console.log('Messaging page elements not found');
             }
         } else if (this.isProfilePage()) {
             const profileSection = await this.waitForElement('section[data-member-id]', 10000);
             if (profileSection) {
-                console.log('Profile page elements found, processing profile page');
+                // console.log('Profile page elements found, processing profile page');
                 await this.processProfilePage();
             } else {
-                console.log('Profile page elements not found');
+                // console.log('Profile page elements not found');
             }
         }
     }
 
     setupUrlChangeListener() {
-        console.log('Setting up URL change listener');
+        // console.log('Setting up URL change listener');
         let lastUrl = location.href;
         let isProcessing = false;
 
@@ -220,14 +220,14 @@ class LinkedInLabelsManager {
         const handleUrlChange = async () => {
             const currentUrl = location.href;
             if (currentUrl !== lastUrl && !isProcessing) {
-                console.log('URL changed:', { from: lastUrl, to: currentUrl });
+                // console.log('URL changed:', { from: lastUrl, to: currentUrl });
                 isProcessing = true;
 
 
                 // Add small delay to let LinkedIn's navigation complete
                 await new Promise(resolve => setTimeout(resolve, 300));
                 let isLastProfileUrl = lastUrl.match(/\/in\/[^/]+\/?$/);
-                console.log(isLastProfileUrl)
+                // console.log(isLastProfileUrl)
                 if (this.isProfilePage() && !isLastProfileUrl) {
                     await this.processProfilePage();
 
@@ -388,8 +388,8 @@ class LinkedInLabelsManager {
     }
 
     createLabel(labelData, matchingProfile) {
-        console.log(labelData);
-        console.log(matchingProfile)
+        // console.log(labelData);
+        // console.log(matchingProfile)
         const labelContainer = document.createElement('div');
         labelContainer.className = 'profile-label-container';
 
