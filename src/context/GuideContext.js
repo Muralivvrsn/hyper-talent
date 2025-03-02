@@ -438,8 +438,7 @@ export const GuideProvider = ({ children }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [hasSeenGuide, setHasSeenGuide] = useState(false);
-    const { loading: dataLoading } = useData();
-    const { loading: authLoading, user } = useAuth();
+    const { user } = useAuth();
     const { loading: themeLoading } = useTheme();
 
     useEffect(() => {
@@ -449,7 +448,7 @@ export const GuideProvider = ({ children }) => {
         if (!hasSeenGuideStorage) {
             setIsGuideOpen(true);
         }
-    }, [authLoading, dataLoading, themeLoading]);
+    }, [themeLoading]);
 
     const handleSearch = (query) => {
         setSearchQuery(query);
@@ -534,7 +533,7 @@ export const GuideProvider = ({ children }) => {
         <GuideContext.Provider value={value}>
             {children}
             {
-                !themeLoading && !dataLoading && !authLoading && user && <>
+                !themeLoading && user && <>
                     <MainGuide
                         currentStep={currentStep}
                         isGuideOpen={isGuideOpen}
@@ -557,7 +556,8 @@ export const GuideProvider = ({ children }) => {
                         className="fixed bottom-5 right-5 p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg hover:shadow-xl transition-shadow z-40"
                     >
                         <HelpCircle className="h-6 w-6" />
-                    </button></>
+                    </button>
+                </>
             }
         </GuideContext.Provider>
     );

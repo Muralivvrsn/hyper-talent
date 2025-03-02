@@ -39,26 +39,26 @@ window.labelManagerUtils = {
             } 
             // Handle profile page
             else {
-                await this.waitForElement('a[aria-label]');
+                await this.waitForElement('main a[aria-label]');
                 let name = null;
-                const nameElement = document.querySelector('a[aria-label] h1');
+                const nameElement = document.querySelector('main a[aria-label] h1');
                 if (nameElement) {
                     name = nameElement.textContent.trim();
                 }
                 let imageUrl = null;
-                const profileImage = document.querySelector('img.pv-top-card-profile-picture__image--show');
+                const profileImage = document.querySelector('main img.pv-top-card-profile-picture__image--show');
                 if (profileImage) {
                     imageUrl = profileImage.getAttribute('src');
                 }
                 let connectionCode = null;
                 const potentialAnchors = [
-                    ...document.querySelectorAll('a[href*="connectionOf"]'),
-                    ...document.querySelectorAll('a[href*="followerOf"]'),
-                    ...document.querySelectorAll('a[href*="miniProfileUrn"]'),
-                    ...document.querySelectorAll('a[href*="fsd_profilePosition"]'),
-                    ...document.querySelectorAll('a[href*="details"][href*="profileUrn"]'),
-                    ...document.querySelectorAll('a[href*="skill-associations-details"]'),
-                    ...document.querySelectorAll('a[id*="navigation"]')
+                    ...document.querySelectorAll('main a[href*="connectionOf"]'),
+                    ...document.querySelectorAll('main a[href*="followerOf"]'),
+                    ...document.querySelectorAll('main a[href*="miniProfileUrn"]'),
+                    ...document.querySelectorAll('main a[href*="fsd_profilePosition"]'),
+                    ...document.querySelectorAll('main a[href*="details"][href*="profileUrn"]'),
+                    ...document.querySelectorAll('main a[href*="skill-associations-details"]'),
+                    ...document.querySelectorAll('main a[id*="navigation"]')
                 ];
     
                 for (const anchor of potentialAnchors) {

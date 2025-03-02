@@ -19,7 +19,7 @@ import MessageCard from '../components/messages/MessageCard';
 import EmptyState from '../components/messages/EmptyState';
 
 const StandardizedReplies = () => {
-  const { templates, loading, error, addTemplate, editTemplate, deleteTemplate } = useData();
+  const { templates, error, addTemplate, editTemplate, deleteTemplate } = useData();
   const [editingMessage, setEditingMessage] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

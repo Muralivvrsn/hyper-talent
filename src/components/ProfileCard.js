@@ -364,7 +364,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
         <div className="flex-1 min-w-0">
           {/* Profile Header */}
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-base font-medium leading-none truncate flex items-center gap-1.5">
+            <h3 className="text-base font-medium truncate flex items-center gap-1.5">
               <a href={profile.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                 {profile.name || 'Unknown User'}
               </a>
