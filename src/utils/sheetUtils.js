@@ -6,34 +6,6 @@ const HEADERS = {
   "Messages": ['ID', 'Title', 'Content']
 };
 
-export const getLastRow = async (spreadsheetId, token, sheetName) => {
-  try {
-    const response = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await response.json();
-    return (data.values || []).length;
-  } catch (error) {
-    console.error('Error getting last row:', error);
-    return 0;
-  }
-};
-
-export const getExistingIds = async (spreadsheetId, token, sheetName) => {
-  try {
-    const response = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await response.json();
-    return new Set((data.values || []).slice(1).map(row => row[0]));
-  } catch (error) {
-    console.error('Error getting existing IDs:', error);
-    return new Set();
-  }
-};
-
 export const getSheetId = async (spreadsheetId, token, sheetName) => {
   try {
     const response = await fetch(
@@ -301,35 +273,37 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
   }
 };
 
-export const createSheet = async (token, title) => {
+export const syncSheet = async (spreadsheetId, token, data) => {
   try {
-    const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        properties: { title },
-        sheets: [
-          { properties: { title: 'Profile Data' } },
-          { properties: { title: 'Messages' } }
-        ]
-      })
-    });
+    await Promise.all([
+      ensureHeaders(spreadsheetId, token, 'Profile Data'),
+      ensureHeaders(spreadsheetId, token, 'Messages')
+    ]);
 
-    if (!response.ok) throw new Error('Sheet creation failed');
-    const sheet = await response.json();
-
-    await Promise.all(
-      Object.keys(HEADERS).map(sheetName =>
-        ensureHeaders(sheet.spreadsheetId, token, sheetName)
+    await Promise.all([
+      updateSheetData(
+        spreadsheetId,
+        token,
+        formatData.profileData(
+          {
+            labels: data.labels,
+            sharedLabels: data.sharedLabels,
+            notes: data.notes
+          },
+          data.getLabelProfiles,
+          data.getNoteWithProfile
+        ),
+        'Profile Data'
+      ),
+      updateSheetData(
+        spreadsheetId,
+        token,
+        formatData.messages(data.shortcuts),
+        'Messages'
       )
-    );
-
-    return sheet;
+    ]);
   } catch (error) {
-    console.error('Error creating sheet:', error);
+    console.error('Error syncing sheet:', error);
     throw error;
   }
 };
@@ -403,215 +377,38 @@ export const formatData = {
   }
 };
 
-export const syncSheet = async (spreadsheetId, token, data) => {
+export const createSheet = async (token, title) => {
   try {
-    await Promise.all([
-      ensureHeaders(spreadsheetId, token, 'Profile Data'),
-      ensureHeaders(spreadsheetId, token, 'Messages')
-    ]);
+    const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        properties: { title },
+        sheets: [
+          { properties: { title: 'Profile Data' } },
+          { properties: { title: 'Messages' } }
+        ]
+      })
+    });
 
-    await Promise.all([
-      updateSheetData(
-        spreadsheetId,
-        token,
-        formatData.profileData(
-          {
-            labels: data.labels,
-            sharedLabels: data.sharedLabels,
-            notes: data.notes
-          },
-          data.getLabelProfiles,
-          data.getNoteWithProfile
-        ),
-        'Profile Data'
-      ),
-      updateSheetData(
-        spreadsheetId,
-        token,
-        formatData.messages(data.shortcuts),
-        'Messages'
+    if (!response.ok) throw new Error('Sheet creation failed');
+    const sheet = await response.json();
+
+    await Promise.all(
+      Object.keys(HEADERS).map(sheetName =>
+        ensureHeaders(sheet.spreadsheetId, token, sheetName)
       )
-    ]);
+    );
+
+    return sheet;
   } catch (error) {
-    console.error('Error syncing sheet:', error);
+    console.error('Error creating sheet:', error);
     throw error;
   }
 };
-
-export const syncDatabase = async (spreadsheetId, token, userId, data) => {
-  try {
-    // Process both sheets
-    const [profileData, messagesData] = await Promise.all([
-      getSheetData(spreadsheetId, token, 'Profile Data'),
-      getSheetData(spreadsheetId, token, 'Messages')
-    ]);
-
-    const profileIndices = getHeaderIndices(profileData[0] || HEADERS['Profile Data'], HEADERS['Profile Data']);
-    const messageIndices = getHeaderIndices(messagesData[0] || HEADERS['Messages'], HEADERS['Messages']);
-
-    if (userId) {
-      await Promise.all([
-        ...profileData.slice(1).map(row => syncProfileData(row, profileIndices, userId, data.labels, data.notes)),
-        ...messagesData.slice(1).map((row, index) => syncMessagesToDB({ ...row, rowIndex: index + 2 }, token, messageIndices, userId, data.shortcuts, spreadsheetId))
-      ]);
-    }
-  } catch (error) {
-    console.error('Error syncing DB:', error);
-    throw error;
-  }
-};
-
-async function syncProfileData(row, headerIndices, userId, labels, notes) {
-  const db = getFirestore();
-  const profileId = row[headerIndices['Profile ID']]?.trim();
-  const notesData = row[headerIndices['Notes']]?.trim();
-  const labelsStr = row[headerIndices['Labels']]?.trim();
-
-  if (!profileId) return;
-
-  try {
-    // Handle notes
-    if (notesData) {
-      const existingNote = Object.entries(notes).find(([_, note]) => note.profileId === profileId)?.[0];
-
-      if (existingNote) {
-        if (notes[existingNote].content !== notesData) {
-          await updateDoc(doc(db, 'profile_notes_v2', existingNote), {
-            n: notesData,
-            lu: new Date().toISOString()
-          });
-        }
-      } else {
-        const newNoteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        await Promise.all([
-          setDoc(doc(db, 'profile_notes_v2', newNoteId), {
-            n: notesData,
-            p: profileId,
-            lu: new Date().toISOString()
-          }),
-          updateDoc(doc(db, 'users_v2', userId), {
-            'd.n': arrayUnion(newNoteId)
-          })
-        ]);
-      }
-    }
-    // Handle labels
-    if (labelsStr) {
-      const sheetLabelNames = labelsStr.split(',')
-        .map(l => l.trim())
-        .filter(Boolean)
-      // Process labels in batches for efficiency
-      const batchSize = 10;
-      const labelEntries = Object.entries(labels.labels || {});
-
-      for (let i = 0; i < labelEntries.length; i += batchSize) {
-        const batch = labelEntries.slice(i, i + batchSize);
-        await Promise.all(batch.map(async ([labelId, label]) => {
-          const isInSheet = sheetLabelNames.includes(label.name);
-          const hasProfile = label.profileIds?.includes(profileId);
-
-          if (hasProfile && !isInSheet) {
-            // Remove profile from label if not in sheet
-            await updateDoc(doc(db, 'profile_labels_v2', labelId), {
-              p: arrayRemove(profileId),
-              lu: new Date().toISOString()
-            });
-          } else if (!hasProfile && isInSheet) {
-            // Add profile to label if in sheet but not in label
-            await updateDoc(doc(db, 'profile_labels_v2', labelId), {
-              p: arrayUnion(profileId),
-              lu: new Date().toISOString()
-            });
-          }
-        }));
-      }
-
-      // Create new labels if needed
-      const newLabelNames = sheetLabelNames.filter(name =>
-        !Object.values(labels.labels || {}).some(l => l.name === name)
-      );
-
-      if (newLabelNames.length > 0) {
-        await Promise.all(newLabelNames.map(async name => {
-          const newLabelId = await createLabel(name, userId, db);
-          if (newLabelId) {
-            await updateDoc(doc(db, 'profile_labels_v2', newLabelId), {
-              p: arrayUnion(profileId),
-              lu: new Date().toISOString()
-            });
-          }
-        }));
-      }
-    }
-  } catch (error) {
-    console.error(`Error syncing profile data: ${profileId}`, error);
-  }
-}
-
-async function syncMessagesToDB(row, token, headerIndices, userId, messages, spreadsheetId) {
-  const db = getFirestore();
-  const messageId = row[headerIndices['ID']]?.trim();
-  const title = row[headerIndices['Title']]?.trim();
-  const content = row[headerIndices['Content']]?.trim();
-  const rowIndex = row.rowIndex;
-
-  if (!title || !content) return null;
-
-  try {
-    const timestamp = new Date().toISOString();
-    let rowUpdate = null;
-
-    if (messageId && messages[messageId]) {
-      if (messages[messageId].title !== title || messages[messageId].content !== content) {
-        await updateDoc(doc(db, 'message_templates_v2', messageId), {
-          t: title,
-          n: content,
-          lu: timestamp
-        });
-      }
-    } else {
-      const newId = `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      await Promise.all([
-        setDoc(doc(db, 'message_templates_v2', newId), {
-          t: title,
-          n: content,
-          lu: timestamp
-        }),
-        updateDoc(doc(db, 'users_v2', userId), {
-          'd.s': arrayUnion(newId)
-        })
-      ]);
-
-      rowUpdate = {
-        range: `Messages!${String.fromCharCode(65 + headerIndices['ID'])}${rowIndex}:${String.fromCharCode(65 + headerIndices['Content'])}${rowIndex}`,
-        values: [[newId, title, content]]
-      };
-    }
-
-    if (rowUpdate) {
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${rowUpdate.range}?valueInputOption=RAW`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            range: rowUpdate.range,
-            values: rowUpdate.values
-          })
-        }
-      );
-    }
-
-    return rowUpdate;
-
-  } catch (error) {
-    console.error(`Error syncing message template: ${messageId || 'new template'}`, error);
-    return null;
-  }
-}
 
 export const processUploadLabels = async (sheetData, headerIndices, userId, spreadsheetId, token) => {
   const db = getFirestore();
