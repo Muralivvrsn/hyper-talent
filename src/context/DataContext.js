@@ -95,14 +95,9 @@ export const DataProvider = ({ children }) => {
       
       // Create the template object for the user profile
       const templateObject = {
+        ca: new Date().getTime(),
         id: templateId,
         t: 'owned',
-        ca: new Date().getTime(), // Created at timestamp
-        a: null,
-        ps: null,
-        sa: null,
-        sb: null,
-        sbn: null
       };
       
       // Get current shortcuts array or create new one
