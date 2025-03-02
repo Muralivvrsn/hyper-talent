@@ -396,7 +396,7 @@ export const formatData = {
 
   messages: (data) => {
     return Object.entries(data || {}).map(([id, message]) => ({
-      'ID': id,
+      'ID': message.id,
       'Title': message.title,
       'Content': message.content,
     }));
@@ -616,19 +616,16 @@ async function syncMessagesToDB(row, token, headerIndices, userId, messages, spr
 export const processUploadLabels = async (sheetData, headerIndices, userId, spreadsheetId, token) => {
   const db = getFirestore();
   let rowUpdates = [];
-  console.log('Starting processUploadLabels with rows:', sheetData.length);
 
   for (let i = 1; i < sheetData.length; i++) {
     const row = [...sheetData[i]];
     const profileUrl = row[headerIndices['Profile URL']]?.trim();
     let profileId = row[headerIndices['Profile ID']]?.trim();
 
-    if (!profileUrl) {
-      console.log(`Row ${i}: Skipping - No profile URL`);
+    if (!profileUrl || profileId) {
+      // console.log(`Row ${i}: Skipping - No profile URL`);
       continue;
     }
-
-    console.log(`Processing row ${i} - URL: ${profileUrl}, ID: ${profileId}`);
 
     let profileName = row[headerIndices['Profile Name']]?.trim();
     if (!profileName) {
@@ -641,18 +638,17 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
     const username = urlMatch ? urlMatch[1] : null;
 
     if (!profileId) {
-      console.log(`Row ${i}: No profile ID, checking if profile exists...`);
       const profilesRef = collection(db, 'profiles');
       const q = query(profilesRef, where('u', '==', profileUrl));
       const profileSnapshot = await getDocs(q);
 
       if (!profileSnapshot.empty) {
         profileId = profileSnapshot.docs[0].id;
-        console.log(`Found existing profile with ID: ${profileId}`);
+        // console.log(`Found existing profile with ID: ${profileId}`);
       } else {
         profileId = username || `profile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const profileRef = doc(db, 'profiles', profileId);
-        console.log(`Creating new profile with ID: ${profileId}`);
+        // console.log(`Creating new profile with ID: ${profileId}`);
 
         await setDoc(profileRef, {
           n: profileName,
@@ -678,11 +674,7 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
         .map(l => l.trim())
         .filter(Boolean)
 
-      console.log(`Processing labels for profile ${profileId}:`, labelNames);
-
-      for (const labelName of labelNames) {
-        console.log(`\nProcessing label: ${labelName}`);
-        
+      for (const labelName of labelNames) {        
         const userRef = doc(db, 'users_v2', userId);
         const userDoc = await getDoc(userRef);
         if (!userDoc.exists()) {
@@ -692,7 +684,6 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
 
         const userData = userDoc.data();
         const userLabels = userData?.d?.l || [];
-        console.log('User labels:', userLabels);
 
         let existingLabel = null;
         for (const labelObj of userLabels) {
@@ -707,7 +698,6 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
                   id: labelObj.id,
                   data: labelData
                 };
-                console.log(`Found existing label: ${labelObj.id}`);
                 break;
               }
             }
@@ -720,7 +710,6 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
         if (existingLabel) {
           labelId = existingLabel.id;
           try {
-            console.log(`Updating existing label ${labelId} with profile ${profileId}`);
             const currentProfiles = existingLabel.data.p || [];
             const updatedProfiles = Array.from(new Set([...currentProfiles, profileId]));
             
@@ -729,25 +718,21 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
               p: updatedProfiles,
               lu: Date.now()
             });
-            console.log(`Successfully updated label ${labelId} with profiles:`, updatedProfiles);
           } catch (error) {
             console.error(`Error updating existing label ${labelId}:`, error);
           }
         } else {
-          // Create new label
-          console.log(`Creating new label for: ${labelName}`);
           try {
             labelId = await createLabel(labelName, userId, db);
             if (labelId) {
-              console.log(`Created new label with ID: ${labelId}`);
+              // console.log(`Created new label with ID: ${labelId}`);
               const labelRef = doc(db, 'profile_labels_v2', labelId);
               await updateDoc(labelRef, {
                 p: [profileId],
                 lu: Date.now()
               });
-              console.log(`Added profile ${profileId} to new label ${labelId}`);
             } else {
-              console.error('Failed to create new label');
+              // console.error('Failed to create new label');
             }
           } catch (error) {
             console.error('Error creating/updating new label:', error);
@@ -755,12 +740,11 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
         }
       }
     } else {
-      console.log(`Row ${i}: No labels found`);
+      // console.log(`Row ${i}: No labels found`);
     }
   }
 
   if (rowUpdates.length > 0 && spreadsheetId && token) {
-    console.log('Updating spreadsheet with new profile IDs');
     try {
       await Promise.all(rowUpdates.map(update =>
         fetch(
@@ -778,9 +762,8 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
           }
         )
       ));
-      console.log('Spreadsheet updates completed');
     } catch (error) {
-      console.error('Error updating spreadsheet:', error);
+      // console.error('Error updating spreadsheet:', error);
     }
   }
   return rowUpdates.length;
