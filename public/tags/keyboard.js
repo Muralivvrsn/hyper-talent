@@ -16,7 +16,7 @@ class LabelThemeManager {
 
         // Check if themeManager exists before adding listener
         if (window.themeManager) {
-            console.log('[LabelThemeManager] Adding theme listener');
+            // console.log('[LabelThemeManager] Adding theme listener');
 
             // Clean up any existing listener to avoid duplicates
             try {
@@ -28,7 +28,7 @@ class LabelThemeManager {
             // Add new listener
             window.themeManager.addListener(this.themeUpdate.bind(this));
         } else {
-            console.log('[LabelThemeManager] Theme manager not found, will retry');
+            // console.log('[LabelThemeManager] Theme manager not found, will retry');
 
             // If themeManager doesn't exist yet, wait and try again
             let attempts = 0;
@@ -36,7 +36,7 @@ class LabelThemeManager {
                 attempts++;
                 if (window.themeManager) {
                     clearInterval(checkInterval);
-                    console.log('[LabelThemeManager] Theme manager found, adding listener');
+                    // console.log('[LabelThemeManager] Theme manager found, adding listener');
                     window.themeManager.addListener(this.themeUpdate.bind(this));
                 } else if (attempts >= 20) { // Give up after 10 seconds
                     clearInterval(checkInterval);
@@ -49,7 +49,7 @@ class LabelThemeManager {
     themeUpdate(theme, loading, error) {
         // Only update if theme has actually changed
         if (theme && theme !== this.currentTheme) {
-            console.log(`[LabelThemeManager] Theme changed: ${this.currentTheme} -> ${theme}`);
+            // console.log(`[LabelThemeManager] Theme changed: ${this.currentTheme} -> ${theme}`);
             this.currentTheme = theme;
             this.theme = theme;
             this.injectStyles();
@@ -122,6 +122,7 @@ class LabelThemeManager {
                 color: var(--lm-text) !important;
                 padding: 20px !important;
                 font-size: 13px !important
+                text-align: center;
             }
     
             .hyper_label_button:hover:not(:disabled) {

@@ -276,7 +276,7 @@ class LabelManager {
 
 
     async handleLabelClick(labelId) {
-        console.log('Label clicked:', labelId);
+        // console.log('Label clicked:', labelId);
         await window.labelsDatabase.applyLabel(labelId);
         // Your label click logic here
     }
@@ -348,14 +348,14 @@ class LabelManager {
             );
 
             if (filteredLabels.length === 0) {
-                console.log('creating label:', searchText);
+                // console.log('creating label:', searchText);
                 await window.labelsDatabase.createLabel(searchText);
                 event.target.value = '';
                 this.updateDropdownContent();
             } else {
                 // Programmatically trigger click
                 const firstLabelId = filteredLabels[0].label_id;
-                console.log('Clicking first label:', firstLabelId);
+                // console.log('Clicking first label:', firstLabelId);
                 // await window.labelsDatabase.deleteLabel(firstLabelId);
                 await window.labelsDatabase.applyLabel(firstLabelId);
                 // Your click handling logic here
@@ -470,7 +470,7 @@ class LabelManager {
         this.elements.dropdown.querySelectorAll('.label_item').forEach(item => {
             item.addEventListener('click', async () => {
                 const labelId = item.dataset.labelId;
-                console.log('Label clicked:', labelId);
+                // console.log('Label clicked:', labelId);
                 // await window.labelsDatabase.deleteLabel(labelId);
                 await window.labelsDatabase.applyLabel(labelId);
                 // Your click handling logic here
@@ -491,7 +491,7 @@ class LabelManager {
 
         // If it's a direct label click (not button)
         if (!action) {
-            console.log('Label clicked:', labelId);
+            // console.log('Label clicked:', labelId);
             // await window.labelsDatabase.deleteLabel(labelId);
             await window.labelsDatabase.applyLabel(labelId);
             return;
@@ -788,7 +788,7 @@ class LabelManager {
     }
 
     handleLabelsUpdate(data) {
-        console.log(data)
+        // console.log(data)
         this.state.status = data.status;
         this.state.labels = data.labels || [];
         this.updateButtonState();

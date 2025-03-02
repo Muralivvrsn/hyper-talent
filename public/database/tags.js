@@ -81,16 +81,16 @@ class LinkedInLabelsDatabase {
     
     // Modify setupLabelListeners method
     async setupLabelListeners(labelsList) {
-        console.log("[setupLabelListeners] Initializing label listeners...");
+        // console.log("[setupLabelListeners] Initializing label listeners...");
     
         const db = window.firebaseService.db;
         const currentLabels = new Set();
     
-        console.log("[setupLabelListeners] Received labelsList:", labelsList);
+        // console.log("[setupLabelListeners] Received labelsList:", labelsList);
     
         labelsList.forEach(labelData => {
             const labelId = labelData.id;
-            console.log(`[setupLabelListeners] Processing label: ${labelId}`);
+            // console.log(`[setupLabelListeners] Processing label: ${labelId}`);
     
             currentLabels.add(labelId);
     
@@ -102,11 +102,11 @@ class LinkedInLabelsDatabase {
                 return;
             }
     
-            console.log(`[setupLabelListeners] Setting up listener for label: ${labelId}`);
+            // console.log(`[setupLabelListeners] Setting up listener for label: ${labelId}`);
             const labelRef = db.collection('profile_labels_v2').doc(labelId);
     
             const labelUnsubscribe = labelRef.onSnapshot(async (labelDoc) => {
-                console.log(`[onSnapshot] Snapshot received for label ${labelId}`);
+                // console.log(`[onSnapshot] Snapshot received for label ${labelId}`);
     
                 if (!labelDoc.exists) {
                     console.warn(`[onSnapshot] Label ${labelId} does not exist. Removing from state.`);
@@ -117,12 +117,12 @@ class LinkedInLabelsDatabase {
                 }
     
                 const label = labelDoc.data();
-                console.log(`[onSnapshot] Label data for ${labelId}:`, label);
+                // console.log(`[onSnapshot] Label data for ${labelId}:`, label);
     
                 // Get profile details for each profile ID
-                console.log(`[onSnapshot] Fetching profile details for label ${labelId}`);
+                // console.log(`[onSnapshot] Fetching profile details for label ${labelId}`);
                 const profileDetails = await this.getProfileDetails(label.p || []);
-                console.log(`[onSnapshot] Profile details fetched for label ${labelId}:`, profileDetails);
+                // console.log(`[onSnapshot] Profile details fetched for label ${labelId}:`, profileDetails);
     
                 const labelInfo = {
                     label_id: labelId,
@@ -139,7 +139,7 @@ class LinkedInLabelsDatabase {
                     })
                 };
     
-                console.log(`[onSnapshot] Constructed labelInfo for ${labelId}:`, labelInfo);
+                // console.log(`[onSnapshot] Constructed labelInfo for ${labelId}:`, labelInfo);
     
                 // Update the label with firsttime=false to trigger UI updates
                 this.updateLabel(labelInfo, false);
@@ -161,7 +161,7 @@ class LinkedInLabelsDatabase {
         });
     
         // Cleanup listeners for removed labels
-        console.log("[setupLabelListeners] Checking for removed labels...");
+        // console.log("[setupLabelListeners] Checking for removed labels...");
         for (const [key, unsubscribe] of this.state.subscriptions.entries()) {
             if (key.startsWith('label_')) {
                 const labelId = key.replace('label_', '');
@@ -171,12 +171,12 @@ class LinkedInLabelsDatabase {
                     this.state.subscriptions.delete(key);
                     this.removeLabel(labelId);
                     this.state.pendingLabels.delete(labelId);
-                    console.log(`[setupLabelListeners] Unsubscribed and removed label: ${labelId}`);
+                    // console.log(`[setupLabelListeners] Unsubscribed and removed label: ${labelId}`);
                 }
             }
         }
     
-        console.log("[setupLabelListeners] Completed label listener setup.");
+        // console.log("[setupLabelListeners] Completed label listener setup.");
         
         // Check if we've already loaded all labels
         this.checkAllLabelsLoaded();
@@ -185,10 +185,10 @@ class LinkedInLabelsDatabase {
     // Add a new method to check if all labels are loaded
     checkAllLabelsLoaded() {
         if (this.state.pendingLabels.size === 0 && this.state.status === 'in_progress') {
-            console.log("[checkAllLabelsLoaded] All labels have finished loading, updating status to logged_in");
+            // console.log("[checkAllLabelsLoaded] All labels have finished loading, updating status to logged_in");
             this._updateStatus('logged_in');
         } else {
-            console.log(`[checkAllLabelsLoaded] Still waiting for ${this.state.pendingLabels.size} labels to load`);
+            // console.log(`[checkAllLabelsLoaded] Still waiting for ${this.state.pendingLabels.size} labels to load`);
         }
     }
 
@@ -245,7 +245,7 @@ class LinkedInLabelsDatabase {
     
             const labelData = labelDoc.data();
             
-            console.log(profileId)
+            // console.log(profileId)
             // console.log(profileInfo.profile_id);
 
             // Check if profile exists in the profiles array
@@ -304,8 +304,8 @@ class LinkedInLabelsDatabase {
     }
 
     async _updateStatus(newStatus) {
-        console.log(this.state.status);
-        console.log(newStatus)
+        // console.log(this.state.status);
+        // console.log(newStatus)
         if (this.state.status !== newStatus) {
             this.state.status = newStatus;
             this.notifyListeners();
@@ -332,7 +332,7 @@ class LinkedInLabelsDatabase {
         this.state.labels = [...this.state.labels]; // ✅ Ensure new object reference
     
         this.state.listeners.forEach(callback => {
-            console.log("Notifying listeners with labels:", this.state.labels);
+            // console.log("Notifying listeners with labels:", this.state.labels);
             try {
                 callback({
                     type: 'status',
@@ -376,11 +376,11 @@ class LinkedInLabelsDatabase {
             // First, create the document in profile_labels_v2
             const labelRef = db.collection('profile_labels_v2').doc(labelId);
             const getExistingColors = (labels) => {
-                console.log(labels)
+                // console.log(labels)
                 return labels.map(label => label.label_color);
             };
             let labelColor = await window.labelManagerUtils.generateRandomColor(getExistingColors(this.state?.labels));
-            console.log(labelColor)
+            // console.log(labelColor)
             await labelRef.set({
                 n: labelName,          // name
                 c: labelColor,
@@ -494,7 +494,7 @@ class LinkedInLabelsDatabase {
     
             // Get current profile info from the page
             const profileInfo = await window.labelManagerUtils.getProfileInfo();
-            console.log(profileInfo)
+            // console.log(profileInfo)
             if (!profileInfo || !profileInfo.profile_id) {
                 throw new Error('Could not get profile information from current page');
             }

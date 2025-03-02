@@ -22,7 +22,7 @@
         }
 
         initializeFirebaseListener() {
-            console.log('[ThemeManager] Initializing');
+            // console.log('[ThemeManager] Initializing');
             let attempts = 0;
             const maxAttempts = 20; // 10 seconds with 500ms interval
             
@@ -31,7 +31,7 @@
                 
                 if (window.firebaseService) {
                     clearInterval(checkFirebaseService);
-                    console.log('[ThemeManager] Firebase service found');
+                    // console.log('[ThemeManager] Firebase service found');
                     
                     // Check if Firebase is actually initialized with auth and db
                     if (window.firebaseService.auth && window.firebaseService.db) {
@@ -63,7 +63,7 @@
         }
         
         handleFirebaseReady() {
-            console.log('[ThemeManager] Firebase ready, adding auth listener');
+            // console.log('[ThemeManager] Firebase ready, adding auth listener');
             window.firebaseService.addAuthStateListener(this.handleAuthStateChange.bind(this));
             
             // If user is already logged in, setup theme sync immediately
@@ -101,7 +101,7 @@
                     return;
                 }
 
-                console.log('[ThemeManager] Auth state change:', authState);
+                // console.log('[ThemeManager] Auth state change:', authState);
 
                 if (authState.type === 'status') {
                     switch (authState.status) {
@@ -148,7 +148,7 @@
 
         async setupThemeSync(userId) {
             try {
-                console.log('[ThemeManager] Setting up theme sync for user:', userId);
+                // console.log('[ThemeManager] Setting up theme sync for user:', userId);
                 
                 if (!window.firebaseService || !window.firebaseService.db) {
                     this.notifyError('initialization_failed', 'Firebase not initialized');
@@ -166,7 +166,7 @@
                 // First check if the document exists, create it if it doesn't
                 const docSnapshot = await userRef.get();
                 if (!docSnapshot.exists) {
-                    console.log('[ThemeManager] Creating user document');
+                    // console.log('[ThemeManager] Creating user document');
                     // Create the user document with default theme directly at top level
                     await userRef.set({
                         th: 'light',
@@ -174,7 +174,7 @@
                     });
                 } else if (!docSnapshot.data()?.th) {
                     // If document exists but doesn't have theme data
-                    console.log('[ThemeManager] Adding theme data to user document');
+                    // console.log('[ThemeManager] Adding theme data to user document');
                     await userRef.update({
                         'th': 'light',
                         'updatedAt': firebase.firestore.FieldValue.serverTimestamp()
@@ -196,7 +196,7 @@
                             const hasThemeChanged = theme !== this.state.theme;
                             
                             if (hasThemeChanged) {
-                                console.log(`[ThemeManager] Theme changed: ${this.state.theme} -> ${theme}`);
+                                // console.log(`[ThemeManager] Theme changed: ${this.state.theme} -> ${theme}`);
                                 this.state.theme = theme;
                                 this.state.lastNotifiedTheme = theme;
                                 this.notifyListeners();

@@ -15,6 +15,7 @@ import { OtherUsersProvider } from './context/OtherUsersContext';
 import { UserActionProvider } from './context/UserActionContext';
 import { GuideProvider } from './context/GuideContext';
 import { FeedbackProvider } from './context/FeedbackContext'
+import { AdminProvider } from './context/AdminContext';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(

@@ -337,6 +337,9 @@ class NotesDatabase {
 
     async createNote(profileId, noteText, profileData = null) {
         // this.setLoading(true);
+        if(!window.start_action('notes saving','notes saving'))
+            return;
+
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
@@ -381,9 +384,11 @@ class NotesDatabase {
                 'd.n': firebase.firestore.FieldValue.arrayUnion(noteMetadata)
             });
 
+            window.complete_action('notes saving', true, 'notes saved')
             return noteId;
         } catch (error) {
             console.error('[NotesDB] Create note error:', error);
+            window.complete_action('notes saving', false, 'someting wrong.')
             this._notifyError('note_creation_failed', error.message);
             throw error;
         } finally {
@@ -397,6 +402,8 @@ class NotesDatabase {
 
     async updateNote(noteId, noteText, profileId, profileData) {
         // this.setLoading(true);
+        if(!window.start_action('notes saving','notes saving'))
+            return;
         try {
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
@@ -420,10 +427,12 @@ class NotesDatabase {
                 n: noteText,
                 lu: new Date().toISOString()
             });
+            window.complete_action('notes saving', true, 'notes saved')
 
             return true;
         } catch (error) {
             console.error('[NotesDB] Update note error:', error);
+            window.complete_action('notes saving', false, 'notes failed')
             this._notifyError('note_update_failed', error.message);
             throw error;
         } finally {
@@ -455,10 +464,12 @@ class NotesDatabase {
 
             // Delete the note document
             await db.collection('profile_notes_v2').doc(noteId).delete();
+            window.complete_action('notes saving', true, 'notes saved')
 
             return true;
         } catch (error) {
             console.error('[NotesDB] Delete note error:', error);
+            window.complete_action('notes saving', false, 'notes failed sved')
             this._notifyError('note_deletion_failed', error.message);
             throw error;
         } finally {

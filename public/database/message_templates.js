@@ -26,7 +26,7 @@ class MessageTemplateDatabase {
             switch (authState.status) {
                 case 'logged_in':
                     if (this.status !== 'in_progress') {
-                        console.log('[MessageTemplateDB] Starting template load process');
+                        // console.log('[MessageTemplateDB] Starting template load process');
                         this._updateStatus('in_progress');
                         await this.loadTemplates();
                     }
@@ -46,7 +46,7 @@ class MessageTemplateDatabase {
                     break;
             }
         } catch (error) {
-            console.error('[MessageTemplateDB] Auth state change error:', error);
+            // console.error('[MessageTemplateDB] Auth state change error:', error);
             this._notifyError('auth_state_change_failed', error.message);
         }
     }
@@ -60,12 +60,12 @@ class MessageTemplateDatabase {
 
     async loadTemplates() {
         if (this.isLoadingTemplates) {
-            console.log('[MessageTemplateDB] Template loading already in progress');
+            // console.log('[MessageTemplateDB] Template loading already in progress');
             return;
         }
     
         this.isLoadingTemplates = true;
-        console.log('[MessageTemplateDB] Starting template load');
+        // console.log('[MessageTemplateDB] Starting template load');
     
         try {
             const db = window.firebaseService.db;
@@ -85,7 +85,7 @@ class MessageTemplateDatabase {
                 try {
                     this.cleanupTemplateSubscriptions();
                     if (!userDoc.exists) {
-                        console.log('[MessageTemplateDB] User document does not exist');
+                        // console.log('[MessageTemplateDB] User document does not exist');
                         this.templates = [];
                         this._updateStatus('logged_in');
                         return;
@@ -93,7 +93,7 @@ class MessageTemplateDatabase {
     
                     // Get template references - now an array of objects with id, type, etc.
                     const templateRefs = userDoc.data()?.d?.s || [];
-                    console.log('[MessageTemplateDB] Found template references:', templateRefs.length);
+                    // console.log('[MessageTemplateDB] Found template references:', templateRefs.length);
     
                     if (templateRefs.length === 0) {
                         this.templates = [];
@@ -104,7 +104,7 @@ class MessageTemplateDatabase {
                     // Set up listeners for each template
                     await this.setupTemplateListeners(db, templateRefs);
                 } catch (error) {
-                    console.error('[MessageTemplateDB] Template processing error:', error);
+                    // console.error('[MessageTemplateDB] Template processing error:', error);
                     this._notifyError('template_processing_failed', error.message);
                     this._updateStatus('logged_out');
                 }
@@ -114,7 +114,7 @@ class MessageTemplateDatabase {
             this.initialized = true;
     
         } catch (error) {
-            console.error('[MessageTemplateDB] Load templates failed:', error);
+            // console.error('[MessageTemplateDB] Load templates failed:', error);
             this._notifyError('load_templates_failed', error.message);
             this.cleanupSubscriptions();
             this._updateStatus('logged_out');
@@ -169,12 +169,12 @@ class MessageTemplateDatabase {
                                 this._updateStatus('logged_in');
                             }
                         } catch (error) {
-                            console.error(`[MessageTemplateDB] Template processing error:`, error);
+                            // console.error(`[MessageTemplateDB] Template processing error:`, error);
                             this._notifyError('template_processing_failed', error.message);
                         }
                     },
                     error => {
-                        console.error(`[MessageTemplateDB] Template listener error:`, error);
+                        // console.error(`[MessageTemplateDB] Template listener error:`, error);
                         this._notifyError('template_listener_failed', error.message);
                         loadedTemplates++;
                         if (loadedTemplates >= acceptedTemplates.length) {
@@ -207,7 +207,7 @@ class MessageTemplateDatabase {
             try {
                 unsub();
             } catch (e) {
-                console.error('[MessageTemplateDB] Cleanup error:', e);
+                // console.error('[MessageTemplateDB] Cleanup error:', e);
             }
         });
         this.currentSubscriptionBatch.clear();
@@ -224,7 +224,7 @@ class MessageTemplateDatabase {
                 try {
                     unsub();
                 } catch (e) {
-                    console.error('[MessageTemplateDB] Template cleanup error:', e);
+                    // console.error('[MessageTemplateDB] Template cleanup error:', e);
                 }
             }
         });
@@ -262,13 +262,13 @@ class MessageTemplateDatabase {
                     templates: this.templates
                 });
             } catch (error) {
-                console.error('[MessageTemplateDB] Error in listener callback:', error);
+                // console.error('[MessageTemplateDB] Error in listener callback:', error);
             }
         });
     }
 
     _notifyError(code, message) {
-        console.error('[MessageTemplateDB] Error:', code, message);
+        // console.error('[MessageTemplateDB] Error:', code, message);
         this.listeners.forEach(callback => {
             try {
                 callback({
@@ -282,7 +282,7 @@ class MessageTemplateDatabase {
                     }
                 });
             } catch (error) {
-                console.error('[MessageTemplateDB] Error in error notification:', error);
+                // console.error('[MessageTemplateDB] Error in error notification:', error);
             }
         });
     }
@@ -297,7 +297,7 @@ class MessageTemplateDatabase {
                     timestamp: new Date().toISOString()
                 });
             } catch (error) {
-                console.error('[MessageTemplateDB] Error in listener notification:', error);
+                // console.error('[MessageTemplateDB] Error in listener notification:', error);
             }
         });
     }
@@ -354,7 +354,7 @@ class MessageTemplateDatabase {
 
             return templateRef.id;
         } catch (error) {
-            console.error('[MessageTemplateDB] Create template error:', error);
+            // console.error('[MessageTemplateDB] Create template error:', error);
             this._notifyError('create_template_failed', error.message);
             throw error;
         }
@@ -380,7 +380,7 @@ class MessageTemplateDatabase {
 
             return true;
         } catch (error) {
-            console.error('[MessageTemplateDB] Update template error:', error);
+            // console.error('[MessageTemplateDB] Update template error:', error);
             this._notifyError('update_template_failed', error.message);
             throw error;
         }
@@ -432,7 +432,7 @@ class MessageTemplateDatabase {
 
             return true;
         } catch (error) {
-            console.error('[MessageTemplateDB] Delete template error:', error);
+            // console.error('[MessageTemplateDB] Delete template error:', error);
             this._notifyError('delete_template_failed', error.message);
             throw error;
         }
@@ -490,7 +490,7 @@ class MessageTemplateDatabase {
 
             return true;
         } catch (error) {
-            console.error('[MessageTemplateDB] Share template error:', error);
+            // console.error('[MessageTemplateDB] Share template error:', error);
             this._notifyError('share_template_failed', error.message);
             throw error;
         }
@@ -535,7 +535,7 @@ class MessageTemplateDatabase {
 
             return true;
         } catch (error) {
-            console.error('[MessageTemplateDB] Update shared template status error:', error);
+            // console.error('[MessageTemplateDB] Update shared template status error:', error);
             this._notifyError('update_shared_status_failed', error.message);
             throw error;
         }

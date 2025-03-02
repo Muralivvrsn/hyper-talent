@@ -37,7 +37,10 @@ class FilterManager {
 
         this.setupListeners();
         this.setupObservers();
-        this.initializeUI();
+        if (window?.firebaseService?.currentUser?.email?.includes("hyperverge.co")) {
+            this.initializeUI();
+        }
+        
 
         this.state.initialized = true;
     }
@@ -47,6 +50,7 @@ class FilterManager {
             window.labelsDatabase.removeListener(this.handleLabelsUpdate);
             window.labelsDatabase.addListener(this.handleLabelsUpdate.bind(this));
         }
+
 
         document.addEventListener('click', this.handlers.outsideClick);
         window.addEventListener('resize', this.handlers.resize);
@@ -79,30 +83,30 @@ class FilterManager {
 
     createElements(container) {
         if (!container) return;
-    
+
         this.cleanupElements();
-    
+
         // Create button
         this.elements.button = document.createElement('button');
         this.elements.button.className = 'hyper_filter_button';
         this.elements.button.id = 'hyper_filter_button';
         this.elements.button.innerHTML = 'Filters';
         this.elements.button.addEventListener('click', this.handlers.buttonClick);
-        
+
         // Add count badge if filters are selected
         this.updateFilterCountBadge();
-    
+
         // Create dropdown
         this.elements.dropdown = document.createElement('div');
         this.elements.dropdown.className = 'hyper_filter_dropdown';
         this.elements.dropdown.id = 'hyper_filter_dropdown';
         this.elements.dropdown.style.display = 'none';
-    
+
         // Add search input with icon
         const searchContainer = document.createElement('div');
         searchContainer.className = 'filter_search_container';
         searchContainer.style.position = 'relative'; // For icon positioning
-    
+
         // Create search icon
         const searchIcon = document.createElement('div');
         searchIcon.innerHTML = `
@@ -111,41 +115,41 @@ class FilterManager {
                 <path d="M14 14L11 11" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         `;
-    
+
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'filter_search_input';
         searchInput.placeholder = 'Search filters...';
         searchInput.style.paddingLeft = '36px'; // Space for icon
         searchInput.addEventListener('input', this.handleSearchInput.bind(this));
-    
+
         // Append search icon and input to container
         searchContainer.appendChild(searchIcon);
         searchContainer.appendChild(searchInput);
-    
+
         // Create content container
         const contentContainer = document.createElement('div');
         contentContainer.className = 'dropdown_content';
-    
+
         // Build dropdown structure
         this.elements.dropdown.appendChild(searchContainer);
         this.elements.dropdown.appendChild(contentContainer);
-    
+
         // Insert into DOM
         container.appendChild(this.elements.button);
         document.body.appendChild(this.elements.dropdown);
-    
+
         // Update content after structure is ready
         this.updateDropdownContent();
     }
-    
+
     updateFilterCountBadge() {
         // Remove existing badge if any
         const existingBadge = this.elements.button?.querySelector('.hyper_filter_button_count');
         if (existingBadge) {
             existingBadge.remove();
         }
-        
+
         // Add badge if we have selected filters
         if (this.state.selectedLabels.size > 0 && this.elements.button) {
             const badge = document.createElement('span');
@@ -158,7 +162,7 @@ class FilterManager {
     handleSearchInput(event) {
         const searchText = event.target.value.trim().toLowerCase();
         const filterItems = this.elements.dropdown.querySelectorAll('.filter_item');
-        
+
         filterItems.forEach(item => {
             const filterName = item.querySelector('.filter_name').textContent.toLowerCase();
             if (searchText === '' || filterName.includes(searchText)) {
@@ -167,7 +171,7 @@ class FilterManager {
                 item.classList.add('filter-hidden');
             }
         });
-        
+
         // Check if any items are visible in each section
         const sections = this.elements.dropdown.querySelectorAll('.filter_section');
         sections.forEach(section => {
@@ -178,7 +182,7 @@ class FilterManager {
                 section.classList.remove('filter-hidden');
             }
         });
-        
+
         // Show no results message if needed
         let noResultsElem = this.elements.dropdown.querySelector('.no_filters');
         if (!noResultsElem && this.elements.dropdown.querySelectorAll('.filter_item:not(.filter-hidden)').length === 0) {
@@ -199,16 +203,16 @@ class FilterManager {
         } else {
             this.state.selectedLabels.add(filterId);
         }
-        
+
         // Update UI to reflect selection
         this.updateFilterSelection();
-        
+
         // Update the count badge on the button
         this.updateFilterCountBadge();
-        
-        console.log('Selected filters:', Array.from(this.state.selectedLabels));
+
+        // console.log('Selected filters:', Array.from(this.state.selectedLabels));
     }
-    
+
     updateFilterSelection() {
         // Update all filter items to reflect current selection state
         this.elements.dropdown.querySelectorAll('.filter_item').forEach(item => {
@@ -229,7 +233,7 @@ class FilterManager {
 
     createFilterElement(label) {
         const isSelected = this.state.selectedLabels.has(label.label_id);
-        
+
         return `
             <div class="filter_item ${isSelected ? 'selected' : ''}" 
                  data-filter-id="${label.label_id}" 
@@ -249,7 +253,7 @@ class FilterManager {
 
         // Clear old content
         const contentContainer = this.elements.dropdown.querySelector('.dropdown_content');
-        
+
         // Group labels by type for display
         const owned = this.state.labels.filter(l => l.type === 'owned');
         const shared = this.state.labels.filter(l => l.type === 'shared');
@@ -288,7 +292,7 @@ class FilterManager {
                 this.handleFilterClick(filterId);
             });
         });
-        
+
         // Add event listener to clear filters button
         const clearButton = this.elements.dropdown.querySelector('.clear_filters');
         if (clearButton) {
@@ -301,8 +305,12 @@ class FilterManager {
     }
 
     handleLabelsUpdate(data) {
-        this.state.labels = data.labels || [];
-        this.updateDropdownContent();
+        if (!window?.firebaseService?.currentUser?.email?.includes("hyperverge.co")) {
+            this.state.labels = data.labels || [];
+            this.updateDropdownContent();
+        }
+
+
     }
 
     setupObservers() {
@@ -336,7 +344,7 @@ class FilterManager {
             if (!existingButton) {
                 // Find the appropriate container
                 const isProfilePage = /linkedin\.com\/in\//.test(window.location.href);
-                
+
                 if (isProfilePage) {
                     // For profile pages, place button in body
                     this.createElements(document.body);
@@ -473,7 +481,7 @@ class FilterManager {
 }
 
 // Initialize the filter manager when the script loads
-(function() {
+(function () {
     if (window.location.hostname.includes('linkedin.com')) {
         new FilterManager();
     }

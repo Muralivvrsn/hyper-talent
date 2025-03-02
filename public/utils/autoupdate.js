@@ -1,123 +1,152 @@
 window.autoUpdateProfiles = {
+    STORAGE_KEY: "processedProfiles",
+    CACHE_DURATION: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+    MAX_RETRIES: 10, // Maximum number of retries
+    RETRY_DELAY: 1000, // Delay between retries in milliseconds
+
     async init() {
-        if (!window.location.href.includes('linkedin.com/in/')) return;
-        try {
-            // Only need to check if Firebase service is available
-            if (!window.firebaseService) throw new Error('Firebase service not available');
-            await this.startProfileExtraction();
-        } catch (error) {
-            console.error('Init error:', error);
+        if (!window.location.href.includes("linkedin.com/in/")) return;
+        if (!window.firebaseService) {
+            console.error("Firebase service not available");
+            return;
         }
-    },
 
-    async startProfileExtraction() {
         try {
-            const username = this.extractUsernameFromURL();
-            if (!username) throw new Error('Username extraction failed');
-
-            const profileCode = await this.extractProfileCode();
-            if (!profileCode) throw new Error('Profile code extraction failed');
-
-            // Call Cloud Function instead of directly updating database
-            await this.sendProfileToCloudFunction(profileCode, username);
-        } catch (error) {
-            console.error('Extraction error:', error);
-        }
-    },
-
-    extractUsernameFromURL() {
-        try {
-            const matches = window.location.pathname.match(/\/in\/([^/]+)/);
-            return matches ? matches[1] : null;
-        } catch (error) {
-            console.error('Username parse error:', error);
-            return null;
-        }
-    },
-
-    async extractProfileCode() {
-        try {
-            const element = await this.waitForAnyElement([
-                'a[id*="navigation"][href*="profileUrn"]',
-                'a[href*="/search/results/people"]'
-            ]);
-            if (!element) return null;
-
-            const href = element.getAttribute('href');
-            const match = href.match(/profileUrn=([^&]+)/);
-            return match ? decodeURIComponent(match[1]).split(':').pop() : null;
-        } catch (error) {
-            console.error('Profile code parse error:', error);
-            return null;
-        }
-    },
-
-    async waitForAnyElement(selectors, timeout = 10000) {
-        const startTime = Date.now();
-        while (Date.now() - startTime < timeout) {
-            for (const selector of selectors) {
-                const element = document.querySelector(selector);
-                if (element) return element;
+            const profileInfo = await this.waitForProfileInfo();
+            if (!profileInfo || !profileInfo.profile_id) {
+                console.log("No profile info found after retries");
+                return;
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
+
+            if (this.isRecentlyProcessed(profileInfo.profile_id)) {
+                console.log("Profile recently processed, skipping");
+                return;
+            }
+
+            await this.sendProfileToCloudFunction(
+                profileInfo.profile_id,
+                profileInfo.username || profileInfo.name,
+                profileInfo.name,
+                profileInfo.image_url
+            );
+            this.markProcessed(profileInfo.profile_id);
+        } catch (error) {
+            console.error("Init error:", error);
+        }
+    },
+
+    async waitForProfileInfo() {
+        for (let i = 0; i < this.MAX_RETRIES; i++) {
+            try {
+                // Wait for the DOM to be ready
+                await this.sleep(this.RETRY_DELAY);
+                
+                // Check if page is fully loaded
+                if (document.readyState !== 'complete') {
+                    console.log("Page still loading, retry:", i + 1);
+                    continue;
+                }
+
+                const profileInfo = await window.labelManagerUtils.getProfileInfo();
+                
+                // Validate required fields
+                if (profileInfo && 
+                    profileInfo.profile_id && 
+                    profileInfo.name && 
+                    profileInfo.image_url) {
+                    console.log("Profile info found on attempt:", i + 1);
+                    return profileInfo;
+                }
+                
+                console.log("Incomplete profile info, retry:", i + 1);
+            } catch (error) {
+                console.log("Error getting profile info, retry:", i + 1);
+            }
         }
         return null;
     },
 
-    async sendProfileToCloudFunction(profileCode, username) {
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    },
+
+    isRecentlyProcessed(profileId) {
         try {
-            // Create data object to send
-            const profileData = {
-                profileCode: profileCode,
-                username: username,
-                url: window.location.href,
-                title: document.title,
-                timestamp: Date.now()
-            };
-            
-            // Add pageInfo if possible
-            try {
-                const metaDesc = document.querySelector('meta[name="description"]');
-                if (metaDesc) {
-                    profileData.description = metaDesc.getAttribute('content');
-                }
-            } catch (e) {
-                // Ignore meta extraction errors
-            }
-            
-            console.log('Sending profile data to Cloud Function:', profileData);
-            
-            // Call the Cloud Function using the Firebase service
-            if (window.firebaseService.callCloudFunction) {
-                const result = await window.firebaseService.callCloudFunction('processData', profileData);
-                console.log('Cloud Function response:', result);
-                return result;
-            } else {
-                // Fallback if the method doesn't exist
-                console.error('Firebase service missing callCloudFunction method');
-                
-                // Try to use Firebase functions directly
-                const functions = firebase.functions();
-                const processData = functions.httpsCallable('processData');
-                const result = await processData(profileData);
-                console.log('Cloud Function response:', result.data);
-                return result.data;
-            }
+            const processed = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || "{}");
+            const timestamp = processed[profileId];
+            return timestamp && (Date.now() - timestamp) < this.CACHE_DURATION;
+        } catch {
+            return false;
+        }
+    },
+
+    markProcessed(profileId) {
+        try {
+            const processed = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || "{}");
+            processed[profileId] = Date.now();
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(processed));
         } catch (error) {
-            console.error('Error calling Cloud Function:', error);
+            console.error("Error updating storage:", error);
+        }
+    },
+
+    async sendProfileToCloudFunction(profileId, username, name, imageUrl) {
+        if (!profileId || !username || !name) return;
+    
+        try {
+            // Ensure authentication
+            if (!firebase.auth().currentUser) {
+                await firebase.auth().signInAnonymously();
+            }
+    
+            const profileData = {
+                profileId,
+                username,
+                name,
+                imageUrl,
+                url: window.location.href
+            };
+    
+            const firebaseService = window.firebaseService;
+            let result;
+    
+            if (firebaseService?.callCloudFunction) {
+                result = await firebaseService.callCloudFunction("processData", profileData);
+            } else {
+                const functions = firebase.functions();
+                const processData = functions.httpsCallable("processData");
+                const response = await processData(profileData);
+                result = response.data;
+            }
+    
+            console.log("Profile update success:", result);
+            return result;
+        } catch (error) {
+            console.error("Error calling Cloud Function:", error.message);
+            if (error.code === "unauthenticated") {
+                console.error("Authentication failed. Retrying...");
+                await firebase.auth().signInAnonymously();
+                // Retry the operation once after authentication
+                return this.sendProfileToCloudFunction(profileId, username, name, imageUrl);
+            }
             throw error;
         }
     }
 };
 
-window.autoUpdateProfiles.init();
+setTimeout(() => {
+    window.autoUpdateProfiles.init();
+}, 1000);
 
-// Re-run when URL changes (SPA navigation)
+// Modified URL observer to include delay
 let lastUrl = window.location.href;
 new MutationObserver(() => {
     const currentUrl = window.location.href;
     if (currentUrl !== lastUrl) {
         lastUrl = currentUrl;
-        window.autoUpdateProfiles.init();
+        // Add delay before initializing on URL change
+        setTimeout(() => {
+            window.autoUpdateProfiles.init();
+        }, 1000);
     }
 }).observe(document.body, { subtree: true, childList: true });
