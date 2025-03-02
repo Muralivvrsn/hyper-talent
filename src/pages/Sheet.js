@@ -130,7 +130,6 @@ const SheetPage = () => {
         ls: currentTime
       };
 
-      // Update user document with new spreadsheet data
       const userDocRef = doc(db, 'users_v2', user.uid);
       await updateDoc(userDocRef, {
         'd.sd': newSheetData
