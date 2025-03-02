@@ -13,17 +13,17 @@ import {
 } from "../components/ui/tooltip";
 import { useLabels } from '../context/LabelContext';
 import { useNotes } from '../context/NotesContext';
-import { useTemplates } from '../context/TemplateContext';
+import { useData } from '../context/DataContext';
 import { useSheet } from '../context/SheetContext';
 
-const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled }) => (
+const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled, anyLoading }) => (
   <TooltipProvider>
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
           variant="outline"
           onClick={onClick}
-          disabled={disabled || loading}
+          disabled={disabled || loading || anyLoading}
           className="h-auto p-3 flex gap-3 items-center w-full rounded-lg shadow-sm hover:shadow-md transition-all border text-sm"
         >
           {loading ? (
@@ -66,31 +66,38 @@ const formatDate = (date) => {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
 };
 
-const SheetActions = ({ loadingStates, onSync, onUpload }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-3">
-    <ActionButton
-      icon={FileSpreadsheet}
-      label="Update Sheet"
-      description="Sync latest LinkedIn data to Google Sheet"
-      onClick={() => onSync("Sheet")}
-      loading={loadingStates.syncSheet}
-    />
-    {/* <ActionButton
-      icon={Database}
-      label="Update Database"
-      description="Sync Google Sheet changes to database"
-      onClick={() => onSync("Database")}
-      loading={loadingStates.syncDB}
-    /> */}
-    <ActionButton
-      icon={Upload}
-      label="Upload Labels"
-      description="Process and update connection labels"
-      onClick={onUpload}
-      loading={loadingStates.updateLabels}
-    />
-  </div>
-);
+const SheetActions = ({ loadingStates, onSync, onUpload }) => {
+  const isAnyLoading = Object.values(loadingStates).some(state => state);
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-3">
+      <ActionButton
+        icon={FileSpreadsheet}
+        label="Update Sheet"
+        description="Sync latest LinkedIn data to Google Sheet"
+        onClick={() => onSync("Sheet")}
+        loading={loadingStates.syncSheet}
+        anyLoading={isAnyLoading && !loadingStates.syncSheet}
+      />
+      {/* <ActionButton
+        icon={Database}
+        label="Update Database"
+        description="Sync Google Sheet changes to database"
+        onClick={() => onSync("Database")}
+        loading={loadingStates.syncDB}
+        anyLoading={isAnyLoading && !loadingStates.syncDB}
+      /> */}
+      <ActionButton
+        icon={Upload}
+        label="Upload Labels"
+        description="Process and update connection labels"
+        onClick={onUpload}
+        loading={loadingStates.updateLabels}
+        anyLoading={isAnyLoading && !loadingStates.updateLabels}
+      />
+    </div>
+  );
+};
 
 const SheetPage = () => {
   const { user } = useAuth();
@@ -104,7 +111,7 @@ const SheetPage = () => {
 
   const { labels, activeSharedLabels, getLabelProfiles } = useLabels();
   const { notes, getNoteWithProfile } = useNotes();
-  const { templates } = useTemplates();
+  const { templates } = useData();
 
   const db = getFirestore();
 

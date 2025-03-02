@@ -11,7 +11,6 @@ import { SheetProvider } from './context/SheetContext';
 import { MigrationProvider } from './context/MigrationContext';
 import { LabelProvider } from './context/LabelContext';
 import { NotesProvider } from './context/NotesContext';
-import { TemplateProvider } from './context/TemplateContext';
 import { OtherUsersProvider } from './context/OtherUsersContext';
 import { UserActionProvider } from './context/UserActionContext';
 import { GuideProvider } from './context/GuideContext';
@@ -29,13 +28,11 @@ root.render(
                                 <GuideProvider>
                                     <LabelProvider>
                                         <NotesProvider>
-                                            <TemplateProvider>
-                                                <ProfileNoteProvider>
-                                                    <SheetProvider>
-                                                        <App />
-                                                    </SheetProvider>
-                                                </ProfileNoteProvider>
-                                            </TemplateProvider>
+                                            <ProfileNoteProvider>
+                                                <SheetProvider>
+                                                    <App />
+                                                </SheetProvider>
+                                            </ProfileNoteProvider>
                                         </NotesProvider>
                                     </LabelProvider>
                                 </GuideProvider>
