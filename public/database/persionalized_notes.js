@@ -260,6 +260,8 @@ class NotesDatabase {
                 }
             );
 
+            this.setLoading(false)
+
             this.currentSubscriptionBatch.add(userUnsubscribe);
             this.initialized = true;
 
