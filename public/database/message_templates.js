@@ -279,7 +279,7 @@ class MessageTemplateDatabase {
                 includeMetadataChanges: true  // This is important for catching all updates
             }, async (userDoc) => {
                 try {
-                    console.log('Message template updated', userDoc.metadata.hasPendingWrites);
+                    // console.log('Message template updated', userDoc.metadata.hasPendingWrites);
                     
                     // Skip updates from local writes until they're confirmed by the server
                     if (userDoc.metadata.hasPendingWrites) {

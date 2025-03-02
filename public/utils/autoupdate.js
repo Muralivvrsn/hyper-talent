@@ -7,19 +7,19 @@ window.autoUpdateProfiles = {
     async init() {
         if (!window.location.href.includes("linkedin.com/in/")) return;
         if (!window.firebaseService) {
-            console.error("Firebase service not available");
+            // console.error("Firebase service not available");
             return;
         }
 
         try {
             const profileInfo = await this.waitForProfileInfo();
             if (!profileInfo || !profileInfo.profile_id) {
-                console.log("No profile info found after retries");
+                // console.log("No profile info found after retries");
                 return;
             }
 
             if (this.isRecentlyProcessed(profileInfo.profile_id)) {
-                console.log("Profile recently processed, skipping");
+                // console.log("Profile recently processed, skipping");
                 return;
             }
 
@@ -31,7 +31,7 @@ window.autoUpdateProfiles = {
             );
             this.markProcessed(profileInfo.profile_id);
         } catch (error) {
-            console.error("Init error:", error);
+            // console.error("Init error:", error);
         }
     },
 
@@ -43,7 +43,7 @@ window.autoUpdateProfiles = {
                 
                 // Check if page is fully loaded
                 if (document.readyState !== 'complete') {
-                    console.log("Page still loading, retry:", i + 1);
+                    // console.log("Page still loading, retry:", i + 1);
                     continue;
                 }
 
@@ -54,13 +54,13 @@ window.autoUpdateProfiles = {
                     profileInfo.profile_id && 
                     profileInfo.name && 
                     profileInfo.image_url) {
-                    console.log("Profile info found on attempt:", i + 1);
+                    // console.log("Profile info found on attempt:", i + 1);
                     return profileInfo;
                 }
                 
-                console.log("Incomplete profile info, retry:", i + 1);
+                // console.log("Incomplete profile info, retry:", i + 1);
             } catch (error) {
-                console.log("Error getting profile info, retry:", i + 1);
+                // console.log("Error getting profile info, retry:", i + 1);
             }
         }
         return null;
@@ -86,7 +86,7 @@ window.autoUpdateProfiles = {
             processed[profileId] = Date.now();
             localStorage.setItem(this.STORAGE_KEY, JSON.stringify(processed));
         } catch (error) {
-            console.error("Error updating storage:", error);
+            // console.error("Error updating storage:", error);
         }
     },
 
@@ -119,12 +119,12 @@ window.autoUpdateProfiles = {
                 result = response.data;
             }
     
-            console.log("Profile update success:", result);
+            // console.log("Profile update success:", result);
             return result;
         } catch (error) {
-            console.error("Error calling Cloud Function:", error.message);
+            // console.error("Error calling Cloud Function:", error.message);
             if (error.code === "unauthenticated") {
-                console.error("Authentication failed. Retrying...");
+                // console.error("Authentication failed. Retrying...");
                 await firebase.auth().signInAnonymously();
                 // Retry the operation once after authentication
                 return this.sendProfileToCloudFunction(profileId, username, name, imageUrl);

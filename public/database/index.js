@@ -152,7 +152,7 @@ class FirebaseService {
         try {
             // Check if we're initialized and logged in
             if (!this.db || this.status !== 'logged_in') {
-                console.log('[FirebaseService] Not logged in, waiting for 10 seconds...');
+                // console.log('[FirebaseService] Not logged in, waiting for 10 seconds...');
 
                 // Create a promise that will wait for login or timeout after 10 seconds
                 const loginWaitResult = await Promise.race([
@@ -179,7 +179,7 @@ class FirebaseService {
                     return { error: 'Authentication timeout' };
                 }
 
-                console.log('[FirebaseService] Successfully logged in after waiting');
+                // console.log('[FirebaseService] Successfully logged in after waiting');
             }
 
             // Use the Firebase functions SDK

@@ -29,7 +29,7 @@ class UserActionsDatabase {
     }
 
     destroy() {
-        console.log('UserActionsDatabase destroyed');
+        // console.log('UserActionsDatabase destroyed');
     }
 }
 

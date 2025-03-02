@@ -22,27 +22,27 @@ class LabelProfileNotes {
 
     
         this.databaseSubscription = window.notesDatabase.addListener((data) => {
-            console.log('Database update received:', data);
+            // console.log('Database update received:', data);
     
             // Make sure we have profile info before processing
             if (!this.currentProfileInfo) {
-                console.log('No current profile info, skipping update');
+                // console.log('No current profile info, skipping update');
                 return;
             }
             // Handle notes updates
             if (data && data.type === 'status') {
                 this.status = data.status;
             }
-            console.log('notes udpating')
+            // console.log('notes udpating')
             if (data && data.notes) {
-                console.log('Notes update received');
+                // console.log('Notes update received');
     
                 // Get the correct profile ID from current profile
                 const profileId = this.currentProfileInfo.profile_id;
-                console.log('Current profile ID:', profileId);
+                // console.log('Current profile ID:', profileId);
     
                 if (!profileId) {
-                    console.log('No profile ID available');
+                    // console.log('No profile ID available');
                     return;
                 }
     
@@ -59,7 +59,7 @@ class LabelProfileNotes {
                     })
                     .filter(note => note.profileId === profileId);
     
-                console.log('Filtered notes:', profileNotes);
+                // console.log('Filtered notes:', profileNotes);
     
                 // Create a new array to ensure change detection
                 if (profileNotes.length > 0) {
@@ -82,7 +82,7 @@ class LabelProfileNotes {
             }
         });
     
-        console.log('Database listener set up');
+        // console.log('Database listener set up');
     }
 
     // Fetches notes for a profile
@@ -90,7 +90,7 @@ class LabelProfileNotes {
         try {
             return await window.notesDatabase.getNotesByProfileId(profileId) || [];
         } catch (error) {
-            console.error('Error fetching notes:', error);
+            // console.error('Error fetching notes:', error);
             window.show_error('Unable to load existing notes. Please try again.', 3000);
             return [];
         }
@@ -127,7 +127,7 @@ class LabelProfileNotes {
     updateNoteBoxContent() {
         if (!this.noteBox || !this.noteBox.container) return;
 
-        console.log(this.status)
+        // console.log(this.status)
 
         const container = this.noteBox.container;
         while (container.firstChild) {
@@ -562,10 +562,10 @@ class LabelProfileNotes {
         try {
             // Get profile info using the window.labelManagerUtils helper
             const profileInfo = await window.labelManagerUtils.getProfileInfo();
-            console.log('Retrieved profile info:', profileInfo);
+            // console.log('Retrieved profile info:', profileInfo);
 
             if (!profileInfo || !profileInfo.profile_id) {
-                console.error('Invalid profile info:', profileInfo);
+                // console.error('Invalid profile info:', profileInfo);
                 window.show_error('Unable to access profile information.', 3000);
                 return;
             }
@@ -581,15 +581,15 @@ class LabelProfileNotes {
 
             // Try to get notes
             try {
-                console.log('Fetching notes for profile ID:', this.currentProfileInfo.profile_id);
+                // console.log('Fetching notes for profile ID:', this.currentProfileInfo.profile_id);
                 const notes = await this.getNotes(this.currentProfileInfo.profile_id);
-                console.log('Retrieved notes:', notes);
+                // console.log('Retrieved notes:', notes);
 
                 this.currentNotes = Array.isArray(notes) ? notes : (notes ? [notes] : []);
 
                 // Ensure there's at least one owned note
                 if (!this.currentNotes.some(note => !note.metadata || note.metadata.type === 'owned')) {
-                    console.log('No owned notes found, adding empty note');
+                    // console.log('No owned notes found, adding empty note');
                     this.currentNotes.unshift({
                         id: null,
                         note: '',
@@ -599,7 +599,7 @@ class LabelProfileNotes {
                     });
                 }
             } catch (error) {
-                console.error('Error loading notes:', error);
+                // console.error('Error loading notes:', error);
 
                 // If notes fail to load, ensure we have at least one empty note
                 this.currentNotes = [{
@@ -639,7 +639,7 @@ class LabelProfileNotes {
             document.addEventListener('mousedown', this.handleClickOutside);
             document.addEventListener('keydown', this.handleKeyboardShortcuts);
         } catch (error) {
-            console.error('Error in showNoteBox:', error);
+            // console.error('Error in showNoteBox:', error);
             window.show_error('Unable to display notes. Please try again.', 3000);
         }
     }
@@ -675,21 +675,21 @@ class LabelProfileNotes {
     // Save note with improved error handling and profile ID checks
     async saveNote() {
         if (this.status !== 'logged_in') {
-            console.log('Cannot save note: Not logged in');
+            // console.log('Cannot save note: Not logged in');
             window.show_error('You must be logged in to save notes.', 3000);
             this.resetSaveButton();
             return;
         }
 
         if (!this.currentProfileInfo || !this.currentProfileInfo.profile_id) {
-            console.error('Cannot save note: No profile info or ID');
+            // console.error('Cannot save note: No profile info or ID');
             window.show_error('Unable to save note. Profile information is missing.', 3000);
             this.resetSaveButton();
             return;
         }
 
         if (!this.noteBox || !this.noteBox.textarea) {
-            console.error('Cannot save note: No textarea found');
+            // console.error('Cannot save note: No textarea found');
             window.show_error('Unable to save note. Text area not found.', 3000);
             this.resetSaveButton();
             return;
@@ -703,8 +703,8 @@ class LabelProfileNotes {
         const currentNote = ownedNotes[0];
         const noteText = this.noteBox.textarea.value.trim();
 
-        console.log('Current note:', currentNote);
-        console.log('Note text to save:', noteText);
+        // console.log('Current note:', currentNote);
+        // console.log('Note text to save:', noteText);
 
         if(noteText && currentNote.note){
             if(noteText.trim()===currentNote.note.trim()){
@@ -715,7 +715,7 @@ class LabelProfileNotes {
         }
 
         if (noteText.length === 0) {
-            console.log('Cannot save empty note');
+            // console.log('Cannot save empty note');
             window.show_warning('🚫 Cannot save an empty note! Add some content, pretty please. 📝✍️', 3000);
             this.noteBox.textarea.focus();
             this.resetSaveButton();
@@ -723,14 +723,14 @@ class LabelProfileNotes {
         }
 
         try {
-            console.log(`Saving note for profile ID: ${this.currentProfileInfo.profile_id}`);
+            // console.log(`Saving note for profile ID: ${this.currentProfileInfo.profile_id}`);
 
             if (currentNote && currentNote.id) {
-                console.log(`Updating existing note with ID: ${currentNote.id}`);
+                // console.log(`Updating existing note with ID: ${currentNote.id}`);
                 await window.notesDatabase.updateNote(currentNote.id, noteText);
                 // window.show_success('Your note has been updated.', 3000);
             } else {
-                console.log('Creating new note');
+                // console.log('Creating new note');
                 await window.notesDatabase.createNote(
                     this.currentProfileInfo.profile_id,
                     noteText,
@@ -742,7 +742,7 @@ class LabelProfileNotes {
             window.userActionsDatabase?.addAction("notes_saved");
             // this.closeNoteBox();
         } catch (error) {
-            console.error('Error saving note:', error);
+            // console.error('Error saving note:', error);
             window.show_error('Unable to save your note. Please try again.', 3000);
             window.userActionsDatabase?.addAction("notes_saved_failed");
             this.resetSaveButton();
@@ -802,7 +802,7 @@ class LabelProfileNotes {
             try {
                 this.showNoteBox();
             } catch (error) {
-                console.error('Error in handleKeyPress:', error);
+                // console.error('Error in handleKeyPress:', error);
                 window.show_error('Unable to open notes. Please refresh and try again.', 3000);
             }
         } else if (event.key === 'Escape') {
@@ -813,7 +813,7 @@ class LabelProfileNotes {
     // Initialize the component
     initialize() {
         document.addEventListener('keydown', this.handleKeyPress);
-        // console.log('LabelProfileNotes initialized');
+        console.log('LabelProfileNotes initialized');
     }
 
     // Clean up

@@ -14,7 +14,8 @@ class LabelManager {
             activeTooltip: null,
             lastUrl: location.href,
             lastContainer: null,
-            debounceTimeout: null
+            debounceTimeout: null,
+            editing: false
         };
 
 
@@ -237,6 +238,9 @@ class LabelManager {
 
     async handleLabelClick(labelId) {
         // console.log('Label clicked:', labelId);
+        if (this.state.editing) {
+            return;
+        }
         await window.labelsDatabase.applyLabel(labelId);
         // Your label click logic here
     }
@@ -314,7 +318,7 @@ class LabelManager {
             .filter(l => l.type === 'shared' && l.label_name.toLowerCase().includes(searchText));
 
         const content = `
-        ${searchText && owned.length > 0 || shared.length > 0? `
+        ${searchText && owned.length > 0 || shared.length > 0 ? `
             <div class="search_hint" style="padding: 0px 0px 5px 0px; color: #64748B; font-size: 12px; border-bottom: 1px solid #E2E8F0; text-align:center;">
                 Press Enter to use existing or Shift+Enter to create new
             </div>
@@ -359,14 +363,18 @@ class LabelManager {
                 // Create new label when no matches or Shift+Enter is pressed
                 let labelId = await window.labelsDatabase.createLabel(searchText);
                 if (labelId) {
-                    await window.labelsDatabase.applyLabel(labelId)
+                    if (!this.state.editing) {
+                        await window.labelsDatabase.applyLabel(labelId)
+                    }
                 }
                 event.target.value = '';
                 this.updateDropdownContent();
             } else {
                 // Use existing label
                 const firstLabelId = filteredLabels[0].label_id;
-                await window.labelsDatabase.applyLabel(firstLabelId);
+                if (!this.state.editing) {
+                    await window.labelsDatabase.applyLabel(firstLabelId);
+                }
             }
         }
     }
@@ -479,9 +487,10 @@ class LabelManager {
         this.elements.dropdown.querySelectorAll('.label_item').forEach(item => {
             item.addEventListener('click', async () => {
                 const labelId = item.dataset.labelId;
-                // console.log('Label clicked:', labelId);
-                // await window.labelsDatabase.deleteLabel(labelId);
-                await window.labelsDatabase.applyLabel(labelId);
+                if (!this.state.editing) {
+                    await window.labelsDatabase.applyLabel(labelId);
+                }
+
                 // Your click handling logic here
             });
         });
@@ -502,8 +511,12 @@ class LabelManager {
         if (!action) {
             // console.log('Label clicked:', labelId);
             // await window.labelsDatabase.deleteLabel(labelId);
-            await window.labelsDatabase.applyLabel(labelId);
+            if (!this.state.editing) {
+                await window.labelsDatabase.applyLabel(labelId);
+                // return;
+            }
             return;
+
         }
 
         switch (action) {
@@ -613,12 +626,15 @@ class LabelManager {
 
         // Track editing state
         let isEditing = true;
+        this.state.editing = true;
 
         // Save changes function
         const saveChanges = async () => {
             const newName = input.value.trim();
             if (!newName || newName === label.label_name) {
                 exitEditMode();
+                labelElement.innerHTML = originalContent;
+                this.attachLabelEventListeners(labelElement);
                 return;
             }
 
@@ -627,6 +643,8 @@ class LabelManager {
                 saveButton.disabled = true;
                 await window.labelsDatabase.editLabelName(labelId, newName);
                 exitEditMode();
+                labelElement.innerHTML = originalContent;
+                this.attachLabelEventListeners(labelElement);
 
                 // Show success state
                 const nameElement = labelElement.querySelector('.label_name');
@@ -640,6 +658,8 @@ class LabelManager {
             } catch (error) {
                 console.error('Error updating label:', error);
                 exitEditMode();
+                labelElement.innerHTML = originalContent;
+                this.attachLabelEventListeners(labelElement);
             }
         };
 
@@ -653,6 +673,7 @@ class LabelManager {
             // Exit edit mode if clicking outside the label element
             if (!labelElement.contains(e.target)) {
                 exitEditMode();
+                this.state.editing = false
             }
         };
 
@@ -660,9 +681,9 @@ class LabelManager {
         function exitEditMode() {
             if (!isEditing) return;
             isEditing = false;
+
             document.removeEventListener('mousedown', handleClickOutside);
-            labelElement.innerHTML = originalContent;
-            this.attachLabelEventListeners(labelElement);
+
         }
 
         // Add event listeners
@@ -672,9 +693,13 @@ class LabelManager {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 saveChanges();
+                this.state.editing = false;
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 exitEditMode();
+                labelElement.innerHTML = originalContent;
+                this.attachLabelEventListeners(labelElement);
+                this.state.editing = false;
             }
         });
 
@@ -682,6 +707,7 @@ class LabelManager {
             e.preventDefault();
             e.stopPropagation();
             saveChanges();
+            this.state.editing = false;
         });
 
         // Focus input

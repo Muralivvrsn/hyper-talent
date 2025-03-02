@@ -199,13 +199,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             message: 'Missing client credentials'
           };
         }
-        console.log({
-          accessToken,
-          refreshToken,
-          tokenExpiration,
-          clientId,
-          clientSecret
-        })
+        // console.log({
+        //   accessToken,
+        //   refreshToken,
+        //   tokenExpiration,
+        //   clientId,
+        //   clientSecret
+        // })
 
         if (!accessToken || !refreshToken) {
           return {
@@ -238,7 +238,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             }
           };
         } catch (refreshError) {
-          console.log(refreshError)
+          // console.log(refreshError)
           return {
             type: 'logged_out',
             message: 'Token refresh failed'
@@ -380,7 +380,7 @@ const refreshingToken = async () => {
     }
     // return data.access_token;
   } catch (error) {
-    console.log(error)
+    // console.log(error)
     throw error;
   }
 };

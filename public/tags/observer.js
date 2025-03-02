@@ -66,8 +66,8 @@ class LinkedInLabelsManager {
                     const originalColor = labelData.label_color;
 
                         label.style.backgroundColor = originalColor;
-                        console.log(originalColor)
-                        console.log(window.labelManagerUtils.generateTextColor(originalColor))
+                        // console.log(originalColor)
+                        // console.log(window.labelManagerUtils.generateTextColor(originalColor))
                         label.style.color = window.labelManagerUtils.generateTextColor(originalColor)
                         label.style.border = 'none';
                 }
@@ -403,8 +403,8 @@ class LinkedInLabelsManager {
         label.dataset.originalColor = labelData.label_color;
 
         label.style.backgroundColor = labelData.label_color;
-        console.log(labelData.label_color)
-        console.log(window.labelManagerUtils.generateTextColor(labelData.label_color))
+        // console.log(labelData.label_color)
+        // console.log(window.labelManagerUtils.generateTextColor(labelData.label_color))
         label.style.color = window.labelManagerUtils.generateTextColor(labelData.label_color);
         label.style.border = 'none';
 
@@ -454,6 +454,19 @@ class LinkedInLabelsManager {
 
         labelContainer.appendChild(label);
         return labelContainer;
+    }
+
+    updateLabel(labelsContainer, labelsData) {
+        // console.log(labelsData);
+        
+        const labelElement = labelsContainer.querySelector(`div[data-label-id="${labelsData.label_id}"]`);
+        
+        // If the element exists
+        if (labelElement) {
+            // This will change the text of the first text node
+            // The span (remove button) will remain untouched
+            labelElement.firstChild.textContent = labelsData.label_name;
+        }
     }
 
     processListItem(listItem) {
@@ -520,6 +533,18 @@ class LinkedInLabelsManager {
                         }
                     );
                     labelsContainer.appendChild(labelElement);
+                }
+            }
+            else{
+                const matchingProfile = label.profiles.find(p =>
+                    p.name.trim().toLowerCase() === name.toLowerCase()
+                );
+                if (matchingProfile) {
+                    this.updateLabel(
+                        labelsContainer,
+                        label
+                    );
+                    // labelsContainer.appendChild(labelElement);
                 }
             }
         });
