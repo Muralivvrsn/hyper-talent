@@ -5,12 +5,13 @@ class FilterManager {
 
         this.state = {
             isOpen: false,
-            labels: [], // Will be populated from labelsDatabase
-            selectedLabels: new Set(), // Track selected labels
+            labels: [],
+            selectedLabels: new Set(),
             currentPath: location.pathname,
             initialized: false,
             lastUrl: location.href,
-            debounceTimeout: null
+            debounceTimeout: null,
+            authChecked: false  // New flag to track auth check
         };
 
         this.elements = {
@@ -18,18 +19,60 @@ class FilterManager {
             dropdown: null
         };
 
-        // Bind methods
         this.handlers = {
             labelsUpdate: this.handleLabelsUpdate.bind(this),
             buttonClick: this.handleButtonClick.bind(this),
             outsideClick: this.handleOutsideClick.bind(this),
             resize: this.handleResize.bind(this),
-            filterClick: this.handleFilterClick.bind(this)
+            filterClick: this.handleFilterClick.bind(this),
+            authStateChange: this.handleAuthStateChange.bind(this)  // New handler
         };
 
         window.filterManager = this;
-        this.setupKeyboardNavigation();
-        this.initialize();
+
+        // Wait for auth state instead of checking immediately
+        this.waitForAuth();
+    }
+
+    // New method to wait for auth
+    waitForAuth() {
+        const checkAuth = () => {
+            if (window.firebaseService) {
+                // Remove the interval once we have firebaseService
+                clearInterval(this.authCheckInterval);
+
+                // Add auth state listener
+                window.firebaseService.addAuthStateListener(this.handlers.authStateChange);
+            }
+        };
+
+        // Check every 100ms for firebaseService
+        this.authCheckInterval = setInterval(checkAuth, 100);
+
+        // Also check immediately
+        checkAuth();
+
+        // Cleanup interval after 10 seconds to prevent infinite checking
+        setTimeout(() => {
+            clearInterval(this.authCheckInterval);
+        }, 10000);
+    }
+
+    // New handler for auth state changes
+    handleAuthStateChange(authState) {
+        if (!this.state.authChecked) {
+            this.state.authChecked = true;
+
+            // Check if user is logged in and has hyperverge email
+            const isHypervergeUser = window.firebaseService?.currentUser?.email?.includes("hyperverge.co");
+
+            if (authState?.status === 'logged_in' && isHypervergeUser) {
+                this.setupKeyboardNavigation();
+                this.initialize();
+            } else {
+                this.destroy(); // Cleanup if not a hyperverge user
+            }
+        }
     }
 
     initialize() {
@@ -37,14 +80,39 @@ class FilterManager {
 
         this.setupListeners();
         this.setupObservers();
-        if (window?.firebaseService?.currentUser?.email?.includes("hyperverge.co")) {
-            this.initializeUI();
-        }
-        
+        this.initializeUI();
 
         this.state.initialized = true;
     }
 
+    destroy() {
+        // Remove auth listener
+        if (window.firebaseService) {
+            window.firebaseService.removeAuthStateListener(this.handlers.authStateChange);
+        }
+
+        // Clear auth check interval if it's still running
+        if (this.authCheckInterval) {
+            clearInterval(this.authCheckInterval);
+        }
+
+        // Remove other listeners
+        if (window.labelsDatabase) {
+            window.labelsDatabase.removeListener(this.handlers.labelsUpdate);
+        }
+        document.removeEventListener('click', this.handlers.outsideClick);
+        window.removeEventListener('resize', this.handlers.resize);
+
+        // Clear timers
+        clearTimeout(this.state.debounceTimeout);
+
+        // Cleanup DOM
+        this.cleanupElements();
+
+        // Reset state
+        this.state.initialized = false;
+        window.filterManager = null;
+    }
     setupListeners() {
         if (window.labelsDatabase) {
             window.labelsDatabase.removeListener(this.handleLabelsUpdate);
@@ -460,24 +528,6 @@ class FilterManager {
         this.elements.dropdown = null;
     }
 
-    destroy() {
-        // Remove listeners
-        if (window.labelsDatabase) {
-            window.labelsDatabase.removeListener(this.handleLabelsUpdate);
-        }
-        document.removeEventListener('click', this.handlers.outsideClick);
-        window.removeEventListener('resize', this.handlers.resize);
-
-        // Clear timers
-        clearTimeout(this.state.debounceTimeout);
-
-        // Cleanup DOM
-        this.cleanupElements();
-
-        // Reset state
-        this.state.initialized = false;
-        window.filterManager = null;
-    }
 }
 
 // Initialize the filter manager when the script loads

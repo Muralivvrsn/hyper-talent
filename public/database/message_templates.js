@@ -58,140 +58,6 @@ class MessageTemplateDatabase {
         }
     }
 
-    async loadTemplates() {
-        if (this.isLoadingTemplates) {
-            // console.log('[MessageTemplateDB] Template loading already in progress');
-            return;
-        }
-    
-        this.isLoadingTemplates = true;
-        // console.log('[MessageTemplateDB] Starting template load');
-    
-        try {
-            const db = window.firebaseService.db;
-            const currentUser = window.firebaseService.currentUser;
-            if (!db || !currentUser) {
-                throw new Error('Firebase not initialized');
-            }
-    
-            // Clean up existing subscriptions
-            this.cleanupSubscriptions();
-            this.templates = [];
-    
-            // Set up single snapshot listener for user document - using the users_v2 collection
-            const userRef = db.collection('users_v2').doc(currentUser.uid);
-            
-            const userUnsubscribe = userRef.onSnapshot(async (userDoc) => {
-                try {
-                    this.cleanupTemplateSubscriptions();
-                    if (!userDoc.exists) {
-                        // console.log('[MessageTemplateDB] User document does not exist');
-                        this.templates = [];
-                        this._updateStatus('logged_in');
-                        return;
-                    }
-    
-                    // Get template references - now an array of objects with id, type, etc.
-                    const templateRefs = userDoc.data()?.d?.s || [];
-                    // console.log('[MessageTemplateDB] Found template references:', templateRefs.length);
-    
-                    if (templateRefs.length === 0) {
-                        this.templates = [];
-                        this._updateStatus('logged_in');
-                        return;
-                    }
-    
-                    // Set up listeners for each template
-                    await this.setupTemplateListeners(db, templateRefs);
-                } catch (error) {
-                    // console.error('[MessageTemplateDB] Template processing error:', error);
-                    this._notifyError('template_processing_failed', error.message);
-                    this._updateStatus('logged_out');
-                }
-            });
-    
-            this.currentSubscriptionBatch.add(userUnsubscribe);
-            this.initialized = true;
-    
-        } catch (error) {
-            // console.error('[MessageTemplateDB] Load templates failed:', error);
-            this._notifyError('load_templates_failed', error.message);
-            this.cleanupSubscriptions();
-            this._updateStatus('logged_out');
-        } finally {
-            this.isLoadingTemplates = false;
-        }
-    }
-
-    async setupTemplateListeners(db, templateRefs) {
-        let loadedTemplates = 0;
-        const totalTemplates = templateRefs.length;
-        const acceptedTemplates = templateRefs.filter(ref => 
-            ref.t === 'owned' || (ref.t === 'shared' && ref.a === true)
-        );
-        
-        // If no templates are accepted, update status immediately
-        if (acceptedTemplates.length === 0) {
-            this._updateStatus('logged_in');
-            return;
-        }
-
-        acceptedTemplates.forEach(templateRef => {
-            const templateUnsubscribe = db.collection('message_templates_v2')
-                .doc(templateRef.id)
-                .onSnapshot(
-                    async (templateDoc) => {
-                        try {
-                            if (!templateDoc.exists) {
-                                loadedTemplates++;
-                                return;
-                            }
-
-                            const templateData = templateDoc.data();
-                            this.updateTemplate({
-                                template_id: templateDoc.id,
-                                title: templateData.t,
-                                message: templateData.n,
-                                last_updated: templateData.lu,
-                                type: templateRef.t,
-                                created_at: templateRef.ca,
-                                // Include sharing details for shared templates
-                                ...(templateRef.t === 'shared' && {
-                                    shared_by_name: templateRef.sbn,
-                                    shared_at: templateRef.sa,
-                                    accepted: templateRef.a
-                                })
-                            });
-
-                            loadedTemplates++;
-
-                            if (loadedTemplates >= acceptedTemplates.length) {
-                                this._updateStatus('logged_in');
-                            }
-                        } catch (error) {
-                            // console.error(`[MessageTemplateDB] Template processing error:`, error);
-                            this._notifyError('template_processing_failed', error.message);
-                        }
-                    },
-                    error => {
-                        // console.error(`[MessageTemplateDB] Template listener error:`, error);
-                        this._notifyError('template_listener_failed', error.message);
-                        loadedTemplates++;
-                        if (loadedTemplates >= acceptedTemplates.length) {
-                            this._updateStatus('logged_in');
-                        }
-                    }
-                );
-
-            this.currentSubscriptionBatch.add(templateUnsubscribe);
-        });
-        
-        // If all templates have been processed synchronously (e.g., they're all cached)
-        if (loadedTemplates >= acceptedTemplates.length) {
-            this._updateStatus('logged_in');
-        }
-    }
-
     updateTemplate(newTemplate) {
         const index = this.templates.findIndex(t => t.template_id === newTemplate.template_id);
         if (index === -1) {
@@ -215,21 +81,23 @@ class MessageTemplateDatabase {
     }
 
     cleanupTemplateSubscriptions() {
-        // Keep user document listener but remove template listeners
+        // Find the user listener in the batch
         const userListener = Array.from(this.currentSubscriptionBatch)
-            .find(listener => listener.toString().includes('users_v2'));
-
+            .find(unsub => unsub.isUserListener === true);
+    
+        // Remove all listeners except the user listener
         this.currentSubscriptionBatch.forEach(unsub => {
             if (unsub !== userListener) {
                 try {
                     unsub();
                 } catch (e) {
-                    // console.error('[MessageTemplateDB] Template cleanup error:', e);
+                    console.error('Template cleanup error:', e);
                 }
             }
         });
-
-        this.currentSubscriptionBatch = new Set();
+    
+        // Clear the batch and add back the user listener if it exists
+        this.currentSubscriptionBatch.clear();
         if (userListener) {
             this.currentSubscriptionBatch.add(userListener);
         }
@@ -286,7 +154,7 @@ class MessageTemplateDatabase {
             }
         });
     }
-    
+
     _notifyListeners(status) {
         this.listeners.forEach(callback => {
             try {
@@ -301,65 +169,202 @@ class MessageTemplateDatabase {
             }
         });
     }
+    // In MessageTemplateDatabase class, modify these methods:
 
+    async setupTemplateListeners(db, templateRefs) {
+        // Clean up old template listeners but keep user listener
+        this.cleanupTemplateSubscriptions();
+
+        const acceptedTemplates = templateRefs.filter(ref =>
+            ref.t === 'owned' || (ref.t === 'shared' && ref.a === true)
+        );
+
+        // Keep existing templates that are still in acceptedTemplates
+        this.templates = this.templates.filter(template =>
+            acceptedTemplates.some(ref => ref.id === template.template_id)
+        );
+
+        // Set up listeners for all templates
+        acceptedTemplates.forEach(templateRef => {
+            const templateUnsubscribe = db.collection('message_templates_v2')
+                .doc(templateRef.id)
+                .onSnapshot(
+                    async (templateDoc) => {
+                        try {
+                            if (!templateDoc.exists) {
+                                if (templateRef.t === 'owned' && templateRef.ca) {
+                                    // For new templates, wait and retry
+                                    let retries = 3;
+                                    while (retries > 0 && !templateDoc.exists) {
+                                        await new Promise(resolve => setTimeout(resolve, 300));
+                                        const newDoc = await templateDoc.ref.get();
+                                        if (newDoc.exists) {
+                                            templateDoc = newDoc;
+                                            break;
+                                        }
+                                        retries--;
+                                    }
+                                }
+
+                                if (!templateDoc.exists) {
+                                    this.templates = this.templates.filter(t =>
+                                        t.template_id !== templateRef.id
+                                    );
+                                    this.notifyListeners();
+                                    return;
+                                }
+                            }
+
+                            const templateData = templateDoc.data();
+                            const newTemplate = {
+                                template_id: templateDoc.id,
+                                title: templateData.t,
+                                message: templateData.n,
+                                last_updated: templateData.lu,
+                                type: templateRef.t,
+                                created_at: templateRef.ca,
+                                ...(templateRef.t === 'shared' && {
+                                    shared_by_name: templateRef.sbn,
+                                    shared_at: templateRef.sa,
+                                    accepted: templateRef.a
+                                })
+                            };
+
+                            const index = this.templates.findIndex(t =>
+                                t.template_id === templateDoc.id
+                            );
+
+                            if (index === -1) {
+                                this.templates.push(newTemplate);
+                            } else {
+                                this.templates[index] = newTemplate;
+                            }
+
+                            this.notifyListeners();
+                        } catch (error) {
+                            this._notifyError('template_processing_failed', error.message);
+                        }
+                    },
+                    error => {
+                        this._notifyError('template_listener_failed', error.message);
+                    }
+                );
+
+            this.currentSubscriptionBatch.add(templateUnsubscribe);
+        });
+    }
+
+    async loadTemplates() {
+        if (this.isLoadingTemplates) {
+            return;
+        }
+    
+        this.isLoadingTemplates = true;
+    
+        try {
+            const db = window.firebaseService.db;
+            const currentUser = window.firebaseService.currentUser;
+            if (!db || !currentUser) {
+                throw new Error('Firebase not initialized');
+            }
+    
+            // Clean up existing subscriptions but DON'T set up new ones yet
+            this.cleanupSubscriptions();
+            
+            // Set up user document listener
+            const userRef = db.collection('users_v2').doc(currentUser.uid);
+            
+            // Create the user listener with a unique identifier
+            const userUnsubscribe = userRef.onSnapshot({
+                includeMetadataChanges: true  // This is important for catching all updates
+            }, async (userDoc) => {
+                try {
+                    console.log('Message template updated', userDoc.metadata.hasPendingWrites);
+                    
+                    // Skip updates from local writes until they're confirmed by the server
+                    if (userDoc.metadata.hasPendingWrites) {
+                        return;
+                    }
+    
+                    if (!userDoc.exists) {
+                        this.templates = [];
+                        this._updateStatus('logged_in');
+                        return;
+                    }
+    
+                    // Get template references
+                    const templateRefs = userDoc.data()?.d?.s || [];
+                    
+                    // Set up listeners for each template
+                    await this.setupTemplateListeners(db, templateRefs);
+                    
+                    // Update status after processing all templates
+                    this._updateStatus('logged_in');
+                } catch (error) {
+                    console.error('Template processing error:', error);
+                    this._notifyError('template_processing_failed', error.message);
+                }
+            }, error => {
+                console.error('User listener error:', error);
+                this._notifyError('user_listener_failed', error.message);
+                this._updateStatus('logged_out');
+            });
+    
+            // Add a special property to identify this as the user listener
+            userUnsubscribe.isUserListener = true;
+            
+            // Store the unsubscribe function
+            this.currentSubscriptionBatch.add(userUnsubscribe);
+            this.initialized = true;
+    
+        } catch (error) {
+            console.error('Load templates error:', error);
+            this._notifyError('load_templates_failed', error.message);
+            this.cleanupSubscriptions();
+            this._updateStatus('logged_out');
+        } finally {
+            this.isLoadingTemplates = false;
+        }
+    }
+    
     async createTemplate(title, message) {
         try {
             if (!title || !message) {
                 throw new Error('Title and message are required');
             }
-
+    
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
             
             if (!db || !currentUser) {
                 throw new Error('Firebase not initialized or user not logged in');
             }
-
-            // Create a new template document in message_templates_v2
-            const templateRef = await db.collection('message_templates_v2').add({
+    
+            const userRef = db.collection('users_v2').doc(currentUser.uid);
+            
+            // Create the template document first
+            const templateRef = db.collection('message_templates_v2').doc();
+            await templateRef.set({
                 t: title,
                 n: message,
                 lu: firebase.firestore.FieldValue.serverTimestamp()
             });
-
-            // Add template reference to user document
-            const userRef = db.collection('users_v2').doc(currentUser.uid);
-            
-            // Get current user document
-            const userDoc = await userRef.get();
-            if (!userDoc.exists) {
-                // Create user document if it doesn't exist
-                await userRef.set({
-                    d: {
-                        s: [{
-                            id: templateRef.id,
-                            t: 'owned',
-                            ca: firebase.firestore.FieldValue.serverTimestamp()
-                        }]
-                    }
-                });
-            } else {
-                // Update existing user document
-                const userData = userDoc.data();
-                const templates = userData?.d?.s || [];
-                
-                await userRef.update({
-                    'd.s': [...templates, {
-                        id: templateRef.id,
-                        t: 'owned',
-                        ca: firebase.firestore.FieldValue.serverTimestamp()
-                    }]
-                });
-            }
-
+    
+            // Now update the user document
+            await userRef.update({
+                'd.s': firebase.firestore.FieldValue.arrayUnion({
+                    id: templateRef.id,
+                    t: 'owned',
+                    ca: firebase.firestore.FieldValue.serverTimestamp()
+                })
+            });
+    
             return templateRef.id;
         } catch (error) {
-            // console.error('[MessageTemplateDB] Create template error:', error);
             this._notifyError('create_template_failed', error.message);
             throw error;
         }
     }
-
     async updateTemplateContent(templateId, title, message) {
         try {
             if (!templateId || !title || !message) {
@@ -394,7 +399,7 @@ class MessageTemplateDatabase {
 
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
-            
+
             if (!db || !currentUser) {
                 throw new Error('Firebase not initialized or user not logged in');
             }
@@ -402,14 +407,14 @@ class MessageTemplateDatabase {
             // Get current user document
             const userRef = db.collection('users_v2').doc(currentUser.uid);
             const userDoc = await userRef.get();
-            
+
             if (!userDoc.exists) {
                 throw new Error('User document does not exist');
             }
 
             const userData = userDoc.data();
             let templates = userData?.d?.s || [];
-            
+
             // Find template reference in user document
             const templateIndex = templates.findIndex(t => t.id === templateId);
             if (templateIndex === -1) {
@@ -417,13 +422,13 @@ class MessageTemplateDatabase {
             }
 
             const templateRef = templates[templateIndex];
-            
+
             // Check if template is owned
             if (templateRef.t === 'owned') {
                 // If owned, delete from message_templates_v2
                 await db.collection('message_templates_v2').doc(templateId).delete();
             }
-            
+
             // Remove reference from user document
             templates = templates.filter(t => t.id !== templateId);
             await userRef.update({
@@ -446,7 +451,7 @@ class MessageTemplateDatabase {
 
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
-            
+
             if (!db || !currentUser) {
                 throw new Error('Firebase not initialized or user not logged in');
             }
@@ -460,7 +465,7 @@ class MessageTemplateDatabase {
             // Get recipient user document
             const recipientRef = db.collection('users_v2').doc(recipientId);
             const recipientDoc = await recipientRef.get();
-            
+
             if (!recipientDoc.exists) {
                 throw new Error('Recipient user does not exist');
             }
@@ -472,7 +477,7 @@ class MessageTemplateDatabase {
             // Add template reference to recipient's document
             const recipientData = recipientDoc.data();
             const templates = recipientData?.d?.s || [];
-            
+
             // Check if template is already shared
             if (templates.some(t => t.id === templateId)) {
                 throw new Error('Template already shared with this user');
@@ -504,7 +509,7 @@ class MessageTemplateDatabase {
 
             const db = window.firebaseService.db;
             const currentUser = window.firebaseService.currentUser;
-            
+
             if (!db || !currentUser) {
                 throw new Error('Firebase not initialized or user not logged in');
             }
@@ -512,14 +517,14 @@ class MessageTemplateDatabase {
             // Get current user document
             const userRef = db.collection('users_v2').doc(currentUser.uid);
             const userDoc = await userRef.get();
-            
+
             if (!userDoc.exists) {
                 throw new Error('User document does not exist');
             }
 
             const userData = userDoc.data();
             const templates = userData?.d?.s || [];
-            
+
             // Find template reference in user document
             const templateIndex = templates.findIndex(t => t.id === templateId && t.t === 'shared');
             if (templateIndex === -1) {
@@ -528,7 +533,7 @@ class MessageTemplateDatabase {
 
             // Update template reference status
             templates[templateIndex].a = accept;
-            
+
             await userRef.update({
                 'd.s': templates
             });

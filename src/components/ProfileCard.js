@@ -49,6 +49,76 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
     );
   }
 
+  const generateTextColor = (backgroundColor) => {
+    let h, s, l;
+
+    if (backgroundColor.startsWith('#')) {
+      const hsl = hexToHSL(backgroundColor);
+      h = hsl.h;
+      s = hsl.s;
+      l = hsl.l;
+    } else {
+      const hslValues = parseHSL(backgroundColor);
+      if (!hslValues) return '#000000'; // Default to black if parsing fails
+      h = hslValues.h;
+      s = hslValues.s;
+      l = hslValues.l;
+    }
+
+    // For very light colors (high lightness), use black text
+    // For darker colors, use white text
+    // We can also consider saturation in the calculation
+    const threshold = 65; // Adjust this value to fine-tune the switch point
+
+    // If the color is very light (high lightness) or has very low saturation, use black
+    if (l > threshold || (l > 60 && s < 15)) {
+      return '#000000';
+    }
+    return '#FFFFFF';
+  }
+  const hexToHSL=(hex) =>{
+    // Remove the # if present
+    hex = hex.replace(/^#/, '');
+
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+      h = s = 0; // achromatic
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      l: Math.round(l * 100)
+    };
+  }
+
+  const parseHSL = (hslString) => {
+    const matches = hslString.match(/hsl\((\d+),\s*(\d+)%?,\s*(\d+)%?\)/);
+    if (!matches) return null;
+    return {
+      h: parseInt(matches[1]),
+      s: parseInt(matches[2]),
+      l: parseInt(matches[3])
+    };
+  }
+
   return (
     <div className="flex flex-wrap gap-1.5 mt-1.5">
       {labels.map((label) => (
@@ -60,7 +130,7 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
             borderWidth: theme === "dark" ? "0px" : "1px",
             borderStyle: "solid",
             borderColor: theme === "dark" ? "transparent" : label.color,
-            color: theme === "dark" ? "#FFFFFF" : label.color,
+            color: generateTextColor(label.color),
           }}
         >
           <span className="truncate">{label.name}</span>

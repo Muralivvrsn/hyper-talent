@@ -162,27 +162,27 @@ class LabelManager {
 
     createElements(container) {
         if (!container) return;
-    
+
         this.cleanupElements();
-    
+
         // Create button first
         this.elements.button = document.createElement('button');
         this.elements.button.className = 'hyper_label_button';
         this.elements.button.id = 'hyper_label_button';
         this.updateButtonState();
         this.elements.button.addEventListener('click', this.handlers.buttonClick);
-    
+
         // Create dropdown
         this.elements.dropdown = document.createElement('div');
         this.elements.dropdown.className = 'hyper_label_dropdown';
         this.elements.dropdown.id = 'hyper_label_dropdown';
         this.elements.dropdown.style.display = 'none';
-    
+
         // Add search input with icon
         const searchContainer = document.createElement('div');
         searchContainer.className = 'label_search_container';
         searchContainer.style.position = 'relative'; // For positioning the icon
-    
+
         // Create search icon
         const searchIcon = document.createElement('div');
         searchIcon.innerHTML = `
@@ -196,7 +196,7 @@ class LabelManager {
         // searchIcon.style.top = '50%';
         // searchIcon.style.transform = 'translateY(-50%)';
         // searchIcon.style.pointerEvents = 'none'; // Ensure it doesn't interfere with input
-    
+
         const searchInput = document.createElement('input');
         searchInput.type = 'text';
         searchInput.className = 'label_search_input';
@@ -204,14 +204,14 @@ class LabelManager {
         searchInput.style.paddingLeft = '36px'; // Make room for the icon
         searchInput.addEventListener('input', this.handleSearchInput.bind(this));
         searchInput.addEventListener('keydown', this.handleSearchKeydown.bind(this));
-    
+
         // Append search icon and input to container
         searchContainer.appendChild(searchIcon);
         searchContainer.appendChild(searchInput);
-    
+
         // Create content container
         const isProfilePage = /linkedin\.com\/in\//.test(window.location.href);
-    
+
         if (isProfilePage) {
             this.elements.button.style.position = 'fixed';
             this.elements.button.style.top = '20px';
@@ -220,59 +220,19 @@ class LabelManager {
         }
         const contentContainer = document.createElement('div');
         contentContainer.className = 'dropdown_content';
-    
+
         // Build dropdown structure
         this.elements.dropdown.appendChild(searchContainer);
         this.elements.dropdown.appendChild(contentContainer);
-    
+
         // Insert into DOM
         container.appendChild(this.elements.button);
         document.body.appendChild(this.elements.dropdown);
-    
+
         // Update content after structure is ready
         this.updateDropdownContent();
     }
 
-    handleSearchInput(event) {
-        const searchText = event.target.value.trim().toLowerCase();
-
-        if (!searchText) {
-            // If search is empty, show all labels
-            this.updateDropdownContent();
-            return;
-        }
-
-        // Group labels by type
-        const owned = this.state.labels
-            .filter(l => l.type === 'owned' && l.label_name.toLowerCase().includes(searchText));
-        const shared = this.state.labels
-            .filter(l => l.type === 'shared' && l.label_name.toLowerCase().includes(searchText));
-
-        const content = `
-            ${owned.length ? `
-                <div class="label_section">
-                    <div class="section_header">Owned</div>
-                    ${owned.map(label => this.createLabelElement(label)).join('')}
-                </div>
-            ` : ''}
-            ${shared.length ? `
-                <div class="label_section">
-                    <div class="section_header">Shared</div>
-                    ${shared.map(label => this.createLabelElement(label)).join('')}
-                </div>
-            ` : ''}
-            ${!owned.length && !shared.length ?
-                '<div class="no_labels">No matching labels found. Press Enter to create.</div>' : ''
-            }
-        `;
-
-        this.elements.dropdown.querySelector('.dropdown_content').innerHTML = content;
-
-        // Reattach event listeners
-        this.elements.dropdown.querySelectorAll('.action_btn').forEach(btn => {
-            btn.addEventListener('click', this.handlers.labelAction);
-        });
-    }
 
 
     async handleLabelClick(labelId) {
@@ -337,6 +297,54 @@ class LabelManager {
         `;
     }
 
+    // Modify the handleSearchInput function to add the hint text
+    handleSearchInput(event) {
+        const searchText = event.target.value.trim().toLowerCase();
+
+        if (!searchText) {
+            // If search is empty, show all labels
+            this.updateDropdownContent();
+            return;
+        }
+
+        // Group labels by type
+        const owned = this.state.labels
+            .filter(l => l.type === 'owned' && l.label_name.toLowerCase().includes(searchText));
+        const shared = this.state.labels
+            .filter(l => l.type === 'shared' && l.label_name.toLowerCase().includes(searchText));
+
+        const content = `
+        ${searchText && owned.length > 0 || shared.length > 0? `
+            <div class="search_hint" style="padding: 0px 0px 5px 0px; color: #64748B; font-size: 12px; border-bottom: 1px solid #E2E8F0; text-align:center;">
+                Press Enter to use existing or Shift+Enter to create new
+            </div>
+        ` : ''}
+        ${owned.length ? `
+            <div class="label_section">
+                <div class="section_header">Owned</div>
+                ${owned.map(label => this.createLabelElement(label)).join('')}
+            </div>
+        ` : ''}
+        ${shared.length ? `
+            <div class="label_section">
+                <div class="section_header">Shared</div>
+                ${shared.map(label => this.createLabelElement(label)).join('')}
+            </div>
+        ` : ''}
+        ${!owned.length && !shared.length ?
+                '<div class="no_labels" style="text-align: center; font-size: 13px; padding: 16px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">Nothing found. Press Shift+Enter to create this label!</div>' : ''
+            }
+    `;
+
+        this.elements.dropdown.querySelector('.dropdown_content').innerHTML = content;
+
+        // Reattach event listeners
+        this.elements.dropdown.querySelectorAll('.action_btn').forEach(btn => {
+            btn.addEventListener('click', this.handlers.labelAction);
+        });
+    }
+
+    // Modify the handleSearchKeydown function to handle Shift+Enter
     async handleSearchKeydown(event) {
         if (event.key === 'Enter') {
             const searchText = event.target.value.trim();
@@ -347,18 +355,18 @@ class LabelManager {
                 label.label_name.toLowerCase().includes(searchText.toLowerCase())
             );
 
-            if (filteredLabels.length === 0) {
-                // console.log('creating label:', searchText);
-                await window.labelsDatabase.createLabel(searchText);
+            if (filteredLabels.length === 0 || event.shiftKey) {
+                // Create new label when no matches or Shift+Enter is pressed
+                let labelId = await window.labelsDatabase.createLabel(searchText);
+                if (labelId) {
+                    await window.labelsDatabase.applyLabel(labelId)
+                }
                 event.target.value = '';
                 this.updateDropdownContent();
             } else {
-                // Programmatically trigger click
+                // Use existing label
                 const firstLabelId = filteredLabels[0].label_id;
-                // console.log('Clicking first label:', firstLabelId);
-                // await window.labelsDatabase.deleteLabel(firstLabelId);
                 await window.labelsDatabase.applyLabel(firstLabelId);
-                // Your click handling logic here
             }
         }
     }
@@ -419,7 +427,7 @@ class LabelManager {
         contentContainer.className = 'dropdown_content';
 
         if (this.state.status === 'in_progress') {
-            contentContainer.innerHTML = '<div class="loading_message">Loading labels...</div>';
+            contentContainer.innerHTML = '<div class="loading_message" style="text-align: center; font-size: 13px; padding: 16px 0; display: flex; align-items: center; justify-content: center; gap: 8px;" >Loading labels...</div>';
         } else if (this.state.status === 'logged_out') {
             // Show login prompt for logged out users
             contentContainer.innerHTML = `
@@ -457,9 +465,10 @@ class LabelManager {
             </div>
         ` : ''}
         ${!owned.length && !shared.length ?
-                    '<div class="no_labels">No labels available</div>' : ''
-                }
-        `;
+                    '<div class="no_labels" style="text-align: center; font-size: 13px; padding: 16px 0; display: flex; align-items: center; justify-content: center; gap: 8px;">' +
+                    'Empty as my coffee cup! Hit Enter to brew some labels ☕' +
+                    '</div>' : ''
+                }`;
         }
 
         // Update DOM if needed
@@ -849,6 +858,7 @@ class LabelManager {
                 }
             } else {
                 const existingButton = document.querySelector('.hyper_label_button');
+                existingButton.style.opacity = 0;
                 if (!existingButton) {
                     this.createElements(document.body);
                 }

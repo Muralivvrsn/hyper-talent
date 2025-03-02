@@ -18,6 +18,8 @@ class LabelProfileNotes {
         if (this.databaseSubscription) {
             window.notesDatabase.removeListener(this.databaseSubscription);
         }
+        // console.log(data)
+
     
         this.databaseSubscription = window.notesDatabase.addListener((data) => {
             console.log('Database update received:', data);
@@ -27,20 +29,11 @@ class LabelProfileNotes {
                 console.log('No current profile info, skipping update');
                 return;
             }
-    
-            // Handle status updates
-            if (data && data.type === 'status') {
-                console.log('Status update:', data.status);
-                this.status = data.status;
-                
-                // Use setTimeout to ensure this runs after current execution completes
-                setTimeout(() => {
-                    this.updateNoteBoxContent();
-                }, 0);
-                return;
-            }
-    
             // Handle notes updates
+            if (data && data.type === 'status') {
+                this.status = data.status;
+            }
+            console.log('notes udpating')
             if (data && data.notes) {
                 console.log('Notes update received');
     
@@ -133,6 +126,8 @@ class LabelProfileNotes {
     // Update the note box content based on current state
     updateNoteBoxContent() {
         if (!this.noteBox || !this.noteBox.container) return;
+
+        console.log(this.status)
 
         const container = this.noteBox.container;
         while (container.firstChild) {
@@ -237,7 +232,7 @@ class LabelProfileNotes {
                 myNotesTab.style.flex = '1';
                 myNotesTab.style.justifyContent = 'center';
                 myNotesTab.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
@@ -256,12 +251,12 @@ class LabelProfileNotes {
                 sharedTab.style.justifyContent = 'center';
 
                 sharedTab.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
                         <polyline points="16 6 12 2 8 6"></polyline>
                         <line x1="12" y1="2" x2="12" y2="15"></line>
                     </svg>
-                    <span>Shared</span>
+                    <span>Shared ( ${sharedNotes.length} )</span>
                 `;
 
                 sharedTab.onclick = () => {
@@ -330,14 +325,6 @@ class LabelProfileNotes {
                         sharedNotes.forEach((note, index) => {
                             const sharedItem = document.createElement('div');
                             sharedItem.className = 'shared-note-item';
-
-                            // Add hover effect
-                            sharedItem.onmouseover = () => {
-                                sharedItem.style.backgroundColor = '#f7fafc';
-                            };
-                            sharedItem.onmouseout = () => {
-                                sharedItem.style.backgroundColor = '';
-                            };
 
                             // Shared user info
                             const userInfo = document.createElement('div');
@@ -479,24 +466,13 @@ class LabelProfileNotes {
                     saveBtn.className = 'note-save-btn';
 
                     saveBtn.innerHTML = `
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
                             <polyline points="17 21 17 13 7 13 7 21"></polyline>
                             <polyline points="7 3 7 8 15 8"></polyline>
                         </svg>
                         <span class="save-btn-text">Save Note</span>
                     `;
-
-                    saveBtn.onmouseover = () => {
-                        if (!saveBtn.disabled) {
-                            saveBtn.style.backgroundColor = '#6b46c1';
-                        }
-                    };
-                    saveBtn.onmouseout = () => {
-                        if (!saveBtn.disabled) {
-                            saveBtn.style.backgroundColor = '#805ad5';
-                        }
-                    };
 
                     saveBtn.onclick = () => {
                         // Update button state to "Saving..."
@@ -598,7 +574,7 @@ class LabelProfileNotes {
 
             // Get current status
             this.status = window.notesDatabase?.status || 'in_progress';
-            console.log('Current status:', this.status);
+            // console.log('Current status:', this.status);
 
             // Setup database listener now that we have profile info
             this.setupDatabaseListener();
@@ -730,9 +706,17 @@ class LabelProfileNotes {
         console.log('Current note:', currentNote);
         console.log('Note text to save:', noteText);
 
+        if(noteText && currentNote.note){
+            if(noteText.trim()===currentNote.note.trim()){
+                window.show_warning('⚠️ No changes detected. Are you sure you want to save? 🤔', 3000);
+                this.resetSaveButton();
+                return;
+            }
+        }
+
         if (noteText.length === 0) {
             console.log('Cannot save empty note');
-            window.show_warning('Cannot save an empty note. Please add some content.', 3000);
+            window.show_warning('🚫 Cannot save an empty note! Add some content, pretty please. 📝✍️', 3000);
             this.noteBox.textarea.focus();
             this.resetSaveButton();
             return;
@@ -756,7 +740,7 @@ class LabelProfileNotes {
             }
 
             window.userActionsDatabase?.addAction("notes_saved");
-            this.closeNoteBox();
+            // this.closeNoteBox();
         } catch (error) {
             console.error('Error saving note:', error);
             window.show_error('Unable to save your note. Please try again.', 3000);

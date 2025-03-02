@@ -1,14 +1,92 @@
 import { doc, runTransaction } from 'firebase/firestore';
 
-export const getRandomColor = () => {
-  const colors = [
-    '#191970', '#800020', '#36454F', '#228B22', '#301934',
-    '#002147', '#654321', '#2F4F4F', '#4B0082', '#8B0000',
-    '#556B2F', '#004D4D', '#555D50', '#702963', '#8B008B',
-    '#008B8B', '#242124', '#1F2D1B', '#003153', '#3C1414'
-  ];
-  return colors[Math.floor(Math.random() * colors.length)];
-};
+export const hexToHSL = (hex) => {
+  // Remove the # if present
+  hex = hex.replace(/^#/, '');
+
+  // Parse the hex values
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0; // achromatic
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100)
+  };
+}
+
+export const parseHSL = (hslString) => {
+  const matches = hslString.match(/hsl\((\d+),\s*(\d+)%?,\s*(\d+)%?\)/);
+  if (!matches) return null;
+  return {
+    h: parseInt(matches[1]),
+    s: parseInt(matches[2]),
+    l: parseInt(matches[3])
+  };
+}
+
+// Generate a random color that's different from existing colors
+const generateRandomColor = async (existingColors = []) => {
+  const minDistance = 30; // Minimum hue distance between colors
+
+  // Convert all existing colors to HSL for comparison
+  const existingHSL = existingColors.map(color => {
+    if (color.startsWith('#')) {
+      return hexToHSL(color);
+    } else {
+      return parseHSL(color);
+    }
+  });
+
+  let attempts = 0;
+  const maxAttempts = 50;
+
+  while (attempts < maxAttempts) {
+    const hue = Math.floor(Math.random() * 360);
+    const saturation = Math.floor(Math.random() * (80 - 60) + 60); // Random saturation between 60-80%
+    const lightness = Math.floor(Math.random() * (85 - 25) + 25);  // Random lightness between 25-85%
+
+    // Check if this color is far enough from existing colors
+    const isFarEnough = existingHSL.every(existing => {
+      if (!existing) return true;
+      const hueDiff = Math.min(
+        Math.abs(hue - existing.h),
+        360 - Math.abs(hue - existing.h)
+      );
+      return hueDiff > minDistance;
+    });
+
+    if (isFarEnough || attempts === maxAttempts - 1) {
+      return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+
+    attempts++;
+  }
+
+  // Fallback if we couldn't find a distinct color
+  const hue = Math.floor(Math.random() * 360);
+  const saturation = Math.floor(Math.random() * (80 - 60) + 60);
+  const lightness = Math.floor(Math.random() * (85 - 25) + 25);
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
 
 export const createLabel = async (labelName, userId, db) => {
   if (!userId || !labelName.trim()) return null;
@@ -26,6 +104,10 @@ export const createLabel = async (labelName, userId, db) => {
 
       const userData = userDoc.data();
       const userLabels = Array.isArray(userData.d?.l) ? userData.d.l : [];
+      // const getExistingColors = (labels) => {
+      //   // console.log(labels)
+      //   return labels.map(label => label.label_color);
+      // };
 
       // Check if label with same name already exists
       if (userLabels.length > 0) {
@@ -51,7 +133,7 @@ export const createLabel = async (labelName, userId, db) => {
       }
 
       const labelId = `label_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const color = getRandomColor();
+      const color = await generateRandomColor();
 
       const labelRef = doc(db, 'profile_labels_v2', labelId);
       transaction.set(labelRef, {

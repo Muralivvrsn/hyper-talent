@@ -358,7 +358,8 @@ class LinkedInLabelsDatabase {
             );
 
             if (isDuplicate) {
-                throw new Error('Label with this name already exists');
+                window.complete_action('creating label', false, "Oops! This label already exists. Great minds think alike! 🎯");
+                return false;
             }
 
             const db = window.firebaseService.db;
@@ -404,7 +405,7 @@ class LinkedInLabelsDatabase {
         } catch (error) {
             console.error('[LinkedInLabels] Create label error:', error);
             window.complete_action('creating label', false, "Label stork got lost. Your creation's fashionably late! 🎪🦢");
-            throw error;
+            return false;
         }
     }
 

@@ -62,101 +62,72 @@ class NotesDatabase {
     // Modify the setupNoteListeners method in NotesDatabase class to emit note update events
 
     async setupNoteListeners(db, noteItems) {
-        let loadedNotes = 0;
-        const totalNotes = noteItems.length;
-
+        const loadingPromises = [];
+    
         noteItems.forEach(noteItem => {
             const noteId = noteItem.id;
-
-            const noteUnsubscribe = db.collection('profile_notes_v2')
-                .doc(noteId)
-                .onSnapshot(
-                    async (noteDoc) => {
-                        try {
-                            if (!noteDoc.exists) {
-                                loadedNotes++;
-                                return;
-                            }
-
-                            const noteData = noteDoc.data();
-                            const previousNote = this.notes[noteId];
-
-                            this.notes[noteId] = {
-                                id: noteDoc.id,
-                                note: noteData.n,
-                                lastUpdated: noteData.lu,
-                                profileId: noteData.p,
-                                // Add the metadata from user document
-                                metadata: {
-                                    createdAt: noteItem.ca,
-                                    type: noteItem.t,
-                                    // Include sharing info if available
-                                    ...(noteItem.t === 'shared' && {
-                                        sharedAt: noteItem.sa,
-                                        sharedByName: noteItem.sbn,
-                                        permission: noteItem.ps,
-                                        accepted: noteItem.a
-                                    })
+            
+            const loadPromise = new Promise((resolve) => {
+                const noteUnsubscribe = db.collection('profile_notes_v2')
+                    .doc(noteId)
+                    .onSnapshot(
+                        async (noteDoc) => {
+                            try {
+                                if (!noteDoc.exists) {
+                                    resolve();
+                                    return;
                                 }
-                            };
-
-                            if (previousNote && noteData) {
-                                this.listeners.forEach(callback => {
-                                    try {
-                                        callback({
-                                            type: 'status_changed',  // New event type
-                                            noteId: noteId,
-                                            profileId: noteData.p,
-                                            note: this.notes[noteId],
-                                            lastUpdated: noteData.lu,  // Important for time updates
-                                            status: this.status,
-                                            notes: this.notes
-                                        });
-                                    } catch (error) {
-                                        console.error('[NotesDB] Error in status update callback:', error);
+    
+                                const noteData = noteDoc.data();
+                                const previousNote = this.notes[noteId];
+    
+                                this.notes[noteId] = {
+                                    id: noteDoc.id,
+                                    note: noteData.n,
+                                    lastUpdated: noteData.lu,
+                                    profileId: noteData.p,
+                                    metadata: {
+                                        createdAt: noteItem.ca,
+                                        type: noteItem.t,
+                                        ...(noteItem.t === 'shared' && {
+                                            sharedAt: noteItem.sa,
+                                            sharedByName: noteItem.sbn,
+                                            permission: noteItem.ps,
+                                            accepted: noteItem.a
+                                        })
                                     }
-                                });
+                                };
+    
+                                // Notify for updates after initial load
+                                if (previousNote && noteData) {
+                                    this.notifyUpdate(noteId, noteData);
+                                }
+    
+                                resolve();
+                            } catch (error) {
+                                console.error(`[NotesDB] Note processing error:`, error);
+                                this._notifyError('note_processing_failed', error.message);
+                                resolve();
                             }
-
-                            // Emit note update event if this is an update (not initial load)
-                            if (previousNote && (previousNote.note !== noteData.n || previousNote.lastUpdated !== noteData.lu)) {
-                                this.listeners.forEach(callback => {
-                                    try {
-                                        callback({
-                                            type: 'note_updated',
-                                            noteId: noteId,
-                                            profileId: noteData.p,
-                                            note: this.notes[noteId],
-                                            status: this.status,
-                                            notes: this.notes
-                                        });
-                                    } catch (error) {
-                                        console.error('[NotesDB] Error in note update callback:', error);
-                                    }
-                                });
-                            }
-
-                            loadedNotes++;
-                            if (loadedNotes >= totalNotes) {
-                                this._updateStatus('logged_in');
-                            }
-                        } catch (error) {
-                            console.error(`[NotesDB] Note processing error:`, error);
-                            this._notifyError('note_processing_failed', error.message);
+                        },
+                        error => {
+                            console.error(`[NotesDB] Note listener error:`, error);
+                            this._notifyError('note_listener_failed', error.message);
+                            resolve();
                         }
-                    },
-                    error => {
-                        console.error(`[NotesDB] Note listener error:`, error);
-                        this._notifyError('note_listener_failed', error.message);
-                        loadedNotes++;
-                        if (loadedNotes >= totalNotes) {
-                            this._updateStatus('logged_in');
-                        }
-                    }
-                );
-
-            this.currentSubscriptionBatch.add(noteUnsubscribe);
+                    );
+    
+                this.currentSubscriptionBatch.add(noteUnsubscribe);
+            });
+    
+            loadingPromises.push(loadPromise);
         });
+    
+        // Wait for all notes to load
+        await Promise.all(loadingPromises);
+        
+        // Only update status after all notes are loaded
+        this._updateStatus('logged_in');
     }
 
     // Add a listener function for the user document to detect changes in the notes list
@@ -229,8 +200,6 @@ class NotesDatabase {
                                 try {
                                     callback({
                                         type: 'notes_list_updated',
-                                        addedNotes: addedNotes,
-                                        removedNotes: removedNotes,
                                         status: this.status,
                                         notes: this.notes
                                     });
@@ -259,8 +228,6 @@ class NotesDatabase {
                     this._updateStatus('logged_out');
                 }
             );
-
-            this.setLoading(false)
 
             this.currentSubscriptionBatch.add(userUnsubscribe);
             this.initialized = true;
@@ -337,7 +304,7 @@ class NotesDatabase {
 
     async createNote(profileId, noteText, profileData = null) {
         // this.setLoading(true);
-        if(!window.start_action('notes saving','notes saving'))
+        if(!window.start_action('notes saving','🔄 Notes are currently being created. Please wait... 📝'))
             return;
 
         try {
@@ -384,11 +351,11 @@ class NotesDatabase {
                 'd.n': firebase.firestore.FieldValue.arrayUnion(noteMetadata)
             });
 
-            window.complete_action('notes saving', true, 'notes saved')
+            window.complete_action('notes saving', true, '✅ Notes created successfully! Ready to go. 🎉')
             return noteId;
         } catch (error) {
             console.error('[NotesDB] Create note error:', error);
-            window.complete_action('notes saving', false, 'someting wrong.')
+            window.complete_action('notes saving', false, '🚫 Error occurred while creating notes. Please try again. 😕')
             this._notifyError('note_creation_failed', error.message);
             throw error;
         } finally {
@@ -402,7 +369,7 @@ class NotesDatabase {
 
     async updateNote(noteId, noteText, profileId, profileData) {
         // this.setLoading(true);
-        if(!window.start_action('notes saving','notes saving'))
+        if(!window.start_action('updating notes','🚨 Notes updating – stay back and prepare for awesomeness! 🚀'))
             return;
         try {
             const db = window.firebaseService.db;
@@ -427,12 +394,12 @@ class NotesDatabase {
                 n: noteText,
                 lu: new Date().toISOString()
             });
-            window.complete_action('notes saving', true, 'notes saved')
+            window.complete_action('updating notes', true, '✅ Update completed successfully! Everything is now up to date. 🎉')
 
             return true;
         } catch (error) {
             console.error('[NotesDB] Update note error:', error);
-            window.complete_action('notes saving', false, 'notes failed')
+            window.complete_action('updating notes', false, '🚨 Oops! Something went wrong during the update. Please try again later. 😱')
             this._notifyError('note_update_failed', error.message);
             throw error;
         } finally {

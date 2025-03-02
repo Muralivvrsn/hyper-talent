@@ -66,6 +66,8 @@ class LinkedInLabelsManager {
                     const originalColor = labelData.label_color;
 
                         label.style.backgroundColor = originalColor;
+                        console.log(originalColor)
+                        console.log(window.labelManagerUtils.generateTextColor(originalColor))
                         label.style.color = window.labelManagerUtils.generateTextColor(originalColor)
                         label.style.border = 'none';
                 }
@@ -401,6 +403,8 @@ class LinkedInLabelsManager {
         label.dataset.originalColor = labelData.label_color;
 
         label.style.backgroundColor = labelData.label_color;
+        console.log(labelData.label_color)
+        console.log(window.labelManagerUtils.generateTextColor(labelData.label_color))
         label.style.color = window.labelManagerUtils.generateTextColor(labelData.label_color);
         label.style.border = 'none';
 

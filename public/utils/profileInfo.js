@@ -277,7 +277,7 @@ window.labelManagerUtils = {
         // For very light colors (high lightness), use black text
         // For darker colors, use white text
         // We can also consider saturation in the calculation
-        const threshold = 65; // Adjust this value to fine-tune the switch point
+        const threshold = 50; // Adjust this value to fine-tune the switch point
         
         // If the color is very light (high lightness) or has very low saturation, use black
         if (l > threshold || (l > 60 && s < 15)) {

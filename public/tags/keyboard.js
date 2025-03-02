@@ -119,10 +119,10 @@ class LabelThemeManager {
 
 
             .no_labels{
-                color: var(--lm-text) !important;
+                color: var(--lm-category-text) !important;
                 padding: 20px !important;
                 font-size: 13px !important
-                text-align: center;
+                text-align: center !important;
             }
     
             .hyper_label_button:hover:not(:disabled) {
@@ -214,9 +214,9 @@ class LabelThemeManager {
             }
     
             .dropdown_content {
-                max-height: 400px;
-                overflow-y: auto;
-                padding: 6px;
+                max-height: 400px !important;
+                overflow-y: auto !important;
+                padding: 6px !important;
             }
     
             .label_section {
@@ -405,15 +405,15 @@ class LabelThemeManager {
                 border: 2px solid var(--lm-border) !important;
                 border-radius: 50% !important;
                 border-top-color: var(--lm-text) !important;
-                animation: labelSpinnerSpin 0.6s linear infinite !important;
+                animation: labelSpinnerSpin 0.6s linear infinite;
             }
     
             @keyframes labelSpinnerSpin {
-                to { transform: rotate(360deg) !important; }
+                to { transform: rotate(360deg); }
             }
             .login_container {
                 padding: 20px;
-                text-align: center;
+                text-align: center !important;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -638,28 +638,7 @@ class LabelThemeManager {
                 outline: none !important;
             }
             
-            
-            .note-save-btn {
-                background: var(--lm-primary);
-                color: var(--lm-primary-foreground);
-                border: none;
-                padding: 8px 14px;
-                border-radius: var(--lm-radius);
-                cursor: pointer;
-                font-size: 13px;
-                font-weight: 500;
-                font-family: 'Poppins', sans-serif;
-                transition: opacity 0.2s ease;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                height: 32px;
-                line-height: 1;
-            }
-            
-            .note-save-btn:hover {
-                opacity: 0.9;
-            }
+
             
             /* Loading state */
             .note-loading-container {
@@ -668,7 +647,7 @@ class LabelThemeManager {
                 align-items: center;
                 justify-content: center;
                 padding: 40px 20px;
-                text-align: center;
+                text-align: center !important;
             }
             
             .note-loading-spinner {
@@ -698,7 +677,7 @@ class LabelThemeManager {
                 align-items: center;
                 justify-content: center;
                 padding: 40px 20px;
-                text-align: center;
+                text-align: center !important;
             }
             
             .note-login-message {
@@ -746,13 +725,17 @@ class LabelThemeManager {
                 align-items: center;
                 gap: 6px;
                 padding: 2px 10px;
-                font-size: 13px;
+                font-size: 13px !important;
                 cursor: pointer;
                 user-select: none;
                 border-bottom: 2px solid transparent;
                 white-space: nowrap;
                 color: var(--lm-category-text);
                 transition: all 0.2s;
+            }
+            
+            .note-tab span {
+                font-size: 13px !important;
             }
 
             .note-tab:hover {
@@ -869,6 +852,7 @@ class LabelThemeManager {
                 font-size: 14px;
                 cursor: pointer;
                 transition: opacity 0.2s ease;
+                font-size: 13px !important;
             }
 
             .note-save-btn:hover {
@@ -921,7 +905,7 @@ class LabelThemeManager {
             .note-login-message {
                 font-size: 14px;
                 color: var(--lm-text);
-                text-align: center;
+                text-align: center !important;
             }
 
             .note-login-button {
@@ -948,7 +932,7 @@ class LabelThemeManager {
                 align-items: center;
                 justify-content: center;
                 padding: 30px;
-                text-align: center;
+                text-align: center !important;
             }
 
             .note-empty-icon {
@@ -1156,7 +1140,7 @@ class LabelThemeManager {
                 color: var(--lm-text) !important;
                 padding: 20px !important;
                 font-size: 13px !important;
-                text-align: center;
+                text-align: center !important;
             }
 
             .hyper_filter_button:hover:not(:disabled) {
@@ -1219,11 +1203,6 @@ class LabelThemeManager {
                 box-shadow: 0 0 0 2px var(--lm-ring);
             }
 
-            .dropdown_content {
-                max-height: 400px;
-                overflow-y: auto;
-                padding: 6px;
-            }
 
             .filter_section {
                 margin: 4px 0;
@@ -1383,7 +1362,7 @@ class LabelThemeManager {
             }
             .loading_message {
                 display: flex;
-                text-align: center;
+                text-align: center !important;
                 color: var(--lm-text) !important;
                 font-size: 13px;
                 width: 100%;
@@ -1418,10 +1397,19 @@ class LabelThemeManager {
 
             .profile-label-remove {
                 display: none;
-                margin-left: 5px !important;
                 cursor: pointer;
-                opacity: 0.7;
-                font-size: 13px !important;
+                position: absolute;
+                top: -5px;
+                right: -4px;
+                background: black;
+                width: 11px;
+                height: 11px;
+                justify-content: center;
+                align-items: center;
+                background: white;
+                color: black;
+                border-radius: 50%;
+                z-index: 9999;
             }
 
             .profile-label-remove:hover {
@@ -1430,7 +1418,7 @@ class LabelThemeManager {
             }
 
             .profile-label:hover .profile-label-remove {
-                display: inline-flex;
+                display: flex;
             }
 
             .profile-label[data-shared-by] {
@@ -1500,7 +1488,7 @@ class LabelThemeManager {
             .labels-loading-state,
             .no-labels-state {
                 width: 100%;
-                text-align: center;
+                text-align: center !important;
                 font-size: 14px;
                 color: var( --lm-text);
                 padding: 10px 0;
@@ -1533,7 +1521,7 @@ class LabelThemeManager {
                 top: 20px;
                 right: 20px;
                 width: 90%;
-                max-width: 550px;
+                max-width: 400px;
                 background: var(--lm-bg);
                 border-radius: 10px;
                 box-shadow: var(--lm-shadow);
@@ -1547,6 +1535,9 @@ class LabelThemeManager {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
                 color: var(--lm-text);
             }
+            .emoji-container{
+                font-size: 13px !important;
+            }
 
             .note-box-header {
                 display: flex;
@@ -1559,8 +1550,8 @@ class LabelThemeManager {
             }
 
             .note-title-text {
-                font-size: 16px;
-                font-weight: 600;
+                font-size: 14px;
+                font-weight: 500;
                 color: var(--lm-text);
                 margin: 0;
             }
@@ -1695,30 +1686,6 @@ class LabelThemeManager {
                 color: var(--lm-text);
             }
 
-            .note-save-btn {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 6px 12px;
-                border-radius: 6px;
-                background: var(--lm-primary);
-                color: var(--lm-primary-foreground);
-                font-weight: 500;
-                font-size: 13px;
-                border: none;
-                cursor: pointer;
-                transition: all 0.2s ease;
-            }
-
-            .note-save-btn:hover {
-                opacity: 0.9;
-            }
-
-            .note-save-btn:disabled {
-                opacity: 0.6;
-                cursor: not-allowed;
-            }
-
             .note-footer {
                 display: flex;
                 justify-content: space-between;
@@ -1758,25 +1725,6 @@ class LabelThemeManager {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
             }
-            .note-box-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 90%;
-    max-width: 550px;
-    background: var(--lm-bg);
-    border-radius: 10px;
-    box-shadow: var(--lm-shadow);
-    opacity: 0;
-    transition: all 0.2s ease;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    max-height: 90vh;
-    border: 1px solid var(--lm-border);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    color: var(--lm-text);
-}
 
 .note-box-header {
     display: flex;
@@ -1794,12 +1742,6 @@ class LabelThemeManager {
     gap: 6px;
 }
 
-.note-title-text {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--lm-text);
-    margin: 0;
-}
 
 .note-close-btn {
     width: 28px;
@@ -1826,36 +1768,6 @@ class LabelThemeManager {
     gap: 8px;
     border-bottom: 1px solid var(--lm-border);
     background: var(--lm-category-bg);
-}
-
-.note-tab {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--lm-category-text);
-}
-
-.note-tab:hover {
-    background: var(--lm-hover);
-}
-
-.note-tab-active {
-    background: var(--lm-bg);
-    color: var(--lm-text);
-    box-shadow: var(--lm-shadow);
-}
-
-.note-content-area {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 150px;
 }
 
 .note-textarea {
@@ -1915,30 +1827,6 @@ class LabelThemeManager {
 .note-shortcut-hint span {
     color: var(--lm-text);
     font-weight: 500;
-}
-
-.note-save-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    background: var(--lm-primary);
-    color: var(--lm-primary-foreground);
-    font-weight: 500;
-    font-size: 13px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.note-save-btn:hover:not(:disabled) {
-    opacity: 0.9;
-}
-
-.note-save-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
 }
 
 .note-footer {
@@ -2003,7 +1891,7 @@ class LabelThemeManager {
     height: 100%;
     padding: 20px;
     color: var(--lm-category-text);
-    text-align: center;
+    text-align: center !important;
 }
 
 .empty-state-icon {
@@ -2092,29 +1980,6 @@ class LabelThemeManager {
     color: var(--lm-text);
 }
 
-.note-save-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    background-color: var(--lm-primary);
-    color: var(--lm-primary-foreground);
-    font-weight: 500;
-    font-size: 13px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.note-save-btn:hover:not(:disabled) {
-    opacity: 0.9;
-}
-
-.note-save-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
     .read-only-badge {
     display: flex;
     align-items: center;
@@ -2164,7 +2029,7 @@ class LabelThemeManager {
     align-items: center;
     justify-content: center;
     height: 100%;
-    text-align: center;
+    text-align: center !important;
     padding: 20px;
     color: var(--lm-category-text);
 }
@@ -2197,6 +2062,7 @@ class LabelThemeManager {
     flex-direction: column;
     overflow: hidden;
     min-height: 150px;
+    max-height: 400px;
     background-color: var(--lm-bg);
 }
 .no-labels-state {
@@ -2204,7 +2070,7 @@ class LabelThemeManager {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    text-align: center;
+    text-align: center !important;
     background-color: var(--lm-bg);
     border-radius: 8px;
 }
