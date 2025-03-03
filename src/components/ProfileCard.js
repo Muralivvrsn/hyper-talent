@@ -126,10 +126,7 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
           key={label.id}
           className="group/label relative inline-flex items-center text-[10px] px-3 py-0.5 rounded-full transition-all duration-200 font-semibold"
           style={{
-            backgroundColor: theme === "dark" ? label.color : 'transparent',
-            borderWidth: theme === "dark" ? "0px" : "1px",
-            borderStyle: "solid",
-            borderColor: theme === "dark" ? "transparent" : label.color,
+            backgroundColor: label.color,
             color: generateTextColor(label.color),
           }}
         >

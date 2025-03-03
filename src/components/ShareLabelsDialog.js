@@ -189,6 +189,11 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
     }
   };
 
+  const isValidEmail = (email) => {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email.trim());
+  };
+
   return (
     <div className="flex gap-2">
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -313,7 +318,7 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
                     ))
                   ) : (
                     <div className="text-center py-4 text-muted-foreground">
-                      No users found
+                          {isValidEmail(searchTerm) ? 'No users match this email' : 'Type a full email address to search'}
                     </div>
                   )}
                 </div>

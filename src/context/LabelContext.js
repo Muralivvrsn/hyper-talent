@@ -62,7 +62,7 @@ export const LabelProvider = ({ children }) => {
                                         id: labelId,
                                         name: labelData.n,
                                         color: labelData.c,
-                                        createdBy: labelData.lc,
+                                        createdBy: userProfile.name,
                                         lastUpdated: labelData.lu,
                                         profileIds: labelData.p || []
                                     }
@@ -128,7 +128,7 @@ export const LabelProvider = ({ children }) => {
                                 id: sharedLabel.id,
                                 name: labelData.n,
                                 color: labelData.c,
-                                createdBy: labelData.lc,
+                                sharedByName: sharedLabel.sbn,
                                 lastUpdated: labelData.lu,
                                 profileIds: labelData.p || [],
                                 accessType: sharedLabel.a
