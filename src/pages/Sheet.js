@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from "../components/ui/button";
 import { Upload, Database, FileSpreadsheet, Loader2, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { createSheet, syncSheet, syncDatabase, processUploadLabels } from '../utils/sheetUtils';
+import { createSheet, syncSheet, processUploadLabels } from '../utils/sheetUtils';
 import { doc, updateDoc, getFirestore } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -161,7 +161,7 @@ const SheetPage = () => {
       if (syncType === "Sheet") {
         await syncSheet(sheetData.id, token, { ...data, getLabelProfiles, getNoteWithProfile });
       } else {
-        await syncDatabase(sheetData.id, token, user.uid, data);
+        // await syncDatabase(sheetData.id, token, user.uid, data);
       }
 
       const userDocRef = doc(db, 'users_v2', user.uid);

@@ -108,7 +108,7 @@ export const getSheetData = async (spreadsheetId, token, sheetName) => {
 
 export const updateSheetData = async (spreadsheetId, token, formattedData, sheetName, startRow = null) => {
   try {
-    const sheetData = await getSheetData(spreadsheetId, token, sheetName);
+    let sheetData = await getSheetData(spreadsheetId, token, sheetName);
     const headers = sheetData[0] || HEADERS[sheetName];
     const headerIndices = getHeaderIndices(headers, HEADERS[sheetName]);
 
@@ -120,8 +120,8 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
       return;
     }
 
-    const existingRows = sheetData.slice(1);
-    const existingDataMap = new Map();
+    let existingRows = sheetData.slice(1);
+    let existingDataMap = new Map();
     existingRows.forEach((row, index) => {
       const id = row[idColumnIndex];
       if (id) {
@@ -183,6 +183,22 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
 
           await new Promise(resolve => setTimeout(resolve, 100));
         }
+        
+        // Refetch the sheet data after deletions to get updated structure
+        sheetData = await getSheetData(spreadsheetId, token, sheetName);
+        existingRows = sheetData.slice(1);
+        
+        // Rebuild the mapping with updated row indices
+        existingDataMap = new Map();
+        existingRows.forEach((row, index) => {
+          const id = row[idColumnIndex];
+          if (id) {
+            existingDataMap.set(id, {
+              data: row,
+              rowIndex: index + 2
+            });
+          }
+        });
       } catch (error) {
         console.error('Error deleting rows:', error);
         throw error;
@@ -192,9 +208,9 @@ export const updateSheetData = async (spreadsheetId, token, formattedData, sheet
     const updates = [];
     const newData = [];
 
-    formattedData.forEach((row, rowIndex) => {
+    formattedData.forEach((row) => {
       const id = row[idColumnName];
-      if (!id) return
+      if (!id) return;
 
       const existing = existingDataMap.get(id);
       if (existing) {

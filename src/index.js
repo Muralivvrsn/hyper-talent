@@ -31,7 +31,9 @@ root.render(
                                         <NotesProvider>
                                             <ProfileNoteProvider>
                                                 <SheetProvider>
-                                                    <App />
+                                                    <AdminProvider>
+                                                        <App />
+                                                    </AdminProvider>
                                                 </SheetProvider>
                                             </ProfileNoteProvider>
                                         </NotesProvider>
