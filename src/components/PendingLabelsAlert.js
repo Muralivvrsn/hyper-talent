@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useLabels } from '../context/LabelContext';
 import { useOtherUsers } from '../context/OtherUsersContext';
+import { useTheme } from '../context/ThemeContext';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
@@ -19,6 +20,7 @@ const PendingLabelsAlert = () => {
     const { pendingSharedLabels } = useLabels();
     const { getUserById } = useOtherUsers();
     const { user } = useAuth();
+    const { theme } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [selectedLabels, setSelectedLabels] = useState([]);
@@ -90,22 +92,37 @@ const PendingLabelsAlert = () => {
         return null;
     }
 
+    // Define theme-specific styles for better visibility
+    const alertStyles = theme === "dark"
+        ? "border-2 border-blue-400 bg-slate-800 shadow-lg shadow-blue-500/20"
+        : "border-2 border-blue-500 bg-white shadow-lg shadow-blue-500/20";
+
     return (
         <div className="fixed bottom-4 right-4 z-50">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
                 <SheetTrigger asChild>
-                    <Alert className="cursor-pointer hover:bg-accent transition-colors">
-                        <Bell className="h-4 w-4" />
-                        <AlertTitle>Pending Label Invitations</AlertTitle>
-                        <AlertDescription>
-                            You have {pendingLabelsCount} pending label{pendingLabelsCount > 1 ? 's' : ''} to review
-                        </AlertDescription>
+                    <Alert
+                        className={`cursor-pointer hover:bg-accent transition-colors ${alertStyles} transform hover:scale-105 transition-all duration-200`}
+                    >
+                        <div className="relative flex items-center">
+                            <Bell className="h-5 w-5 text-blue-500 animate-pulse" />
+                            <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-red-500 rounded-full text-white text-xs font-bold">{pendingLabelsCount}</span>
+                            <div className="ml-2">
+                                <AlertTitle className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
+                                    Pending Label Invitations
+                                </AlertTitle>
+                                <AlertDescription className={theme === "dark" ? "text-blue-200" : "text-blue-600"}>
+                                    You have {pendingLabelsCount} pending label{pendingLabelsCount > 1 ? 's' : ''} to review
+                                </AlertDescription>
+                            </div>
+                        </div>
+
                     </Alert>
                 </SheetTrigger>
 
                 <SheetContent side="bottom" className="h-[400px] flex flex-col">
                     <SheetHeader>
-                        <SheetTitle>Pending Label Invitations</SheetTitle>
+                        <SheetTitle>Pending Label Invitations ({pendingLabelsCount})</SheetTitle>
                     </SheetHeader>
 
                     <div className="flex-1 overflow-auto py-4">
@@ -114,8 +131,8 @@ const PendingLabelsAlert = () => {
                                 <div
                                     key={labelId}
                                     className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedLabels.includes(labelId)
-                                        ? 'bg-accent'
-                                        : 'hover:bg-accent/50'
+                                        ? theme === "dark" ? 'bg-slate-700' : 'bg-accent'
+                                        : theme === "dark" ? 'hover:bg-slate-800' : 'hover:bg-accent/50'
                                         }`}
                                     onClick={() => toggleLabelSelection(labelId)}
                                 >
