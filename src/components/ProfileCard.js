@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Users, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2, ChevronRight, Plus } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2, ChevronRight, Plus, ArrowDownLeft } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { Button } from './ui/button';
 import ProfileActionManager from './ProfileActionManager';
 import { X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getFirestore } from 'firebase/firestore';
-import { removeLabelFromProfile } from '../utils/labelUtils';
+import { hexToHSL, parseHSL, removeLabelFromProfile } from '../utils/labelUtils';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const ProfileActionsMenu = ({ onAction, hasNote }) => (
   <Popover>
@@ -59,64 +61,18 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
       l = hsl.l;
     } else {
       const hslValues = parseHSL(backgroundColor);
-      if (!hslValues) return '#000000'; // Default to black if parsing fails
+      if (!hslValues) return '#000000';
       h = hslValues.h;
       s = hslValues.s;
       l = hslValues.l;
     }
 
-    // For very light colors (high lightness), use black text
-    // For darker colors, use white text
-    // We can also consider saturation in the calculation
-    const threshold = 65; // Adjust this value to fine-tune the switch point
+    const threshold = 65;
 
-    // If the color is very light (high lightness) or has very low saturation, use black
     if (l > threshold || (l > 60 && s < 15)) {
       return '#000000';
     }
     return '#FFFFFF';
-  }
-  const hexToHSL=(hex) =>{
-    // Remove the # if present
-    hex = hex.replace(/^#/, '');
-
-    // Parse the hex values
-    const r = parseInt(hex.substring(0, 2), 16) / 255;
-    const g = parseInt(hex.substring(2, 4), 16) / 255;
-    const b = parseInt(hex.substring(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
-
-    if (max === min) {
-      h = s = 0; // achromatic
-    } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h /= 6;
-    }
-
-    return {
-      h: Math.round(h * 360),
-      s: Math.round(s * 100),
-      l: Math.round(l * 100)
-    };
-  }
-
-  const parseHSL = (hslString) => {
-    const matches = hslString.match(/hsl\((\d+),\s*(\d+)%?,\s*(\d+)%?\)/);
-    if (!matches) return null;
-    return {
-      h: parseInt(matches[1]),
-      s: parseInt(matches[2]),
-      l: parseInt(matches[3])
-    };
   }
 
   return (
@@ -130,29 +86,28 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
             color: generateTextColor(label.color),
           }}
         >
+          {!label.isShared && (
+            <div className="absolute -top-1.5 -right-1.5 z-50 opacity-0 group-hover/label:opacity-100 transition-opacity">
+              {isRemoving[label.id] ? (
+                <div className={`rounded-full p-0.5 shadow-sm bg-zinc-900`}>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => onRemove(label.id, e)}
+                  className={`rounded-full p-0.5 shadow-sm transition-colors bg-zinc-900 hover:bg-zinc-800`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
           <span className="truncate">{label.name}</span>
-          <div className="ml-1 w-0 group-hover/label:w-2 overflow-hidden transition-all duration-200 flex items-center justify-center z-50">
-            {isRemoving[label.id] ? (
-              <Loader2 className="h-2.5 w-2.5 animate-spin" />
-            ) : (
-              <button
-                onClick={(e) => onRemove(label.id, e)}
-                className="rounded-full flex items-center justify-center"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            )}
-          </div>
+          {label.isShared && (
+            <ArrowDownLeft className="h-3 w-3 ml-1 opacity-70" />
+          )}
         </div>
       ))}
-      {/* <Button
-        variant="ghost"
-        size="sm"
-        className="h-6 px-2 text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground"
-        onClick={onAddLabel}
-      >
-        <Plus className="h-3 w-3" /> Add
-      </Button> */}
     </div>
   );
 };
@@ -204,13 +159,35 @@ const NotesSection = ({
   expandedNotes,
   setExpanded,
   toggleNoteExpanded,
-  setActionType
+  userId,
+  db
 }) => {
-  const [activeTab, setActiveTab] = useState('primary');
   const hasSharedNotes = sharedNotes?.length > 0;
   const hasPrimaryNote = !!note?.content;
 
-  // Helper to render primary note or empty state
+  const handleRemoveSharedNote = async (noteId) => {
+    try {
+      const userRef = doc(db, 'users_v2', userId);
+      const userDoc = await getDoc(userRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const notes = userData.d.n;
+
+        const updatedNotes = notes.filter(note => note.id !== noteId);
+
+        await updateDoc(userRef, {
+          'd.n': updatedNotes
+        });
+
+        toast.success('Note removed successfully');
+      }
+    } catch (error) {
+      console.error('Error removing note:', error);
+      toast.error('Failed to remove note');
+    }
+  };
+
   const renderPrimaryNote = () => (
     <div className="w-full">
       {hasPrimaryNote && (
@@ -223,24 +200,35 @@ const NotesSection = ({
     </div>
   );
 
-  // Helper to render shared notes
   const renderSharedNotes = () => (
     <div className="w-full">
       <div className="space-y-2">
         {sharedNotes.map((note) => (
-          <div key={note.id} className="overflow-hidden">
+          <div key={note.id} className="overflow-hidden group/note">
             <div
-              className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/30"
-              onClick={() => toggleNoteExpanded(note.id)}
+              className="flex items-center gap-2 py-1 hover:bg-muted/30"
             >
-              {expandedNotes[note.id] ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              )}
-              <h4 className="text-sm font-medium flex-1">
-                {note.sbn}
-              </h4>
+              <div
+                className="flex-1 cursor-pointer flex items-center gap-2"
+                onClick={() => toggleNoteExpanded(note.id)}
+              >
+                {expandedNotes[note.id] ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+                <h4 className="text-sm font-medium">
+                  {note.sbn}
+                </h4>
+              </div>
+              {/* <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 opacity-0 group-hover/note:opacity-100 transition-opacity"
+                onClick={() => handleRemoveSharedNote(note.id)}
+              >
+                <X className="h-4 w-4" />
+              </Button> */}
             </div>
 
             {expandedNotes[note.id] && (
@@ -268,32 +256,36 @@ const NotesSection = ({
   }
 
   return (
-    <div className="w-full mt-2">
-      <div className="flex  border-b mb-2">
-        <button
-          className={`px-3 py-1 text-sm font-medium ${activeTab === 'primary'
-            ? 'border-b-2 border-primary text-primary'
-            : 'text-muted-foreground hover:text-foreground'}`}
-          onClick={() => setActiveTab('primary')}
-        >
-          My Notes
-        </button>
-        <button
-          className={`px-3 py-1 text-sm font-medium flex items-center gap-1.5 ${activeTab === 'shared'
-            ? 'border-b-2 border-primary text-primary'
-            : 'text-muted-foreground hover:text-foreground'}`}
-          onClick={() => setActiveTab('shared')}
-        >
-          Shared Notes
-          <span className="inline-flex items-center justify-center w-5 h-5 text-xs rounded-full bg-muted">
-            {sharedNotes.length}
-          </span>
-        </button>
-      </div>
+    <div className="w-full">
+      <Tabs defaultValue="primary" className="w-full">
+        <TabsList className="w-full border-b">
+          <TabsTrigger
+            value="primary"
+            className="flex-1 px-4 py-2"
+          >
+            My Notes
+          </TabsTrigger>
+          <TabsTrigger
+            value="shared"
+            className="flex-1 px-4 py-2"
+          >
+            <div className="flex items-center gap-2">
+              Shared Notes
+              <span className="inline-flex items-center justify-center w-5 h-5 text-xs rounded-full bg-muted">
+                {sharedNotes.length}
+              </span>
+            </div>
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="pt-1">
-        {activeTab === 'primary' ? renderPrimaryNote() : renderSharedNotes()}
-      </div>
+        <TabsContent value="primary">
+          {renderPrimaryNote()}
+        </TabsContent>
+
+        <TabsContent value="shared">
+          {renderSharedNotes()}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
@@ -365,9 +357,6 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
               <a href={profile.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
                 {profile.name || 'Unknown User'}
               </a>
-              {labels?.some(label => label.isShared) && (
-                <Users className="h-4 w-4 text-muted-foreground" />
-              )}
             </h3>
 
             <ProfileActionsMenu
@@ -395,7 +384,8 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
         expandedNotes={expandedNotes}
         setExpanded={setExpanded}
         toggleNoteExpanded={toggleNoteExpanded}
-        setActionType={setActionType}
+        userId={user?.uid}
+        db={db}
       />
 
       <ProfileActionManager

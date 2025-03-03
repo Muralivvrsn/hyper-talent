@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  setDoc, 
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
   updateDoc,
   deleteDoc
 } from 'firebase/firestore';
@@ -44,7 +44,7 @@ export const DataProvider = ({ children }) => {
           const templateId = shortcut.id;
           const templateDocRef = doc(db, 'message_templates_v2', templateId);
           const templateDocSnap = await getDoc(templateDocRef);
-          
+
           if (templateDocSnap.exists()) {
             const templateData = templateDocSnap.data();
             return {
@@ -61,7 +61,7 @@ export const DataProvider = ({ children }) => {
         });
 
         const fetchedTemplates = await Promise.all(templatePromises);
-        setTemplates(fetchedTemplates.filter(Boolean).sort((a, b) => 
+        setTemplates(fetchedTemplates.filter(Boolean).sort((a, b) =>
           new Date(b.lastUpdated) - new Date(a.lastUpdated)
         ));
       } catch (err) {
@@ -73,13 +73,13 @@ export const DataProvider = ({ children }) => {
     };
 
     fetchTemplateDetails();
-  }, [user, userProfile?.data?.shortcuts, db]);
+  }, [user, userProfile?.data?.shortcuts, db, templates.length]);
 
   const addTemplate = async (newTemplate) => {
     try {
       // Generate unique template ID
       const templateId = `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Add template to message_template collection
       const templateDocRef = doc(db, 'message_templates_v2', templateId);
       await setDoc(templateDocRef, {
@@ -92,19 +92,19 @@ export const DataProvider = ({ children }) => {
       const userDocRef = doc(db, 'users_v2', user.uid);
       const userDocSnap = await getDoc(userDocRef);
       const userData = userDocSnap.data();
-      
+
       // Create the template object for the user profile
       const templateObject = {
         ca: new Date().getTime(),
         id: templateId,
         t: 'owned',
       };
-      
+
       // Get current shortcuts array or create new one
-      const currentShortcuts = Array.isArray(userData.d?.s) 
-        ? userData.d.s 
+      const currentShortcuts = Array.isArray(userData.d?.s)
+        ? userData.d.s
         : [];
-      
+
       // Add new template to shortcuts
       await updateDoc(userDocRef, {
         'd.s': [...currentShortcuts, templateObject]
@@ -128,6 +128,19 @@ export const DataProvider = ({ children }) => {
         lu: new Date().toISOString()
       });
 
+      setTemplates(prevTemplates =>
+        prevTemplates.map(template =>
+          template.id === id
+            ? {
+              ...template,
+              title: editedTemplate.title,
+              content: editedTemplate.content,
+              lastUpdated: new Date().toISOString()
+            }
+            : template
+        )
+      );
+
       return true;
     } catch (err) {
       setError('Failed to update template');
@@ -141,21 +154,21 @@ export const DataProvider = ({ children }) => {
       // Remove template from message_template collection
       const templateDocRef = doc(db, 'message_templates_v2', id);
       await deleteDoc(templateDocRef);
-  
+
       // Remove template from user's shortcuts list
       const userDocRef = doc(db, 'users_v2', user.uid);
       const userDocSnap = await getDoc(userDocRef);
       const userData = userDocSnap.data();
-      
+
       // Filter out the template from shortcuts
-      const updatedShortcuts = (userData.d?.s || []).filter(shortcut => 
+      const updatedShortcuts = (userData.d?.s || []).filter(shortcut =>
         typeof shortcut === 'string' ? shortcut !== id : shortcut.id !== id
       );
-      
+
       await updateDoc(userDocRef, {
         'd.s': updatedShortcuts
       });
-  
+
       return true;
     } catch (err) {
       setError('Failed to delete template');

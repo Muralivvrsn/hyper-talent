@@ -99,29 +99,55 @@ export const ThemeProvider = ({ children }) => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
-  const getRequiredFields = (user, localTheme, systemTheme) => ({
-    av: "",
-    ca: new Date().toISOString(),
-    d: {
-      l: [],
-      n: [],
-      s: [],
-      sd: {
-        ca: "",
-        id: "",
-        ls: "",
+  const getRequiredFields = (user, localTheme, systemTheme) => {
+    const templateId = `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create a function to add the default template to Firestore
+    const addDefaultTemplate = async (db) => {
+      try {
+        const templateDocRef = doc(db, 'message_templates_v2', templateId);
+        await setDoc(templateDocRef, {
+          t: "Introduction",
+          n: `Hi <<name>>,\n\nI noticed your profile and would love to add you to my professional network. I'm always looking to connect with talented professionals like yourself. Looking forward to the opportunity to interact and share insights on LinkedIn!\n\nHope to connect soon.`,
+          lu: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error("Error creating default template:", err);
+      }
+    };
+
+    if (db) addDefaultTemplate(db);
+
+    return {
+      av: "",
+      ca: new Date().toISOString(),
+      d: {
+        l: [],
+        n: [],
+        s: [
+          {
+            ca: new Date().getTime(),
+            id: templateId,
+            t: 'owned',
+          }
+        ],
+        sd: {
+          ca: "",
+          id: "",
+          ls: "",
+        },
       },
-    },
-    e: user?.email || '',
-    lg: 'en',
-    ll: new Date().toISOString(),
-    n: user?.displayName || '',
-    ne: true,
-    p: "free",
-    pe: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-    t: [],
-    th: localTheme || systemTheme,
-  });
+      e: user?.email || '',
+      lg: 'en',
+      ll: new Date().toISOString(),
+      n: user?.displayName || '',
+      ne: true,
+      p: "free",
+      pe: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+      t: [],
+      th: localTheme || systemTheme,
+    };
+  };
 
   useEffect(() => {
     const initializeTheme = async () => {

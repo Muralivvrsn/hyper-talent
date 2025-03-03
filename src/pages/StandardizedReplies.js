@@ -3,7 +3,7 @@ import { useData } from '../context/DataContext';
 import { Plus, Loader2 } from 'lucide-react';
 import { Button } from "../components/ui/button";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import {AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,28 +25,23 @@ const StandardizedReplies = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [formVisible, setFormVisible] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState(null);
 
   const handleFormClose = (formData) => {
-    const hasChanges = editingMessage
-      ? (formData.title !== editingMessage.title || formData.content !== editingMessage.content)
-      : (formData.title !== '' || formData.content !== '');
-
-    if (hasChanges) {
-      setPendingChanges(formData);
-      setShowExitDialog(true);
-    } else {
+    if (!editingMessage && formData.title === '' && formData.content === '') {
       closeForm();
+    } else if (editingMessage &&
+      formData.title === editingMessage.title &&
+      formData.content === editingMessage.content) {
+      closeForm();
+    } else {
+      setShowExitDialog(true);
     }
   };
 
   const closeForm = () => {
-    setFormVisible(false);
     setTimeout(() => {
       setEditingMessage(null);
       setShowAddForm(false);
-      setPendingChanges(null);
     }, 300);
   };
 
@@ -111,7 +106,6 @@ const StandardizedReplies = () => {
                 message={message}
                 onClick={() => {
                   setEditingMessage(message);
-                  setFormVisible(true);
                 }}
               />
             ))}
