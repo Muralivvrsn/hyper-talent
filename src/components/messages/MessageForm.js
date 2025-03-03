@@ -12,8 +12,8 @@ const MessageForm = ({
   isSaving 
 }) => {
   const [formData, setFormData] = useState({
-    title: message?.title || '',
-    content: message?.content || ''
+    title: message ? message.title : '',
+    content: message ? message.content : ''
   });
   const contentRef = useRef(null);
   const [isContentFocused, setIsContentFocused] = useState(false);

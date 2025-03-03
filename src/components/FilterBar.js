@@ -18,6 +18,7 @@ const FilterBar = ({
   filterMode,
   onFilterModeChange,
   onNotesFilterChange,
+  filteredResultsCount,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -115,7 +116,7 @@ const FilterBar = ({
             onClick={() => setIsExpanded(!isExpanded)}
           >
             <span>
-              Showing profiles with{' '}
+              Showing {filteredResultsCount} profiles with{' '}
               {selectedLabels.length > 0 ? `${filterMode === 'all' ? 'all' : 'any'} of:` : ''}
             </span>
             {isExpanded ? (

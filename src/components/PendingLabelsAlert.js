@@ -18,7 +18,6 @@ import { useAuth } from '../context/AuthContext';
 
 const PendingLabelsAlert = () => {
     const { pendingSharedLabels } = useLabels();
-    const { getUserById } = useOtherUsers();
     const { user } = useAuth();
     const { theme } = useTheme();
     const [isOpen, setIsOpen] = useState(false);
@@ -41,7 +40,7 @@ const PendingLabelsAlert = () => {
 
                 const userData = userDoc.data();
                 const allLabels = userData.d?.l || [];
-                
+
                 let updatedLabels;
 
                 if (accept) {
@@ -105,7 +104,7 @@ const PendingLabelsAlert = () => {
                                 <AlertTitle className={`font-semibold ${theme === "dark" ? "text-white" : "text-slate-800"}`}>
                                     Pending Label Invitations
                                 </AlertTitle>
-                                <AlertDescription className={theme === "dark" ? "text-blue-200" : "text-blue-600"}>
+                                <AlertDescription className={`text-xs ${theme === "dark" ? "text-blue-200" : "text-blue-600"}`}>
                                     You have {pendingLabelsCount} pending label{pendingLabelsCount > 1 ? 's' : ''} to review
                                 </AlertDescription>
                             </div>
@@ -138,13 +137,13 @@ const PendingLabelsAlert = () => {
                                             onClick={(e) => e.stopPropagation()}
                                         />
                                         <span
-                                            className="w-3 h-3 rounded-full"
+                                            className="w-3 h-3 rounded-full text-lg"
                                             style={{ backgroundColor: label.color }}
                                         />
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-medium">{label.name}</h4>
-                                            <p className="text-sm text-muted-foreground">
-                                                {label.sharedByName ? `Shared by ${label.sharedByName}` : 'Pending invitation'}
+                                            <p className="text-xs text-muted-foreground">
+                                                Shared by {label.sharedByName || 'Unknown User'}
                                             </p>
                                         </div>
                                     </div>
