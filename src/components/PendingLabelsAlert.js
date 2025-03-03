@@ -41,7 +41,7 @@ const PendingLabelsAlert = () => {
 
                 const userData = userDoc.data();
                 const allLabels = userData.d?.l || [];
-
+                
                 let updatedLabels;
 
                 if (accept) {
@@ -79,12 +79,6 @@ const PendingLabelsAlert = () => {
                 : [...prev, labelId]
         );
     };
-
-    const getSharedByUser = useCallback((createdBy) => {
-        if (!createdBy) return 'Unknown User';
-        const sharedByUser = getUserById(createdBy);
-        return sharedByUser?.name || 'Unknown User';
-    }, [getUserById]);
 
     const pendingLabelsCount = Object.keys(pendingSharedLabels).length;
 
@@ -150,7 +144,7 @@ const PendingLabelsAlert = () => {
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-medium">{label.name}</h4>
                                             <p className="text-sm text-muted-foreground">
-                                                Shared by {label.sbn || getSharedByUser(label.sb)}
+                                                {label.sharedByName ? `Shared by ${label.sharedByName}` : 'Pending invitation'}
                                             </p>
                                         </div>
                                     </div>
