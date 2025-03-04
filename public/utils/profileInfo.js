@@ -2,28 +2,28 @@ window.labelManagerUtils = {
     async getProfileInfo() {
         try {
             const url = window.location.href;
-            
+
             // Check if we're on a messaging page
             if (url.includes('messaging/thread')) {
                 // Get detail container
                 const detailContainer = document.querySelector('.scaffold-layout__detail');
                 if (!detailContainer) return null;
-    
+
                 // Get profile link
                 const profileLink = detailContainer.querySelector('.msg-thread__link-to-profile');
                 if (!profileLink) return null;
-    
+
                 // Get name and URL
                 const name = profileLink.querySelector('h2')?.textContent?.trim();
                 const profileUrl = profileLink.href;
-                
+
                 // Get profile image from active conversation
                 const activeConvo = document.querySelector('.msg-conversations-container__convo-item-link--active');
                 const img = activeConvo?.querySelector('img')?.src || null;
-    
+
                 // Extract profile ID from URL
                 const profile_id = this.extractProfileId(profileUrl);
-    
+
                 // Only return if we have all required information
                 if (!name || !profileUrl || !img || !profile_id) {
                     return null;
@@ -36,7 +36,7 @@ window.labelManagerUtils = {
                     image_url: img,
                     username: null // Using name as username since it's not separately available
                 };
-            } 
+            }
             // Handle profile page
             else {
                 await this.waitForElement('main a[aria-label]');
@@ -51,28 +51,35 @@ window.labelManagerUtils = {
                     imageUrl = profileImage.getAttribute('src');
                 }
                 let connectionCode = null;
-                const potentialAnchors = [
-                    ...document.querySelectorAll('main a[href*="connectionOf"]'),
-                    ...document.querySelectorAll('main a[href*="followerOf"]'),
-                    ...document.querySelectorAll('main a[href*="miniProfileUrn"]'),
-                    ...document.querySelectorAll('main a[href*="fsd_profilePosition"]'),
-                    ...document.querySelectorAll('main a[href*="details"][href*="profileUrn"]'),
-                    ...document.querySelectorAll('main a[href*="skill-associations-details"]'),
-                    ...document.querySelectorAll('main a[id*="navigation"]')
-                ];
-    
-                for (const anchor of potentialAnchors) {
-                    const href = anchor?.getAttribute('href');
-                    // console.log(href)
-                    if (href) {
+                let username = this.extractUsername(url)
+                if (!connectionCode) {
+                    console.log('extracting')
+                    connectionCode = this.extracProfileIdFromCode()
+                }
+                if (!connectionCode) {
+                    const potentialAnchors = [
+                        ...document.querySelectorAll('main a[href*="connectionOf"]'),
+                        ...document.querySelectorAll('main a[href*="followerOf"]'),
+                        ...document.querySelectorAll('main a[href*="miniProfileUrn"]'),
+                        ...document.querySelectorAll('main a[href*="fsd_profilePosition"]'),
+                        ...document.querySelectorAll('main a[href*="details"][href*="profileUrn"]'),
+                        ...document.querySelectorAll('main a[href*="skill-associations-details"]'),
+                        ...document.querySelectorAll('main a[id*="navigation"]')
+                    ];
+
+                    for (const anchor of potentialAnchors) {
+                        const href = anchor?.getAttribute('href');
                         // console.log(href)
-                        connectionCode = this.extractConnectionCode(href);
-                        if (connectionCode) {
-                            break;
+                        if (href) {
+                            // console.log(href)
+                            connectionCode = this.extractConnectionCode(href);
+                            if (connectionCode) {
+                                break;
+                            }
                         }
                     }
                 }
-                let username = this.extractUsername(url)
+                // console.log(connectionCode)
                 return {
                     url,
                     profile_id: connectionCode,
@@ -86,7 +93,31 @@ window.labelManagerUtils = {
             return null;
         }
     },
-    
+
+    extracProfileIdFromCode() {
+        const codeTags = document.querySelectorAll('code');
+
+        for (const codeTag of codeTags) {
+            try {
+                const jsonContent = JSON.parse(codeTag.textContent.trim());
+
+                // console.log(jsonContent)
+
+                if (jsonContent?.data?.["*miniProfile"]) {
+                    const miniProfile = jsonContent.data["*miniProfile"];
+                    const profileId = miniProfile.split(':').pop();
+                    return profileId;
+                }
+            } catch (error) {
+                // Skip this tag if not valid JSON
+                // console.log(error)
+                continue;
+            }
+        }
+
+        return null;
+    },
+
     // Helper function to extract profile ID
     extractProfileId(url) {
         const match = url.match(/ACoAA[A-Za-z0-9_-]+/);
@@ -100,7 +131,7 @@ window.labelManagerUtils = {
     // Helper function to extract connection code
     extractConnectionCode(href) {
         if (!href) return null;
-    
+
         // Pattern 1: Extract from profileUrn or miniProfileUrn
         const urnMatch = href.match(/profileUrn=([^&]*)|miniProfileUrn=([^&]*)/);
         if (urnMatch) {
@@ -113,7 +144,7 @@ window.labelManagerUtils = {
                 }
             }
         }
-    
+
         // Pattern 2: Extract from connectionOf, followerOf, or fsd_profilePosition
         const connectionMatch = href.match(/(?:connectionOf|followerOf|fsd_profilePosition)=([^&]+)/);
         if (connectionMatch) {
@@ -124,7 +155,7 @@ window.labelManagerUtils = {
                 return codeMatch[1];
             }
         }
-    
+
         // Pattern 3: Extract from skill-associations-details or other similar patterns
         const skillMatch = href.match(/skill-associations-details.*profileUrn=([^&]*)/);
         if (skillMatch) {
@@ -134,7 +165,7 @@ window.labelManagerUtils = {
                 return codeMatch[1];
             }
         }
-    
+
         // If no match is found, return null
         return null;
     },
@@ -172,16 +203,16 @@ window.labelManagerUtils = {
     hexToHSL(hex) {
         // Remove the # if present
         hex = hex.replace(/^#/, '');
-    
+
         // Parse the hex values
         const r = parseInt(hex.substring(0, 2), 16) / 255;
         const g = parseInt(hex.substring(2, 4), 16) / 255;
         const b = parseInt(hex.substring(4, 6), 16) / 255;
-    
+
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         let h, s, l = (max + min) / 2;
-    
+
         if (max === min) {
             h = s = 0; // achromatic
         } else {
@@ -194,7 +225,7 @@ window.labelManagerUtils = {
             }
             h /= 6;
         }
-    
+
         return {
             h: Math.round(h * 360),
             s: Math.round(s * 100),
@@ -211,11 +242,11 @@ window.labelManagerUtils = {
             l: parseInt(matches[3])
         };
     },
-    
+
     // Generate a random color that's different from existing colors
-    async generateRandomColor (existingColors = []) {
+    async generateRandomColor(existingColors = []) {
         const minDistance = 30; // Minimum hue distance between colors
-        
+
         // Convert all existing colors to HSL for comparison
         const existingHSL = existingColors.map(color => {
             if (color.startsWith('#')) {
@@ -224,15 +255,15 @@ window.labelManagerUtils = {
                 return this.parseHSL(color);
             }
         });
-    
+
         let attempts = 0;
         const maxAttempts = 50;
-    
+
         while (attempts < maxAttempts) {
             const hue = Math.floor(Math.random() * 360);
             const saturation = Math.floor(Math.random() * (80 - 60) + 60); // Random saturation between 60-80%
             const lightness = Math.floor(Math.random() * (85 - 25) + 25);  // Random lightness between 25-85%
-    
+
             // Check if this color is far enough from existing colors
             const isFarEnough = existingHSL.every(existing => {
                 if (!existing) return true;
@@ -242,25 +273,25 @@ window.labelManagerUtils = {
                 );
                 return hueDiff > minDistance;
             });
-    
+
             if (isFarEnough || attempts === maxAttempts - 1) {
                 return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
             }
-    
+
             attempts++;
         }
-    
+
         // Fallback if we couldn't find a distinct color
         const hue = Math.floor(Math.random() * 360);
         const saturation = Math.floor(Math.random() * (80 - 60) + 60);
         const lightness = Math.floor(Math.random() * (85 - 25) + 25);
         return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
     },
-    
+
     // Generate appropriate text color (black or white) based on background color
-    generateTextColor (backgroundColor) {
+    generateTextColor(backgroundColor) {
         let h, s, l;
-    
+
         if (backgroundColor.startsWith('#')) {
             const hsl = this.hexToHSL(backgroundColor);
             h = hsl.h;
@@ -273,12 +304,12 @@ window.labelManagerUtils = {
             s = hslValues.s;
             l = hslValues.l;
         }
-    
+
         // For very light colors (high lightness), use black text
         // For darker colors, use white text
         // We can also consider saturation in the calculation
         const threshold = 50; // Adjust this value to fine-tune the switch point
-        
+
         // If the color is very light (high lightness) or has very low saturation, use black
         if (l > threshold || (l > 60 && s < 15)) {
             return '#000000';
