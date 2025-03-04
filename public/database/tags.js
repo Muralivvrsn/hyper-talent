@@ -91,6 +91,9 @@ class LinkedInLabelsDatabase {
         labelsList.forEach(labelData => {
             const labelId = labelData.id;
             // console.log(`[setupLabelListeners] Processing label: ${labelId}`);
+            if (labelData.t === 'shared' && labelData.a !== true) {
+                return;
+            }
     
             currentLabels.add(labelId);
     

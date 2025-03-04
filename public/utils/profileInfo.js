@@ -51,11 +51,7 @@ window.labelManagerUtils = {
                     imageUrl = profileImage.getAttribute('src');
                 }
                 let connectionCode = null;
-                let username = this.extractUsername(url)
-                if (!connectionCode) {
-                    console.log('extracting')
-                    connectionCode = this.extracProfileIdFromCode()
-                }
+                let username = this.extractUsername(url);
                 if (!connectionCode) {
                     const potentialAnchors = [
                         ...document.querySelectorAll('main a[href*="connectionOf"]'),
@@ -79,6 +75,11 @@ window.labelManagerUtils = {
                         }
                     }
                 }
+                if (!connectionCode) {
+                    console.log('extracting')
+                    connectionCode = this.extracProfileIdFromCode()
+                }
+
                 // console.log(connectionCode)
                 return {
                     url,
@@ -94,27 +95,35 @@ window.labelManagerUtils = {
         }
     },
 
-    extracProfileIdFromCode() {
+    extractProfileIdFromCode() {
         const codeTags = document.querySelectorAll('code');
-
+    
         for (const codeTag of codeTags) {
+            const content = codeTag.textContent.trim();
+            
+            // Try pattern matching first for efficiency
+            const match = content.match(/"identityDashProfilesByMemberIdentity":\s*\{\s*"\*elements"\s*:\s*\[\s*"([^"]+)"\s*\]/);
+            if (match && match[1]) {
+                const urn = match[1];
+                const profileId = urn.split(':').pop();
+                return profileId;
+            }
+            
+            // If pattern matching fails, try JSON parsing as fallback
             try {
-                const jsonContent = JSON.parse(codeTag.textContent.trim());
-
-                // console.log(jsonContent)
-
-                if (jsonContent?.data?.["*miniProfile"]) {
-                    const miniProfile = jsonContent.data["*miniProfile"];
-                    const profileId = miniProfile.split(':').pop();
+                const jsonContent = JSON.parse(content);
+                
+                if (jsonContent?.data?.data?.identityDashProfilesByMemberIdentity?.["*elements"]?.[0]) {
+                    const urn = jsonContent.data.data.identityDashProfilesByMemberIdentity["*elements"][0];
+                    const profileId = urn.split(':').pop();
                     return profileId;
                 }
             } catch (error) {
                 // Skip this tag if not valid JSON
-                // console.log(error)
                 continue;
             }
         }
-
+    
         return null;
     },
 
