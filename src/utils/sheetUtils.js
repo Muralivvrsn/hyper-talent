@@ -435,7 +435,7 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
     const profileUrl = row[headerIndices['Profile URL']]?.trim();
     let profileId = row[headerIndices['Profile ID']]?.trim();
 
-    if (!profileUrl || profileId) {
+    if (!profileUrl) {
       // console.log(`Row ${i}: Skipping - No profile URL`);
       continue;
     }
