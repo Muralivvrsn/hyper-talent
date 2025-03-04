@@ -87,7 +87,7 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
           }}
         >
           {!label.isShared && (
-            <div className="absolute -top-1.5 -right-1.5 z-50 opacity-0 group-hover/label:opacity-100 transition-opacity">
+            <div className="absolute -top-1.5 -right-1.5 z-50 opacity-0 group-hover/label:opacity-100 transition-opacity duration-300">
               {isRemoving[label.id] ? (
                 <div className={`rounded-full p-0.5 shadow-sm bg-zinc-900`}>
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -95,9 +95,9 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
               ) : (
                 <button
                   onClick={(e) => onRemove(label.id, e)}
-                  className={`rounded-full p-0.5 shadow-sm transition-colors bg-zinc-900 hover:bg-zinc-800`}
+                  className={`rounded-full p-0.5 shadow transition-all duration-300 ease-in-out bg-zinc-900 hover:bg-zinc-800 hover:scale-110`}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3 text-white" />
                 </button>
               )}
             </div>
@@ -354,7 +354,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
           {/* Profile Header */}
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-base font-medium truncate flex items-center gap-1.5">
-              <a href={profile.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              <a href={profile.url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate">
                 {profile.name || 'Unknown User'}
               </a>
             </h3>

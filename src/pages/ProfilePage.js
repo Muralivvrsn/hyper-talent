@@ -238,7 +238,7 @@ export default function ProfilePage() {
         filteredResultsCount={filteredProfiles.length}
         />
 
-      <div className="max-h-[70vh] overflow-y-auto overflow-x-hidden grid md:grid-cols-2 lg:grid-cols-3">
+      <div className="max-h-[70vh] overflow-y-auto overflow-x-hidden">
         {filteredProfiles.map(({ profile, labels, note, sharedNotes }) => (
           <ProfileCard
             key={profile.id}

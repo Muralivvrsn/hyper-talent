@@ -452,7 +452,7 @@ export const processUploadLabels = async (sheetData, headerIndices, userId, spre
 
     if (!profileId) {
       const profilesRef = collection(db, 'profiles');
-      const q = query(profilesRef, where('u', '==', profileUrl));
+      const q = query(profilesRef, where('un', '==', username));
       const profileSnapshot = await getDocs(q);
 
       if (!profileSnapshot.empty) {
