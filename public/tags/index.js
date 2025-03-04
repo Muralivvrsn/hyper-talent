@@ -778,7 +778,7 @@ class LabelManager {
         const buttonRect = element.getBoundingClientRect();
         tooltipElement.style.position = 'fixed';
         tooltipElement.style.top = `${buttonRect.top - tooltipElement.offsetHeight - 10}px`;
-        tooltipElement.style.left = `${buttonRect.left - (tooltipElement.offsetWidth / 2) + (buttonRect.width / 2)}px`;
+        tooltipElement.style.left = `${buttonRect.left - (tooltipElement.offsetWidth / 2) + (buttonRect.width / 2) - 40}px`;
 
         this.state.activeTooltip = tooltipElement;
 
