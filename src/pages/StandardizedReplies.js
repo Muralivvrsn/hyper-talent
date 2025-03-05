@@ -76,7 +76,7 @@ const StandardizedReplies = () => {
     setIsSaving(true);
     try {
       await deleteTemplate(editingMessage.id);
-      addUserAction(`Extension: Deleted standardized reply: ${editingMessage.title}`);
+      addUserAction(`Extension: Deleted standardized reply`);
       setShowDeleteDialog(false);
       closeForm();
     } finally {
@@ -90,7 +90,7 @@ const StandardizedReplies = () => {
   };
 
   const handleMessageCardClick = (message) => {
-    addUserAction(`Extension: Opened standardized reply: ${message.title}`);
+    addUserAction(`Extension: Opened standardized reply`);
     setEditingMessage(message);
   };
 
