@@ -97,10 +97,10 @@ const FilterPopover = ({
                     {label.name}
                     {/* {label.isShared && <Users className="h-3 w-3 text-muted-foreground" />} */}
                 </span>
-                <span className='w-7 h-7 rounded-full bg-muted flex justify-center items-center text-[10px]'>{label.profileCount}</span>
                 {tempSelectedLabels.includes(label.id) && (
                     <Check className="h-4 w-4 text-primary" />
                 )}
+                <span className='w-7 h-7 rounded-full bg-muted flex justify-center items-center text-[10px]'>{label.profileCount}</span>
             </label>
         ));
     };
