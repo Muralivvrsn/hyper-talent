@@ -84,6 +84,7 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
           style={{
             backgroundColor: label.color,
             color: generateTextColor(label.color),
+            maxWidth: '-webkit-fill-available'
           }}
         >
           {!label.isShared && (
@@ -102,9 +103,9 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
               )}
             </div>
           )}
-          <span className="truncate">{label.name}</span>
+          <span className="truncate block">{label.name}</span>
           {label.isShared && (
-            <ArrowDownLeft className="h-3 w-3 ml-1 opacity-70" />
+            <ArrowDownLeft className="h-3 w-3 ml-1 opacity-70 shrink-0" />
           )}
         </div>
       ))}
@@ -117,7 +118,7 @@ const Note = ({ content, isExpanded, onToggle, isShared = false, onDelete, isDel
 
   const renderDeleteButton = () => {
     if (!isOwned) return null;
-    
+
     if (isDeleting) {
       return (
         <div className="opacity-0 group-hover/note:opacity-100 transition-opacity">

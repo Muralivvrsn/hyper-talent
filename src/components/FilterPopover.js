@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PopoverContent } from './ui/popover';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, Users, Check } from 'lucide-react';
+import { Search, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Checkbox } from './ui/checkbox';
 const FilterType = {
