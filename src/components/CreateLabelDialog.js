@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Plus, Loader2, Search, Tag, Trash2 } from 'lucide-react';
+import { Plus, Loader2, Search, Tag, Trash2, X } from 'lucide-react';
 import { getFirestore } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { createLabel, deleteLabel } from '../utils/labelUtils';
@@ -89,9 +89,14 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels, addUserAction }) => {
                 </div>
                 {isDeleting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
+                ) : !isShared ? (
                     <Trash2
                         className="h-4 w-4 text-red-500 cursor-pointer opacity-0 group-hover:opacity-100"
+                        onClick={() => handleDeleteLabel(label.id, isShared)}
+                    />
+                ) : (
+                    <X
+                        className="h-4 w-4 cursor-pointer opacity-0 group-hover:opacity-100"
                         onClick={() => handleDeleteLabel(label.id, isShared)}
                     />
                 )}
