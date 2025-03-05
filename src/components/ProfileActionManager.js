@@ -16,7 +16,8 @@ const ProfileActionManager = ({
   onClose,
   profile,
   existingLabels = [],
-  existingNote
+  existingNote,
+  addUserAction
 }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [noteContent, setNoteContent] = React.useState(existingNote?.content || '');
@@ -45,6 +46,7 @@ const ProfileActionManager = ({
     try {
       const labelId = await createLabel(searchTerm, user?.uid, db);
       if (labelId) {
+        await addUserAction("Extension: Created new label")
         await handleToggleLabel(labelId, true);
         setSearchTerm('');
         toast.success(`Label "${searchTerm}" created successfully`);
@@ -69,11 +71,13 @@ const ProfileActionManager = ({
       if (isSelected && !isNew) {
         success = await removeLabelFromProfile(labelId, profile.id, user?.uid, db);
         if (success) {
+          await addUserAction("Extension: Removed label from profile")
           toast.success('Label removed from profile');
         }
       } else {
         success = await addLabelToProfile(labelId, profile.id, user?.uid, db);
         if (success) {
+          await addUserAction("Extension: Added label to a profile")
           toast.success('Label added to profile');
         }
       }
@@ -103,12 +107,20 @@ const ProfileActionManager = ({
 
     setIsLoading(true);
     try {
-      const toastPromise = existingNote?.id
+      const notePromise = existingNote?.id
         ? updateNote(existingNote.id, noteContent, user?.uid, db)
         : createNote(profile.id, noteContent, user?.uid, db);
 
+      const [noteResult] = await Promise.all([
+        notePromise,
+        addUserAction(existingNote?.id
+          ? "Extension: Updated note"
+          : "Extension: Added a new note"
+        )
+      ]);
+
       await toast.promise(
-        toastPromise,
+        Promise.resolve(noteResult),
         {
           loading: 'Saving note...',
           success: () => {
@@ -118,6 +130,8 @@ const ProfileActionManager = ({
           error: (err) => err.message || 'Failed to save note'
         }
       );
+    } catch (error) {
+      toast.error(error.message || 'Failed to save note');
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +210,7 @@ const ProfileActionManager = ({
                           className={`w-full flex items-center gap-2 p-2 rounded-md text-sm ${selectedLabels.has(label.id)
                             ? 'bg-accent'
                             : 'hover:bg-accent/50'
-                          }`}
+                            }`}
 
                           disabled={isLoading}
                         >

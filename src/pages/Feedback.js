@@ -20,6 +20,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useFeedback } from '../context/FeedbackContext';
 import toast from 'react-hot-toast';
+import { useUserAction } from '../context/UserActionContext'
 
 const feedbackTypes = [
   { value: "Bug", label: "Bug Report", placeholder: "Describe the bug you encountered..." },
@@ -207,6 +208,7 @@ const Feedback = () => {
   const [selectedType, setSelectedType] = useState('Bug');
   const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
+  const { addUserAction } = useUserAction()
 
   const {
     feedbackItems,
@@ -226,6 +228,7 @@ const Feedback = () => {
 
     try {
       await submitFeedback(selectedType, feedback, files);
+      await addUserAction("Extension: Submitted feedback");
       setFeedback('');
       setFiles([]);
       toast.success('Feedback submitted successfully');

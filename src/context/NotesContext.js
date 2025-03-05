@@ -59,6 +59,28 @@ export const NotesProvider = ({ children }) => {
         const sharedNoteIds = allNotes
             .filter(note => note.t === 'shared')
             .map(note => note.id);
+        
+        
+            setNotes(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(noteId => {
+                    if (!ownedNoteIds.includes(noteId)) {
+                        delete updated[noteId];
+                    }
+                });
+                return updated;
+            });
+    
+            // Clean up any shared notes that are no longer in the user's list
+            setSharedNotes(prev => {
+                const updated = { ...prev };
+                Object.keys(updated).forEach(noteId => {
+                    if (!sharedNoteIds.includes(noteId)) {
+                        delete updated[noteId];
+                    }
+                });
+                return updated;
+            });
 
         const subscribeToNotes = (noteIds, setNotesState, isShared = false) => {
             if (!noteIds?.length) {

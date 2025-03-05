@@ -19,6 +19,7 @@ const FilterBar = ({
   onFilterModeChange,
   onNotesFilterChange,
   filteredResultsCount,
+  addUserAction,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -43,6 +44,7 @@ const FilterBar = ({
     onFilterModeChange(mode);
     onNotesFilterChange(hasNotes);
     setHasNotesFilter(hasNotes);
+    addUserAction("Extension: Applied filter")
   };
 
   const handleClearFilters = () => {
@@ -104,8 +106,9 @@ const FilterBar = ({
           <CreateLabelDialog
             ownedLabels={ownedLabels}
             sharedLabels={sharedLabels}
+            addUserAction={addUserAction}
           />
-          <ShareLabelsDialog ownedLabels={ownedLabels} />
+          <ShareLabelsDialog ownedLabels={ownedLabels} addUserAction={addUserAction} />
         </div>
       </div>
 

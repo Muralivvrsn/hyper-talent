@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { useLabels } from '../context/LabelContext';
-import { useOtherUsers } from '../context/OtherUsersContext';
 import { useTheme } from '../context/ThemeContext';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Button } from './ui/button';
@@ -16,7 +15,7 @@ import { Bell, Check, X, Loader2 } from 'lucide-react';
 import { getFirestore, doc, runTransaction } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 
-const PendingLabelsAlert = () => {
+const PendingLabelsAlert = ({addUserAction}) => {
     const { pendingSharedLabels } = useLabels();
     const { user } = useAuth();
     const { theme } = useTheme();
@@ -44,12 +43,14 @@ const PendingLabelsAlert = () => {
                 let updatedLabels;
 
                 if (accept) {
+                    await addUserAction("Extension: Accepted shared labels")
                     updatedLabels = allLabels.map(label =>
                         (selectedLabels.includes(label.id) && label.t === 'shared')
                             ? { ...label, a: true }
                             : label
                     );
                 } else {
+                    await addUserAction("Extension: Declined shared labels");
                     updatedLabels = allLabels.filter(label =>
                         !(selectedLabels.includes(label.id) && label.t === 'shared')
                     );

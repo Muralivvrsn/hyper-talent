@@ -359,3 +359,54 @@ export const updateNote = async (noteId, content, userId, db) => {
     return false;
   }
 };
+
+export const deleteNote = async (noteId, userId, isShared, db) => {
+  if (!noteId || !userId) return false;
+
+  try {
+    return await runTransaction(db, async (transaction) => {
+      const userRef = doc(db, 'users_v2', userId);
+      const userDoc = await transaction.get(userRef);
+
+      if (!userDoc.exists()) {
+        throw new Error('User document not found');
+      }
+
+      const userData = userDoc.data();
+      const userNotes = Array.isArray(userData.d?.n) ? userData.d.n : [];
+
+      if (!isShared) {
+        const noteRef = doc(db, 'profile_notes_v2', noteId);
+        const noteDoc = await transaction.get(noteRef);
+
+        if (!noteDoc.exists()) {
+          throw new Error('Note not found');
+        }
+
+        const matchingNote = userNotes.find(note => note.id === noteId);
+        if (!matchingNote || matchingNote.t !== 'owned') {
+          throw new Error('Unauthorized to delete note');
+        }
+
+        // Filter out the note to be deleted
+        const updatedNotes = userNotes.filter(note => note.id !== noteId);
+
+        transaction.update(userRef, {
+          'd.n': updatedNotes
+        });
+
+        transaction.delete(noteRef);
+      } else {
+        const updatedNotes = userNotes.filter(note => note.id !== noteId);
+        transaction.update(userRef, {
+          'd.n': updatedNotes
+        });
+      }
+
+      return true;
+    });
+  } catch (error) {
+    console.error('Error deleting note:', error);
+    return false;
+  }
+};

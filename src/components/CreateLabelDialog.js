@@ -9,7 +9,7 @@ import { createLabel, deleteLabel } from '../utils/labelUtils';
 import { toast } from 'react-hot-toast';
 import { ScrollArea } from './ui/scroll-area';
 
-const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
+const CreateLabelDialog = ({ ownedLabels, sharedLabels, addUserAction }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [labelName, setLabelName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +25,7 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
         try {
             const result = await createLabel(labelName, user?.uid, db);
             if (result) {
+                await addUserAction("Extension: Created new label")
                 toast.success(`Label "${labelName}" created successfully`);
                 setIsOpen(false);
                 setLabelName('');
@@ -41,9 +42,10 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
 
     const handleDeleteLabel = async (labelId, isShared) => {
         if (isCreating) return;
-        setIsDeleting(true)
+        setIsDeleting(true);
         try {
             await deleteLabel(labelId, user?.uid, isShared, db);
+            await addUserAction("Extension: Deleted label")
             toast.success('Label deleted successfully');
         } catch (error) {
             toast.error('Failed to delete label');
@@ -74,15 +76,17 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
         labels.map(label => (
             <div
                 key={label.id}
-                className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent/50 relative group"
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent/50 relative group"
             >
                 <span
                     className="w-2 h-2 rounded-full"
                     style={{ backgroundColor: label.color }}
                 />
-                <span className="flex-1 truncate text-xs">
-                    {label.name}
-                </span>
+                <div className="flex-1 flex flex-col min-w-0">
+                    <span className="text-xs break-words">
+                        {label.name}
+                    </span>
+                </div>
                 {isDeleting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -91,6 +95,7 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
                         onClick={() => handleDeleteLabel(label.id, isShared)}
                     />
                 )}
+                <span className='w-7 h-7 rounded-full bg-muted flex justify-center items-center text-[10px]'>{label.profileCount}</span>
             </div>
         ))
     );
@@ -138,33 +143,55 @@ const CreateLabelDialog = ({ ownedLabels, sharedLabels }) => {
 
                     <ScrollArea className="h-[200px] pr-4">
                         <div className="space-y-2">
-                            {ownedLabels.length > 0 && (
+                            {searchTerm ? (
                                 <>
-                                    {sharedLabels.length > 0 &&
-                                        <div className="text-sm">Your Labels <small>({ownedLabels.length})</small></div>
-                                    }
-                                    {renderLabelList(ownedLabels, false)}
-                                </>
-                            )}
+                                    {filteredOwnedLabels.length > 0 && (
+                                        <>
+                                            {filteredSharedLabels.length > 0 &&
+                                                <div className="text-sm">Your Labels <small>({filteredOwnedLabels.length})</small></div>
+                                            }
+                                            {renderLabelList(filteredOwnedLabels, false)}
+                                        </>
+                                    )}
 
-                            {sharedLabels.length > 0 && (
+                                    {filteredSharedLabels.length > 0 && (
+                                        <>
+                                            <div className="text-sm mt-4">Shared Labels <small>({filteredSharedLabels.length})</small></div>
+                                            {renderLabelList(filteredSharedLabels, true)}
+                                        </>
+                                    )}
+
+                                    {filteredOwnedLabels.length === 0 && filteredSharedLabels.length === 0 && (
+                                        <div className="px-2 py-8 text-center text-sm text-muted-foreground">
+                                            <p>No matching labels</p>
+                                            <p className="mt-1">Press Enter to create new label</p>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
                                 <>
-                                    <div className="text-sm mt-4">Shared Labels <small>({sharedLabels.length})</small></div>
-                                    {renderLabelList(sharedLabels, true)}
+                                    {ownedLabels.length > 0 && (
+                                        <>
+                                            {sharedLabels.length > 0 &&
+                                                <div className="text-sm">Your Labels <small>({ownedLabels.length})</small></div>
+                                            }
+                                            {renderLabelList(ownedLabels, false)}
+                                        </>
+                                    )}
+
+                                    {sharedLabels.length > 0 && (
+                                        <>
+                                            <div className="text-sm mt-4">Shared Labels <small>({sharedLabels.length})</small></div>
+                                            {renderLabelList(sharedLabels, true)}
+                                        </>
+                                    )}
+
+                                    {ownedLabels.length === 0 && sharedLabels.length === 0 && (
+                                        <div className="px-2 py-8 text-center text-sm text-muted-foreground">
+                                            <p>No labels available</p>
+                                        </div>
+                                    )}
                                 </>
-                            )}
-
-                            {filteredOwnedLabels.length === 0 && filteredSharedLabels.length === 0 && searchTerm && (
-                                <div className="px-2 py-8 text-center text-sm text-muted-foreground">
-                                    <p>No matching labels</p>
-                                    <p className="mt-1">Press Enter to create new label</p>
-                                </div>
-                            )}
-
-                            {ownedLabels.length === 0 && sharedLabels.length === 0 && (
-                                <div className="px-2 py-8 text-center text-sm text-muted-foreground">
-                                    <p>No labels available</p>
-                                </div>
                             )}
                         </div>
                     </ScrollArea>
