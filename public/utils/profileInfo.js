@@ -77,7 +77,7 @@ window.labelManagerUtils = {
                 }
                 if (!connectionCode) {
                     console.log('extracting')
-                    connectionCode = this.extracProfileIdFromCode()
+                    connectionCode = this.extractProfileIdFromCode()
                 }
 
                 // console.log(connectionCode)

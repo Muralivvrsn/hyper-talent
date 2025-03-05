@@ -884,7 +884,7 @@ class LabelManager {
                 }
             } else {
                 const existingButton = document.querySelector('.hyper_label_button');
-                existingButton.style.opacity = 0;
+                // existingButton.style.opacity = 0;
                 if (!existingButton) {
                     this.createElements(document.body);
                 }

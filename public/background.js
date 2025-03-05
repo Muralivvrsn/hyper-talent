@@ -10,8 +10,8 @@ chrome.tabs.onActivated.addListener(function (activeInfo) {
 });
 
 
-const REFRESH_BUFFER = 10 * 60 * 1000; // 10 minutes buffer before token expiry
-const REFRESH_INTERVAL = 50 * 60 * 1000; // Refresh every 50 minutes
+const REFRESH_BUFFER = 10 * 60 * 1000; 
+const REFRESH_INTERVAL = 50 * 60 * 1000; 
 
 // Tab update listener
 // Helper function to check if URL is a LinkedIn URL
