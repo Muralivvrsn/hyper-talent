@@ -295,22 +295,42 @@ class LinkedInLabelsManager {
         if (!name || !this.labelsData || !Array.isArray(this.labelsData)) {
             return [];
         }
-
+    
         return this.labelsData.filter(label => {
             if (!label || !Array.isArray(label.profiles)) return false;
-
-            const matchingProfile = label.profiles.find(profile =>
+    
+            // First, try to match the profile by image ID
+            console.log(label.profiles)
+            const matchingProfileByImage = label.profiles.find(profile => {
+                if (profile && profile.image_url) {
+                    const profileImageId = this.extractImageId(profile.image_url);
+                    
+                    const currentImageId = this.extractImageId(imageUrl);
+                    return profileImageId === currentImageId;
+                }
+                return false;
+            });
+    
+            console.log(name)
+            console.log(matchingProfileByImage)
+            if (matchingProfileByImage) {
+                console.log(imageUrl)
+                matchingProfileByImage.isVerified = true;
+                return true;
+            }
+    
+            // If no match by image, check by name
+            const matchingProfileByName = label.profiles.find(profile => 
                 profile && profile.name &&
                 profile.name.trim().toLowerCase() === name.toLowerCase()
             );
-
-            if (matchingProfile) {
-                // Add verification status
-                const profileImageId = this.extractImageId(matchingProfile.image_url);
-                const currentImageId = this.extractImageId(imageUrl);
-                matchingProfile.isVerified = profileImageId === currentImageId;
+    
+            if (matchingProfileByName) {
+                // If name matches, set isVerified to false
+                matchingProfileByName.isVerified = false;
                 return true;
             }
+    
             return false;
         });
     }
@@ -318,7 +338,7 @@ class LinkedInLabelsManager {
     // Helper function for image verification
     extractImageId(url) {
         if (!url) return null;
-        const match = url.match(/image\/[^/]+\/([^/]+)/);
+        const match = url.match(/v2\/([^/]+)/);
         return match ? match[1] : null;
     }
 
@@ -477,7 +497,7 @@ class LinkedInLabelsManager {
         const contentElement = listItem.querySelector('.msg-conversation-card__content--selectable');
         const rowsContainer = contentElement?.querySelector('.msg-conversation-card__rows');
         const nameElement = listItem.querySelector('.msg-conversation-listitem__participant-names span.truncate');
-        const imageElement = listItem.querySelector('img');
+        const imageElement = listItem.querySelector('.msg-conversation-listitem__link .msg-selectable-entity img');
 
         if (!rowsContainer || !nameElement || !imageElement) {
             return;
@@ -519,32 +539,71 @@ class LinkedInLabelsManager {
         // Add new matching labels that aren't already displayed
         matchingLabels.forEach(label => {
             if (!currentLabelIds.has(label.label_id)) {
-                const matchingProfile = label.profiles.find(p =>
-                    p.name.trim().toLowerCase() === name.toLowerCase()
-                );
-
-                if (matchingProfile) {
+                // First, check by image URL
+                const matchingProfileByImage = label.profiles.find(p => {
+                    const profileImageId = this.extractImageId(p.image_url);
+                    const currentImageId = this.extractImageId(imageUrl);
+                    return profileImageId === currentImageId;
+                });
+        
+                if (matchingProfileByImage) {
+                    // If image matches, mark as verified and create the label
                     const labelElement = this.createLabel(
                         label,
                         {
-                            name: name,
-                            profile_id: matchingProfile.profile_id,
+                            name: matchingProfileByImage.name,
+                            profile_id: matchingProfileByImage.profile_id,
                             isVerified: true
                         }
                     );
                     labelsContainer.appendChild(labelElement);
+                } else {
+                    // If image does not match, check by name
+                    const matchingProfileByName = label.profiles.find(p =>
+                        p.name.trim().toLowerCase() === name.toLowerCase()
+                    );
+        
+                    if (matchingProfileByName) {
+                        // If name matches, mark as unverified and create the label
+                        const labelElement = this.createLabel(
+                            label,
+                            {
+                                name: matchingProfileByName.name,
+                                profile_id: matchingProfileByName.profile_id,
+                                isVerified: false
+                            }
+                        );
+                        labelsContainer.appendChild(labelElement);
+                    }
                 }
             }
-            else{
-                const matchingProfile = label.profiles.find(p =>
-                    p.name.trim().toLowerCase() === name.toLowerCase()
-                );
-                if (matchingProfile) {
+            else {
+                // When label already exists, first check by image URL
+                const matchingProfileByImage = label.profiles.find(p => {
+                    const profileImageId = this.extractImageId(p.image_url);
+                    const currentImageId = this.extractImageId(imageUrl);
+                    return profileImageId === currentImageId;
+                });
+        
+                if (matchingProfileByImage) {
+                    // If image matches, update the label and mark as verified
                     this.updateLabel(
                         labelsContainer,
                         label
                     );
-                    // labelsContainer.appendChild(labelElement);
+                } else {
+                    // If image does not match, check by name
+                    const matchingProfileByName = label.profiles.find(p =>
+                        p.name.trim().toLowerCase() === name.toLowerCase()
+                    );
+        
+                    if (matchingProfileByName) {
+                        // If name matches, update the label and mark as unverified
+                        this.updateLabel(
+                            labelsContainer,
+                            label
+                        );
+                    }
                 }
             }
         });

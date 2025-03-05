@@ -48,6 +48,7 @@ window.autoUpdateProfiles = {
                 }
 
                 const profileInfo = await window.labelManagerUtils.getProfileInfo();
+                console.log(profileInfo)
                 
                 // Validate required fields
                 if (profileInfo && 
