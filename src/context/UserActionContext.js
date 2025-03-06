@@ -2,9 +2,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   getFirestore, 
   collection,
-  getDocs,
   onSnapshot,
-  query
+  query,
+  doc,
+  updateDoc,
+  arrayUnion,
+  setDoc
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 
@@ -97,13 +100,49 @@ export const UserActionProvider = ({ children }) => {
     return Object.keys(data);
   };
 
+  const addUserAction = async (title) => {
+    if (!user || !title) {
+      console.error('User and title are required');
+      return false;
+    }
+  
+    try {
+      const userActionRef = doc(db, 'user_actions', user.uid);
+      
+      // Create action object with serverTimestamp
+      const action = {
+        timestamp: new Date().toISOString(),
+        title: title
+      };
+      
+      // Try to update the document first (if it exists)
+      try {
+        await updateDoc(userActionRef, {
+          actions: arrayUnion(action)
+        });
+      } catch (error) {
+        // If document doesn't exist, create it
+        await setDoc(userActionRef, {
+          actions: [action]
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error adding user action:', error);
+      setError('Failed to add user action');
+      return false;
+    }
+  };
+
   const value = {
     data,
     loading,
     error,
     getUniqueActionTypes,
     getUserActions,
-    getUserIds
+    getUserIds,
+    addUserAction
   };
 
   return (

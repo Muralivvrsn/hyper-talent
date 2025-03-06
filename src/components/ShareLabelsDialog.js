@@ -16,7 +16,7 @@ import { getFirestore, doc, updateDoc, arrayUnion, getDoc } from 'firebase/fires
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
-const ShareLabelsDialog = ({ ownedLabels }) => {
+const ShareLabelsDialog = ({ ownedLabels, addUserAction }) => {
   const { otherUsers } = useOtherUsers();
   const { notes } = useNotes();
   const [isOpen, setIsOpen] = useState(false);
@@ -126,6 +126,7 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
 
           // For sharing labels:
           if (sharingType === 'labels') {
+            await addUserAction("Extension: Shared labels with a user");
             const existingLabels = userData.d?.l || [];
             const newLabelsToShare = selectedLabels.filter(labelId =>
               !existingLabels.some(item => item.id === labelId)
@@ -147,6 +148,7 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
               });
             }
           } else if (sharingType === 'notes') {
+            await addUserAction("Extension: Shared notes with a user");
             const existingNotes = userData.d?.n || [];
             const newNotesToShare = noteIds.filter(noteId =>
               !existingNotes.some(item => item.id === noteId)
@@ -248,6 +250,7 @@ const ShareLabelsDialog = ({ ownedLabels }) => {
                       />
                       <span>{label.name}</span>
                     </label>
+                    <span className='w-7 h-7 rounded-full bg-muted flex justify-center items-center text-[10px]'>{label.profileCount}</span>
                   </div>
                 ))}
                 {filteredLabels.length === 0 && (

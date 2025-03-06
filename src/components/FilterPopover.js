@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PopoverContent } from './ui/popover';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Search, Users, Check } from 'lucide-react';
+import { Search, Check } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Checkbox } from './ui/checkbox';
 const FilterType = {
@@ -95,11 +95,12 @@ const FilterPopover = ({
                 />
                 <span className="flex-1 flex items-center gap-2">
                     {label.name}
-                    {label.isShared && <Users className="h-3 w-3 text-muted-foreground" />}
+                    {/* {label.isShared && <Users className="h-3 w-3 text-muted-foreground" />} */}
                 </span>
                 {tempSelectedLabels.includes(label.id) && (
                     <Check className="h-4 w-4 text-primary" />
                 )}
+                <span className='w-7 h-7 rounded-full bg-muted flex justify-center items-center text-[10px]'>{label.profileCount}</span>
             </label>
         ));
     };

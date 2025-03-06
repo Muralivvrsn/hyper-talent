@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { Users, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2, ChevronRight, Plus, ArrowDownLeft } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, MoreVertical, Tag, MessageSquarePlus, Loader2, ChevronRight, Plus, ArrowDownLeft, Trash2 } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { Button } from './ui/button';
 import ProfileActionManager from './ProfileActionManager';
-import { X } from 'lucide-react';
+import { } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getFirestore } from 'firebase/firestore';
-import { hexToHSL, parseHSL, removeLabelFromProfile } from '../utils/labelUtils';
+import { deleteNote, hexToHSL, parseHSL, removeLabelFromProfile } from '../utils/labelUtils';
 import { toast } from 'react-hot-toast';
 import { useTheme } from '../context/ThemeContext';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const ProfileActionsMenu = ({ onAction, hasNote }) => (
   <Popover>
@@ -84,6 +84,7 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
           style={{
             backgroundColor: label.color,
             color: generateTextColor(label.color),
+            maxWidth: '-webkit-fill-available'
           }}
         >
           {!label.isShared && (
@@ -102,9 +103,9 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
               )}
             </div>
           )}
-          <span className="truncate">{label.name}</span>
+          <span className="truncate block">{label.name}</span>
           {label.isShared && (
-            <ArrowDownLeft className="h-3 w-3 ml-1 opacity-70" />
+            <ArrowDownLeft className="h-3 w-3 ml-1 opacity-70 shrink-0" />
           )}
         </div>
       ))}
@@ -112,17 +113,46 @@ const ProfileLabels = ({ labels, onRemove, isRemoving, theme, onAddLabel }) => {
   );
 };
 
-const Note = ({ content, isExpanded, onToggle, isShared = false }) => {
+const Note = ({ content, isExpanded, onToggle, isShared = false, onDelete, isDeleting, isOwned }) => {
   if (!content && !isShared) return null;
+
+  const renderDeleteButton = () => {
+    if (!isOwned) return null;
+
+    if (isDeleting) {
+      return (
+        <div className="opacity-0 group-hover/note:opacity-100 transition-opacity">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      );
+    }
+
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-0 opacity-0 group-hover/note:opacity-100 transition-opacity"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    );
+  };
 
   const renderContent = () => {
     if (isShared && !isExpanded) return null;
 
-    const contentElement = (
-      <>
+    return (
+      <div className="group/note relative">
         <p className={`text-sm text-muted-foreground ${isExpanded || isShared ? '' : 'line-clamp-2'}`}>
           {content}
         </p>
+        <div className="absolute right-0 top-0">
+          {renderDeleteButton()}
+        </div>
         {!isShared && content?.length > 60 && (
           <button
             onClick={(e) => {
@@ -132,24 +162,17 @@ const Note = ({ content, isExpanded, onToggle, isShared = false }) => {
             className="text-xs text-muted-foreground hover:text-primary mt-1 flex items-center gap-1"
           >
             {isExpanded ? (
-              <>
-                Show less
-                <ChevronUp className="h-3 w-3" />
-              </>
+              <>Show less <ChevronUp className="h-3 w-3" /></>
             ) : (
-              <>
-                Show more
-                <ChevronDown className="h-3 w-3" />
-              </>
+              <>Show more <ChevronDown className="h-3 w-3" /></>
             )}
           </button>
         )}
-      </>
+      </div>
     );
-    return contentElement;
   };
 
-  return renderContent()
+  return renderContent();
 };
 
 const NotesSection = ({
@@ -159,34 +182,13 @@ const NotesSection = ({
   expandedNotes,
   setExpanded,
   toggleNoteExpanded,
-  userId,
-  db
+  onDeleteNote,
+  onRemoveSharedNote,
+  isDeletingNote,
+  isDeletingSharedNote
 }) => {
   const hasSharedNotes = sharedNotes?.length > 0;
   const hasPrimaryNote = !!note?.content;
-
-  const handleRemoveSharedNote = async (noteId) => {
-    try {
-      const userRef = doc(db, 'users_v2', userId);
-      const userDoc = await getDoc(userRef);
-
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        const notes = userData.d.n;
-
-        const updatedNotes = notes.filter(note => note.id !== noteId);
-
-        await updateDoc(userRef, {
-          'd.n': updatedNotes
-        });
-
-        toast.success('Note removed successfully');
-      }
-    } catch (error) {
-      console.error('Error removing note:', error);
-      toast.error('Failed to remove note');
-    }
-  };
 
   const renderPrimaryNote = () => (
     <div className="w-full">
@@ -195,6 +197,9 @@ const NotesSection = ({
           content={note.content}
           isExpanded={expanded}
           onToggle={() => setExpanded(!expanded)}
+          onDelete={() => onDeleteNote(note.id)}
+          isDeleting={isDeletingNote}
+          isOwned={true}
         />
       )}
     </div>
@@ -205,9 +210,7 @@ const NotesSection = ({
       <div className="space-y-2">
         {sharedNotes.map((note) => (
           <div key={note.id} className="overflow-hidden group/note">
-            <div
-              className="flex items-center gap-2 py-1 hover:bg-muted/30"
-            >
+            <div className="flex items-center gap-2 py-1 hover:bg-muted/30">
               <div
                 className="flex-1 cursor-pointer flex items-center gap-2"
                 onClick={() => toggleNoteExpanded(note.id)}
@@ -217,18 +220,31 @@ const NotesSection = ({
                 ) : (
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 )}
-                <h4 className="text-sm font-medium">
-                  {note.sbn}
-                </h4>
+                <h4 className="text-sm font-medium">{note.sbn}</h4>
               </div>
-              {/* <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 opacity-0 group-hover/note:opacity-100 transition-opacity"
-                onClick={() => handleRemoveSharedNote(note.id)}
-              >
-                <X className="h-4 w-4" />
-              </Button> */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {isDeletingSharedNote[note.id] ? (
+                      <div className="h-6 w-6 flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 opacity-0 group-hover/note:opacity-100 transition-opacity"
+                        onClick={() => onRemoveSharedNote(note.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Remove shared note
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
 
             {expandedNotes[note.id] && (
@@ -290,15 +306,51 @@ const NotesSection = ({
   );
 };
 
-const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
+const ProfileCard = ({ profile, labels, note, sharedNotes, addUserAction }) => {
   const [expanded, setExpanded] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState({});
   const [actionType, setActionType] = useState(null);
+  const [isDeletingNote, setIsDeletingNote] = useState(false);
+  const [isDeletingSharedNote, setIsDeletingSharedNote] = useState({});
   const [removingLabels, setRemovingLabels] = useState({});
   const { user } = useAuth();
   const { theme } = useTheme();
   const db = getFirestore();
 
+
+  const handleDeleteNote = async (noteId) => {
+    setIsDeletingNote(true);
+    try {
+      const success = await deleteNote(noteId, user?.uid, false, db);
+      if (success) {
+        await addUserAction("Extension: Deleted owned note");
+        toast.success('Note deleted successfully');
+      } else {
+        toast.error('Failed to delete note');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete note');
+    } finally {
+      setIsDeletingNote(false);
+    }
+  };
+
+  const handleRemoveSharedNote = async (noteId) => {
+    setIsDeletingSharedNote(prev => ({ ...prev, [noteId]: true }));
+    try {
+      const success = await deleteNote(noteId, user?.uid, true, db);
+      if (success) {
+        await addUserAction("Extension: Removed shared note");
+        toast.success('Shared note removed');
+      } else {
+        toast.error('Failed to remove shared note');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to remove shared note');
+    } finally {
+      setIsDeletingSharedNote(prev => ({ ...prev, [noteId]: false }));
+    }
+  };
 
   const handleRemoveLabel = async (labelId, e) => {
     e.stopPropagation();
@@ -308,6 +360,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
     try {
       const success = await removeLabelFromProfile(labelId, profile.id, user?.uid, db);
       if (success) {
+        await addUserAction("Extension: Removed label from profile")
         toast.success(`Removed "${label.name}" from profile`);
       } else {
         toast.error('Failed to remove label');
@@ -384,8 +437,10 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
         expandedNotes={expandedNotes}
         setExpanded={setExpanded}
         toggleNoteExpanded={toggleNoteExpanded}
-        userId={user?.uid}
-        db={db}
+        onDeleteNote={handleDeleteNote}
+        onRemoveSharedNote={handleRemoveSharedNote}
+        isDeletingNote={isDeletingNote}
+        isDeletingSharedNote={isDeletingSharedNote}
       />
 
       <ProfileActionManager
@@ -395,6 +450,7 @@ const ProfileCard = ({ profile, labels, note, sharedNotes }) => {
         profile={profile}
         existingLabels={labels}
         existingNote={note}
+        addUserAction={addUserAction}
       />
     </div>
   );

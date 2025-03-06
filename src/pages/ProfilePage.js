@@ -4,6 +4,7 @@ import { useNotes } from '../context/NotesContext';
 import ProfileCard from '../components/ProfileCard';
 import FilterBar from '../components/FilterBar';
 import PendingLabelsAlert from '../components/PendingLabelsAlert';
+import { useUserAction } from '../context/UserActionContext'
 
 export default function ProfilePage() {
   const {
@@ -17,6 +18,7 @@ export default function ProfilePage() {
   const [selectedLabels, setSelectedLabels] = useState([]);
   const [filterMode, setFilterMode] = useState('any');
   const [hasNotesFilter, setHasNotesFilter] = useState(false);
+  const { addUserAction } = useUserAction()
 
   const profilesData = useMemo(() => {
     const profileMap = new Map();
@@ -40,7 +42,8 @@ export default function ProfilePage() {
               name: label.name,
               color: label.color,
               createdBy: label.createdBy,
-              isShared: false
+              isShared: false,
+              // profilesCount: labelProfiles.length
             }],
             note: null
           });
@@ -50,7 +53,8 @@ export default function ProfilePage() {
             name: label.name,
             color: label.color,
             createdBy: label.createdBy,
-            isShared: false
+            isShared: false,
+            // profilesCount: labelProfiles.length
           });
         }
       });
@@ -75,7 +79,8 @@ export default function ProfilePage() {
               name: label.name,
               color: label.color,
               createdBy: label.createdBy,
-              isShared: true
+              isShared: true,
+              // profilesCount: labelProfiles.length
             }],
             note: null
           });
@@ -85,7 +90,8 @@ export default function ProfilePage() {
             name: label.name,
             color: label.color,
             createdBy: label.createdBy,
-            isShared: true
+            isShared: true,
+            // profilesCount: labelProfiles.length
           });
         }
       });
@@ -143,19 +149,19 @@ export default function ProfilePage() {
               sharedNotes: []
             });
           }
-          
+
           // Push the shared note to the profile's sharedNotes array
           const sharedNoteItem = {
             id: noteId,
             content: noteData.content,
             sbn: noteData.sbn || (noteData.sa ? noteData.sa : null) // Include shared by name if available
           };
-          
+
           // Initialize sharedNotes array if it doesn't exist
           if (!profileMap.get(noteData.profileId).sharedNotes) {
             profileMap.get(noteData.profileId).sharedNotes = [];
           }
-          
+
           profileMap.get(noteData.profileId).sharedNotes.push(sharedNoteItem);
         }
       }
@@ -205,11 +211,24 @@ export default function ProfilePage() {
     return <div>Loading...</div>;
   }
 
+  const labelProfileCounts = new Map();
+
+  Object.keys(labels).forEach(labelId => {
+    const profiles = getLabelProfiles(labelId, false) || [];
+    labelProfileCounts.set(labelId, profiles.length);
+  });
+
+  Object.keys(activeSharedLabels).forEach(labelId => {
+    const profiles = getLabelProfiles(labelId, true) || [];
+    labelProfileCounts.set(labelId, profiles.length);
+  });
+
   const ownedLabelsList = Object.entries(labels).map(([id, label]) => ({
     id,
     name: label.name,
     color: label.color,
-    isShared: false
+    isShared: false,
+    profileCount: labelProfileCounts.get(id) || 0
   }));
 
   const sharedLabelsList = Object.entries(activeSharedLabels).map(([id, label]) => ({
@@ -217,7 +236,8 @@ export default function ProfilePage() {
     name: label.name,
     color: label.color,
     isShared: true,
-    createdBy: label.createdBy
+    createdBy: label.createdBy,
+    profileCount: labelProfileCounts.get(id) || 0
   }));
 
   return (
@@ -236,7 +256,8 @@ export default function ProfilePage() {
         onFilterModeChange={handleFilterModeChange}
         onNotesFilterChange={handleNotesFilterChange}
         filteredResultsCount={filteredProfiles.length}
-        />
+        addUserAction={addUserAction}
+      />
 
       <div className="max-h-[70vh] overflow-y-auto overflow-x-hidden">
         {filteredProfiles.map(({ profile, labels, note, sharedNotes }) => (
@@ -246,10 +267,11 @@ export default function ProfilePage() {
             labels={labels}
             note={note}
             sharedNotes={sharedNotes}
+            addUserAction={addUserAction}
           />
         ))}
       </div>
-      <PendingLabelsAlert />
+      <PendingLabelsAlert addUserAction={addUserAction} />
     </div>
   );
 }

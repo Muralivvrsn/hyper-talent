@@ -15,6 +15,7 @@ import { useLabels } from '../context/LabelContext';
 import { useNotes } from '../context/NotesContext';
 import { useData } from '../context/DataContext';
 import { useSheet } from '../context/SheetContext';
+import { useUserAction } from '../context/UserActionContext'
 
 const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabled, anyLoading }) => (
   <TooltipProvider>
@@ -101,6 +102,7 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => {
 
 const SheetPage = () => {
   const { user } = useAuth();
+  const { addUserAction } = useUserAction()
   const { sheetData, getGoogleToken } = useSheet();
   const [loadingStates, setLoadingStates] = useState({
     create: false,
@@ -136,6 +138,7 @@ const SheetPage = () => {
       });
 
       window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
+      await addUserAction("Extension: Created new google sheet");
     } catch (error) {
       console.error('Error creating sheet:', error);
     } finally {
@@ -149,6 +152,7 @@ const SheetPage = () => {
 
     try {
       setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
+      await addUserAction(`Extension: Synced ${syncType}`);
       const token = await getGoogleToken();
 
       const data = {
@@ -180,6 +184,7 @@ const SheetPage = () => {
     if (!sheetData?.id) return;
     try {
       setLoadingStates(prev => ({ ...prev, updateLabels: true }));
+      await addUserAction("Extension: Uploaded labels");
       const token = await getGoogleToken();
 
       const response = await fetch(
@@ -219,6 +224,11 @@ const SheetPage = () => {
     }
   };
 
+  const handleOpenSheet = async () => {
+    await addUserAction("Extension: Opened google sheet");
+    window.open(`https://docs.google.com/spreadsheets/d/${sheetData?.id}`, '_blank');
+  };
+
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="text-lg font-semibold mb-2">Sheet Manager</h1>
@@ -241,7 +251,7 @@ const SheetPage = () => {
             <div className="flex flex-col items-center gap-4 pb-4">
               <Button
                 variant="outline"
-                onClick={() => window.open(`https://docs.google.com/spreadsheets/d/${sheetData?.id}`, '_blank')}
+                onClick={handleOpenSheet}
                 className="w-full max-w-md p-6"
               >
                 <ExternalLink className="mr-2 h-4 w-4" />

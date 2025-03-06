@@ -17,9 +17,11 @@ import {
 import MessageForm from '../components/messages/MessageForm';
 import MessageCard from '../components/messages/MessageCard';
 import EmptyState from '../components/messages/EmptyState';
+import { useUserAction } from '../context/UserActionContext';
 
 const StandardizedReplies = () => {
   const { templates, error, addTemplate, editTemplate, deleteTemplate } = useData();
+  const { addUserAction } = useUserAction();
   const [editingMessage, setEditingMessage] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,6 +55,11 @@ const StandardizedReplies = () => {
         : await addTemplate(formData);
 
       if (success) {
+        if (editingMessage) {
+          addUserAction("Extension: Edited standardized reply");
+        } else {
+          addUserAction("Extension: Created new standardized reply");
+        }
         closeForm();
       }
     } finally {
@@ -69,6 +76,7 @@ const StandardizedReplies = () => {
     setIsSaving(true);
     try {
       await deleteTemplate(editingMessage.id);
+      addUserAction(`Extension: Deleted standardized reply`);
       setShowDeleteDialog(false);
       closeForm();
     } finally {
@@ -76,6 +84,20 @@ const StandardizedReplies = () => {
     }
   };
 
+  const handleAddButtonClick = () => {
+    addUserAction("Extension: Clicked create new standardized reply button");
+    setShowAddForm(true);
+  };
+
+  const handleMessageCardClick = (message) => {
+    addUserAction(`Extension: Opened standardized reply`);
+    setEditingMessage(message);
+  };
+
+  const handleCancelDelete = () => {
+    addUserAction("Extension: Canceled delete dialog");
+    setShowDeleteDialog(false);
+  };
 
   return (
     <div className="h-full bg-background">
@@ -83,7 +105,7 @@ const StandardizedReplies = () => {
         <div className="flex items-center justify-between mb-5">
           <h1 className="text-lg font-semibold">Standardized Replies</h1>
           <Button
-            onClick={() => setShowAddForm(true)}
+            onClick={handleAddButtonClick}
             className="h-9 w-9 rounded-full p-0"
           >
             <Plus className="h-4 w-4" />
@@ -105,7 +127,7 @@ const StandardizedReplies = () => {
                 key={message.id}
                 message={message}
                 onClick={() => {
-                  setEditingMessage(message);
+                  handleMessageCardClick(message);
                 }}
               />
             ))}
@@ -166,7 +188,7 @@ const StandardizedReplies = () => {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={handleCancelDelete}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

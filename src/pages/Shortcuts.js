@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Keyboard, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 const usePlatform = () => {
   const [isMac, setIsMac] = useState(true);
