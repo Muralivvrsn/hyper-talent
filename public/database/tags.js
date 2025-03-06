@@ -225,6 +225,8 @@ class LinkedInLabelsDatabase {
     }
     
     async removeProfileFromLabel(labelId, profileId) {
+        // console.log(labelId);
+        // console.log(profileId)
         if(!window.start_action('removing','Peeling label off profile. Painless separation in progress! 📤🩹')){
             throw Error;
         }
@@ -252,8 +254,11 @@ class LinkedInLabelsDatabase {
             // console.log(profileInfo.profile_id);
 
             // Check if profile exists in the profiles array
+            console.log(labelData.p);
+            console.log(profileId)
             if (!labelData.p || !labelData.p.includes(profileId)) {
-                throw new Error('Profile not found in label');
+                window.complete_action('removing', false, "Label has separation anxiety. Need relationship counseling! 🤨💔")
+                return false;
             }
     
             // Remove profile from the profiles array
@@ -267,7 +272,7 @@ class LinkedInLabelsDatabase {
         } catch (error) {
             console.error('[LinkedInLabels] Remove profile from label error:', error);
             window.complete_action('removing', false, "Label has separation anxiety. Need relationship counseling! 🤨💔")
-            throw error;
+            return true;
         }
     }
 

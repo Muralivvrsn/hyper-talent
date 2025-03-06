@@ -2,7 +2,7 @@ window.autoUpdateProfiles = {
     STORAGE_KEY: "processedProfiles",
     CACHE_DURATION: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
     MAX_RETRIES: 10, // Maximum number of retries
-    RETRY_DELAY: 1000, // Delay between retries in milliseconds
+    RETRY_DELAY: 2000, // Delay between retries in milliseconds
 
     async init() {
         if (!window.location.href.includes("linkedin.com/in/")) return;
@@ -48,7 +48,7 @@ window.autoUpdateProfiles = {
                 }
 
                 const profileInfo = await window.labelManagerUtils.getProfileInfo();
-                console.log(profileInfo)
+                // console.log(profileInfo)
                 
                 // Validate required fields
                 if (profileInfo && 

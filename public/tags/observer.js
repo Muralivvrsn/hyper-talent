@@ -65,11 +65,11 @@ class LinkedInLabelsManager {
                 if (labelData) {
                     const originalColor = labelData.label_color;
 
-                        label.style.backgroundColor = originalColor;
-                        // console.log(originalColor)
-                        // console.log(window.labelManagerUtils.generateTextColor(originalColor))
-                        label.style.color = window.labelManagerUtils.generateTextColor(originalColor)
-                        label.style.border = 'none';
+                    label.style.backgroundColor = originalColor;
+                    // console.log(originalColor)
+                    // console.log(window.labelManagerUtils.generateTextColor(originalColor))
+                    label.style.color = window.labelManagerUtils.generateTextColor(originalColor)
+                    label.style.border = 'none';
                 }
             });
         });
@@ -125,7 +125,7 @@ class LinkedInLabelsManager {
         // console.log('Element not found within timeout');
         return null;
     }
-    
+
 
     isMessagingPage() {
         return location.pathname.includes('/messaging/thread');
@@ -295,42 +295,44 @@ class LinkedInLabelsManager {
         if (!name || !this.labelsData || !Array.isArray(this.labelsData)) {
             return [];
         }
-    
+
         return this.labelsData.filter(label => {
             if (!label || !Array.isArray(label.profiles)) return false;
-    
+
             // First, try to match the profile by image ID
-            console.log(label.profiles)
+            // console.log(label.profiles)
             const matchingProfileByImage = label.profiles.find(profile => {
                 if (profile && profile.image_url) {
                     const profileImageId = this.extractImageId(profile.image_url);
-                    
+
                     const currentImageId = this.extractImageId(imageUrl);
+                    if (!currentImageId && !profileImageId)
+                        return false;
                     return profileImageId === currentImageId;
                 }
                 return false;
             });
-    
-            console.log(name)
-            console.log(matchingProfileByImage)
+
+            // console.log(name)
+            // console.log(matchingProfileByImage)
             if (matchingProfileByImage) {
-                console.log(imageUrl)
+                // console.log(imageUrl)
                 matchingProfileByImage.isVerified = true;
                 return true;
             }
-    
+
             // If no match by image, check by name
-            const matchingProfileByName = label.profiles.find(profile => 
+            const matchingProfileByName = label.profiles.find(profile =>
                 profile && profile.name &&
                 profile.name.trim().toLowerCase() === name.toLowerCase()
             );
-    
+
             if (matchingProfileByName) {
                 // If name matches, set isVerified to false
                 matchingProfileByName.isVerified = false;
                 return true;
             }
-    
+
             return false;
         });
     }
@@ -357,6 +359,8 @@ class LinkedInLabelsManager {
             container.className = 'hypertalent-profile-labels-container';
             targetElement.insertBefore(container, targetElement.firstChild);
         }
+
+        // console.log(profileInfo)
 
         this.labelContainerRef = container;
         this.updateLabelsDisplay(profileInfo);
@@ -386,6 +390,8 @@ class LinkedInLabelsManager {
 
         // Continue with normal label processing for logged_in state with labels
         const matchingLabels = this.findMatchingLabels(profileInfo.name, profileInfo.image_url);
+
+        // console.log(matchingabels);
 
         // If we have matching labels, show them
         if (matchingLabels.length > 0) {
@@ -455,14 +461,17 @@ class LinkedInLabelsManager {
                 // if (!window.start_action('removing-label', 'Removing Label')) {
                 //     return;
                 // }
+
                 const success = await window.labelsDatabase.removeProfileFromLabel(
                     labelData.label_id,
                     matchingProfile.profile_id
                 );
                 if (success) {
+                    // console.log(matchingProfile.profile_id)
                     // window.complete_action('removing-label', true, `${labelData.label_name} has been removed for ${matchingProfile?.name}`);
                     labelContainer.remove(); // Remove the label from DOM on success
                 } else {
+                    // console.log(matchingProfile.profile_id)
                     // window.complete_action('removing-label', false, 'Something went wrong while removing label');
                 }
             } catch (error) {
@@ -478,9 +487,9 @@ class LinkedInLabelsManager {
 
     updateLabel(labelsContainer, labelsData) {
         // console.log(labelsData);
-        
+
         const labelElement = labelsContainer.querySelector(`div[data-label-id="${labelsData.label_id}"]`);
-        
+
         // If the element exists
         if (labelElement) {
             // This will change the text of the first text node
@@ -541,11 +550,16 @@ class LinkedInLabelsManager {
             if (!currentLabelIds.has(label.label_id)) {
                 // First, check by image URL
                 const matchingProfileByImage = label.profiles.find(p => {
-                    const profileImageId = this.extractImageId(p.image_url);
-                    const currentImageId = this.extractImageId(imageUrl);
-                    return profileImageId === currentImageId;
+                    if (p.image_url && imageUrl) {
+                        const profileImageId = this.extractImageId(p.image_url);
+                        const currentImageId = this.extractImageId(imageUrl);
+                        if (!currentImageId && !profileImageId)
+                            return false;
+                        return profileImageId === currentImageId;
+                    }
+                    return false;
                 });
-        
+
                 if (matchingProfileByImage) {
                     // If image matches, mark as verified and create the label
                     const labelElement = this.createLabel(
@@ -562,7 +576,7 @@ class LinkedInLabelsManager {
                     const matchingProfileByName = label.profiles.find(p =>
                         p.name.trim().toLowerCase() === name.toLowerCase()
                     );
-        
+
                     if (matchingProfileByName) {
                         // If name matches, mark as unverified and create the label
                         const labelElement = this.createLabel(
@@ -584,7 +598,7 @@ class LinkedInLabelsManager {
                     const currentImageId = this.extractImageId(imageUrl);
                     return profileImageId === currentImageId;
                 });
-        
+
                 if (matchingProfileByImage) {
                     // If image matches, update the label and mark as verified
                     this.updateLabel(
@@ -596,7 +610,7 @@ class LinkedInLabelsManager {
                     const matchingProfileByName = label.profiles.find(p =>
                         p.name.trim().toLowerCase() === name.toLowerCase()
                     );
-        
+
                     if (matchingProfileByName) {
                         // If name matches, update the label and mark as unverified
                         this.updateLabel(
