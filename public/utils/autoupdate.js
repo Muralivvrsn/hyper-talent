@@ -113,11 +113,11 @@ window.autoUpdateProfiles = {
     
             if (firebaseService?.callCloudFunction) {
                 console.log('calling processData')
-                result = await firebaseService.callCloudFunction("processData", profileData);
+                result = await firebaseService.callCloudFunction("processdata", profileData);
             } else {
                 const functions = firebase.functions();
                 console.log('calling proces data')
-                const processData = functions.httpsCallable("processData");
+                const processData = functions.httpsCallable("processdata");
                 const response = await processData(profileData);
                 result = response.data;
             }

@@ -145,10 +145,9 @@ class LinkedInSearchLabelManager {
     }
 
     findMatchingLabels(profileId) {
-        const allLabels = [
-            ...(this.labelsData?.owned || []),
-            ...(this.labelsData?.shared || [])
-        ];
+        const allLabels = [...this.labelsData];
+
+        console.log(allLabels)
 
         return allLabels.filter(label =>
             label.profiles?.some(profile => profile.profile_id === profileId)
@@ -330,6 +329,7 @@ const observeSearchPage = () => {
     const isSearchPage = (url) => url.includes('search/results/people');
 
     const tryInitialize = () => {
+        // console.log('checkng')
         const container = document.querySelector('ul[role="list"]');
         if (container) {
             if (!window.linkedInSearchLabelManager) {
