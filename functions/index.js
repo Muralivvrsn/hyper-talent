@@ -6,16 +6,16 @@ admin.initializeApp();
 
 // Email configuration
 const EMAIL_USER =
-  "muralivvrsn75683@hyperverge.co"; // Replace with your actual email
+  "muralivvrsn75683@gmail.com"; // Replace with your actual email
 const EMAIL_APP_PASSWORD =
   "rrbu hiry plgy verv"; // Replace with your app password
 const LOGO_URL =
-  "https://linkagent.vercel.app/static/media/logo.74d8f3896dd2cb65e9e375ccb3787c8f.svg";
+  "https://linkagent-assests.s3.us-east-1.amazonaws.com/Group+131+(1).png";
 const DOCUMENTATION_URL = "https://yourdomain.com/docs";
 const LOOM_VIDEO_URL = "https://loom.com/your-video";
 const YOUTUBE_TUTORIAL_URL =
   "https://youtu.be/9uTW6CTyXck?si=T1NYCODJNVfvgqXF";
-const SUPPORT_EMAIL = "muralivvrsn75683@hyperverge.co";
+const SUPPORT_EMAIL = "muralivvrsn75683@gmail.com";
 const PRIVACY_URL = "https://linkagent.vercel.app/privacy-policy";
 const TERMS_URL = "https://linkagent.vercel.app/terms-of-service";
 

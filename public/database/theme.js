@@ -168,17 +168,17 @@
                 if (!docSnapshot.exists) {
                     // console.log('[ThemeManager] Creating user document');
                     // Create the user document with default theme directly at top level
-                    await userRef.set({
-                        th: 'light',
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    // await userRef.set({
+                    //     th: 'light',
+                    //     createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    // });
                 } else if (!docSnapshot.data()?.th) {
                     // If document exists but doesn't have theme data
                     // console.log('[ThemeManager] Adding theme data to user document');
-                    await userRef.update({
-                        'th': 'light',
-                        'updatedAt': firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    // await userRef.update({
+                    //     'th': 'light',
+                    //     'updatedAt': firebase.firestore.FieldValue.serverTimestamp()
+                    // });
                 }
 
                 // Now set up the snapshot listener
