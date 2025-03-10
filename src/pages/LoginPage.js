@@ -21,7 +21,7 @@ const LoginPage = () => {
           </div>
 
           <Button
-            onClick={signIn}
+            onClick={()=>signIn(false)}
             disabled={status==='in_progress'}
             className="w-full flex items-center justify-center gap-2"
           >

@@ -22,6 +22,12 @@ const firebaseConfig = {
 const OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
+  // 'https://www.googleapis.com/auth/drive.file'
+];
+
+const SHEET_SCOPES = [
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
   'https://www.googleapis.com/auth/drive.file'
 ];
 
@@ -230,12 +236,15 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const handleSignIn = async () => {
-    setAuthState(prev => ({
-      ...prev,
-      status: 'in_progress',
-      error: null
-    }));
+  const handleSignIn = async (isSheetPage=false) => {
+    console.log(isSheetPage)
+    if (!isSheetPage) {
+      setAuthState(prev => ({
+        ...prev,
+        status: 'in_progress',
+        error: null
+      }));
+    }
 
     try {
       const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
@@ -246,7 +255,15 @@ export const AuthProvider = ({ children }) => {
       authUrl.searchParams.append('client_id', clientId);
       authUrl.searchParams.append('redirect_uri', redirectUri);
       authUrl.searchParams.append('response_type', 'code');
-      authUrl.searchParams.append('scope', OAUTH_SCOPES.join(' '));
+      if (!isSheetPage) {
+        console.log(OAUTH_SCOPES)
+        authUrl.searchParams.append('scope', OAUTH_SCOPES.join(' '));
+      }
+      else {
+        console.log(SHEET_SCOPES)
+        authUrl.searchParams.append('scope', SHEET_SCOPES.join(' '));
+      }
+
       authUrl.searchParams.append('access_type', 'offline');
       authUrl.searchParams.append('prompt', 'consent');
 
@@ -295,9 +312,13 @@ export const AuthProvider = ({ children }) => {
         clientSecret
       });
 
-      const credential = GoogleAuthProvider.credential(null, access_token);
-      await signInWithCredential(auth, credential);
-      await chrome.runtime.sendMessage({ type: 'SIGNED_IN' });
+      if (!isSheetPage) {
+        const credential = GoogleAuthProvider.credential(null, access_token);
+        await signInWithCredential(auth, credential);
+        await chrome.runtime.sendMessage({ type: 'SIGNED_IN' });
+      }
+
+      // return;
 
     } catch (error) {
       console.error('Sign in failed:', error);

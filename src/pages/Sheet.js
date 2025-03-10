@@ -42,7 +42,7 @@ const ActionButton = ({ icon: Icon, label, description, onClick, loading, disabl
   </TooltipProvider>
 );
 
-const NoSheetView = ({ onCreateSheet, isLoading }) => (
+const NoSheetView = ({ onCreateSheet, isLoading, access }) => (
   <div className="flex flex-col items-center justify-center space-y-6 p-8">
     <FileSpreadsheet className="h-16 w-16 text-muted-foreground" />
     <div className="text-center space-y-2">
@@ -58,7 +58,7 @@ const NoSheetView = ({ onCreateSheet, isLoading }) => (
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
       ) : null}
-      Create New Sheet
+      {access==='create'?"Create New":"Connect"} Sheet
     </Button>
   </div>
 );
@@ -101,9 +101,9 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => {
 };
 
 const SheetPage = () => {
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
   const { addUserAction } = useUserAction()
-  const { sheetData, getGoogleToken } = useSheet();
+  const { sheetData, getGoogleToken, access } = useSheet();
   const [loadingStates, setLoadingStates] = useState({
     create: false,
     syncSheet: false,
@@ -118,6 +118,7 @@ const SheetPage = () => {
   const db = getFirestore();
 
   const handleCreate = async () => {
+    await signIn(true);
     try {
       setLoadingStates(prev => ({ ...prev, create: true }));
       const token = await getGoogleToken();
@@ -137,7 +138,9 @@ const SheetPage = () => {
         'd.sd': newSheetData
       });
 
-      window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
+      // if(access==='create'){
+        window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
+      // }
       await addUserAction("Extension: Created new google sheet");
     } catch (error) {
       console.error('Error creating sheet:', error);
@@ -236,10 +239,11 @@ const SheetPage = () => {
         Sync and manage your LinkedIn connections using Google Sheets. {sheetData?.lastSynced && <b>Last synced: {formatDate(sheetData?.lastSynced)}</b>}
       </span>
       <div>
-        {!sheetData ? (
+        {access!=='accepted' ? (
           <NoSheetView
             onCreateSheet={handleCreate}
             isLoading={loadingStates.create}
+            access={access}
           />
         ) : (
           <div>

@@ -95,9 +95,11 @@ class FirebaseService {
     async _verifyToken(token) {
         try {
             const credential = firebase.auth.GoogleAuthProvider.credential(null, token);
+            console.log(credential)
             const userCredential = await this.auth.signInWithCredential(credential);
+
             this.currentUser = userCredential.user;
-            // console.log(userCredential.user)
+            console.log(userCredential.user)
             return true;
         } catch (error) {
             console.error('[FirebaseService] Token verification failed:', error);
