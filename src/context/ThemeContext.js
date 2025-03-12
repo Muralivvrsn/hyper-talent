@@ -145,6 +145,12 @@ export const ThemeProvider = ({ children }) => {
       p: "free",
       pe: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
       t: [],
+      uc: {
+        w: false,
+        wu: [],
+        u: [],
+        f: [],
+      },
       th: localTheme || systemTheme,
     };
   };
