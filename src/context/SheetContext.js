@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
 
@@ -77,12 +77,20 @@ export const SheetProvider = ({ children }) => {
     return response.data.accessToken;
   };
 
+  const updateSheetData = (newSheetData) => {
+    setSheetData(newSheetData);
+    if (newSheetData?.id) {
+      setAccess('accepted');
+    }
+  };
+
   const contextValue = {
     sheetData,
     isLoading,
     access,
     getGoogleToken,
     checkPermission,
+    updateSheetData
   };
 
   return (

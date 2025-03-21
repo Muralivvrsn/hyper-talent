@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from "../components/ui/button";
-import { Upload, Database, FileSpreadsheet, Loader2, ExternalLink } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, ExternalLink } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { createSheet, syncSheet, processUploadLabels } from '../utils/sheetUtils';
 import { doc, updateDoc, getFirestore } from 'firebase/firestore';
@@ -103,7 +103,7 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => {
 const SheetPage = () => {
   const { user, signIn } = useAuth();
   const { addUserAction } = useUserAction()
-  const { sheetData, getGoogleToken, access, checkPermission } = useSheet();
+  const { sheetData, getGoogleToken, access, checkPermission, updateSheetData } = useSheet();
   const [loadingStates, setLoadingStates] = useState({
     create: false,
     syncSheet: false,
@@ -122,32 +122,33 @@ const SheetPage = () => {
     try {
       setLoadingStates(prev => ({ ...prev, create: true }));
       const token = await getGoogleToken();
-
+      
       if (sheetData?.id) {
         window.open(`https://docs.google.com/spreadsheets/d/${sheetData.id}`, '_blank');
         await addUserAction("Extension: Connected to existing sheet");
-        await checkPermission()
+        await checkPermission();
         return;
       }
-
+      
       const firstName = user.displayName.split(' ')[0];
       const sheet = await createSheet(token, `${firstName} - LinkedIn Manager`);
       const currentTime = new Date().toISOString();
-
       const newSheetData = {
         id: sheet.spreadsheetId,
         ca: currentTime,
         ls: currentTime
       };
-
+      
+      // Update Firestore
       const userDocRef = doc(db, 'users_v2', user.uid);
       await updateDoc(userDocRef, {
         'd.sd': newSheetData
       });
-
+      
+      updateSheetData(newSheetData);
+      
       window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
       await addUserAction("Extension: Created new google sheet");
-      await checkPermission()
     } catch (error) {
       console.error('Error creating/connecting sheet:', error);
     } finally {
