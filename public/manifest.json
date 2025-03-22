@@ -30,6 +30,8 @@
         "https://*.linkedin.com/*"
       ],
       "js": [
+        "test.js",
+        "content.js",
         "firebase-app.js",
         "firebase-database.js",
         "firebase-auth.js",
@@ -56,6 +58,7 @@
         "services/templates/index.js",
         "services/keyboard/index.js",
         "services/notes/index.js"
+        
       ],
       "run_at": "document_end"
     }
@@ -66,7 +69,8 @@
     "scripting",
     "sidePanel",
     "identity",
-    "cookies"
+    "cookies",
+    "offscreen"
   ],
   "web_accessible_resources": [
     {
@@ -77,6 +81,9 @@
         "firebase-firestore.js",
         "firebase-functions-compat.js",
         "logo.png",
+        "libraries/anime.css",
+        "libraries/anime.js",
+        "libraries/tailwind.js",
         "refresh.png"
       ],
       "matches": [

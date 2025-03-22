@@ -3,101 +3,22 @@ chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch((error) => console.error(error));
 
+  async function setupOffscreenDocument() {
+    if (!(await chrome.offscreen.hasDocument())) {
+      await chrome.offscreen.createDocument({
+        url: "offscreen.html",
+        reasons: ["WORKERS"],
+        justification: "Firebase authentication"
+      });
+    }
+  }
+
 let windowId;
 
 chrome.tabs.onActivated.addListener(function (activeInfo) {
   windowId = activeInfo.windowId;
 });
 
-
-const REFRESH_BUFFER = 10 * 60 * 1000; 
-const REFRESH_INTERVAL = 50 * 60 * 1000; 
-
-// Tab update listener
-// Helper function to check if URL is a LinkedIn URL
-function isLinkedInUrl(url) {
-  return url?.includes('linkedin.com');
-}
-
-function sendMessageForUrl(tabId, url, isOnFocusEvent = false) {
-  if (!url) return;
-
-  if (isOnFocusEvent && isLinkedInUrl(url) && url.includes('linkedin.com/in')) {
-    chrome.tabs.sendMessage(tabId, {
-      type: "PROFILE_TAB",
-      url: url
-    });
-  }
-
-  if (url.includes('linkedin.com/messaging')) {
-    chrome.tabs.sendMessage(tabId, {
-      type: "URL_UPDATED",
-      url: url
-    });
-  } else if (url.includes('linkedin.com/in')) {
-    chrome.tabs.sendMessage(tabId, {
-      type: "URL_PROFILE",
-      url: url
-    });
-    chrome.tabs.sendMessage(tabId, {
-      type: "PROFILE_TAB",
-      url: url
-    });
-  }
-}
-
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (!isLinkedInUrl(tab.url)) return;
-
-  if (changeInfo.status === 'complete' || changeInfo.url) {
-    sendMessageForUrl(tabId, tab.url, true);
-  }
-});
-
-chrome.tabs.onCreated.addListener(async (tab) => {
-  if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
-    sendMessageForUrl(tab.id, tab.url, true);
-  }
-});
-
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  try {
-    const tab = await chrome.tabs.get(activeInfo.tabId);
-    if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
-      sendMessageForUrl(tab.id, tab.url, true);
-    }
-  } catch (error) {
-    console.error('Error handling tab activation:', error);
-  }
-});
-
-chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE) return;
-
-  try {
-    const [activeTab] = await chrome.tabs.query({
-      active: true,
-      windowId: windowId
-    });
-
-    if (activeTab && isLinkedInUrl(activeTab.url) && activeTab.status === 'complete') {
-      sendMessageForUrl(activeTab.id, activeTab.url, true);
-    }
-  } catch (error) {
-    console.error('Error handling window focus:', error);
-  }
-});
-
-chrome.tabs.onReplaced.addListener(async (addedTabId, removedTabId) => {
-  try {
-    const tab = await chrome.tabs.get(addedTabId);
-    if (isLinkedInUrl(tab.url) && tab.status === 'complete') {
-      sendMessageForUrl(tab.id, tab.url, true);
-    }
-  } catch (error) {
-    console.error('Error handling tab replacement:', error);
-  }
-});
 
 function compareVersions(v1, v2) {
   const parts1 = v1.split('.').map(Number);
@@ -114,6 +35,7 @@ function compareVersions(v1, v2) {
 }
 
 chrome.runtime.onInstalled.addListener((details) => {
+  setupOffscreenDocument();
   if (details.reason === 'update') {
     const currentVersion = chrome.runtime.getManifest().version;
     // console.log(details)
@@ -155,6 +77,7 @@ chrome.action.onClicked.addListener(() => {
 
 // Optional: Restore badge if browser is restarted and update hasn't been seen
 chrome.runtime.onStartup.addListener(() => {
+  setupOffscreenDocument();
   chrome.storage.local.get(['hasUnseenUpdate', 'currentVersion', 'previousVersion'], (result) => {
     if (result.hasUnseenUpdate &&
       result.currentVersion &&
@@ -165,6 +88,8 @@ chrome.runtime.onStartup.addListener(() => {
     }
   });
 });
+
+
 
 
 
