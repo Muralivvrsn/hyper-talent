@@ -58,7 +58,7 @@ const NoSheetView = ({ onCreateSheet, isLoading, access }) => (
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
       ) : null}
-      {access==='create'?"Create New":"Connect"} Sheet
+      {access === 'create' ? "Create New" : "Connect"} Sheet
     </Button>
   </div>
 );
@@ -103,7 +103,7 @@ const SheetActions = ({ loadingStates, onSync, onUpload }) => {
 const SheetPage = () => {
   const { user, signIn } = useAuth();
   const { addUserAction } = useUserAction()
-  const { sheetData, getGoogleToken, access } = useSheet();
+  const { sheetData, getGoogleToken, access, checkPermission } = useSheet();
   const [loadingStates, setLoadingStates] = useState({
     create: false,
     syncSheet: false,
@@ -122,8 +122,15 @@ const SheetPage = () => {
     try {
       setLoadingStates(prev => ({ ...prev, create: true }));
       const token = await getGoogleToken();
-      const firstName = user.displayName.split(' ')[0];
 
+      if (sheetData?.id) {
+        window.open(`https://docs.google.com/spreadsheets/d/${sheetData.id}`, '_blank');
+        await addUserAction("Extension: Connected to existing sheet");
+        await checkPermission()
+        return;
+      }
+
+      const firstName = user.displayName.split(' ')[0];
       const sheet = await createSheet(token, `${firstName} - LinkedIn Manager`);
       const currentTime = new Date().toISOString();
 
@@ -138,12 +145,11 @@ const SheetPage = () => {
         'd.sd': newSheetData
       });
 
-      // if(access==='create'){
-        window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
-      // }
+      window.open(`https://docs.google.com/spreadsheets/d/${newSheetData.id}`, '_blank');
       await addUserAction("Extension: Created new google sheet");
+      await checkPermission()
     } catch (error) {
-      console.error('Error creating sheet:', error);
+      console.error('Error creating/connecting sheet:', error);
     } finally {
       setLoadingStates(prev => ({ ...prev, create: false }));
     }
@@ -239,7 +245,7 @@ const SheetPage = () => {
         Sync and manage your LinkedIn connections using Google Sheets. {sheetData?.lastSynced && <b>Last synced: {formatDate(sheetData?.lastSynced)}</b>}
       </span>
       <div>
-        {access!=='accepted' ? (
+        {access !== 'accepted' ? (
           <NoSheetView
             onCreateSheet={handleCreate}
             isLoading={loadingStates.create}
