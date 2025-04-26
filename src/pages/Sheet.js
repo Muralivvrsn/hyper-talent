@@ -163,6 +163,7 @@ const SheetPage = () => {
       setLoadingStates(prev => ({ ...prev, [loadingKey]: true }));
       await addUserAction(`Extension: Synced ${syncType}`);
       const token = await getGoogleToken();
+      console.log(token)
 
       const data = {
         labels: { labels },
@@ -173,6 +174,7 @@ const SheetPage = () => {
 
       if (syncType === "Sheet") {
         await syncSheet(sheetData.id, token, { ...data, getLabelProfiles, getNoteWithProfile });
+
       } else {
         // await syncDatabase(sheetData.id, token, user.uid, data);
       }
@@ -183,6 +185,7 @@ const SheetPage = () => {
       });
 
     } catch (error) {
+      console.log('sheet error')
       console.error(error);
     } finally {
       setLoadingStates(prev => ({ ...prev, [loadingKey]: false }));

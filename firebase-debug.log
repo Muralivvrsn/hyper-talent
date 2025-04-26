@@ -1,0 +1,29 @@
+[debug] [2025-03-28T07:21:55.926Z] ----------------------------------------------------------------------
+[debug] [2025-03-28T07:21:55.927Z] Command:       /Users/muralivvrsngurajapu/.nvm/versions/node/v22.9.0/bin/node /Users/muralivvrsngurajapu/.nvm/versions/node/v22.9.0/bin/firebase deploy --only functions
+[debug] [2025-03-28T07:21:55.928Z] CLI Version:   13.31.2
+[debug] [2025-03-28T07:21:55.928Z] Platform:      darwin
+[debug] [2025-03-28T07:21:55.928Z] Node Version:  v22.9.0
+[debug] [2025-03-28T07:21:55.928Z] Time:          Fri Mar 28 2025 12:51:55 GMT+0530 (India Standard Time)
+[debug] [2025-03-28T07:21:55.928Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-03-28T07:21:56.031Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-03-28T07:21:56.031Z] > authorizing via signed-in user (murali.g@hyperverge.co)
+[debug] [2025-03-28T07:21:56.031Z] [iam] checking project hyper-75b53 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-03-28T07:21:56.032Z] Checked if tokens are valid: true, expires at: 1743150042245
+[debug] [2025-03-28T07:21:56.032Z] Checked if tokens are valid: true, expires at: 1743150042245
+[debug] [2025-03-28T07:21:56.032Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/hyper-75b53:testIamPermissions [none]
+[debug] [2025-03-28T07:21:56.032Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/hyper-75b53:testIamPermissions x-goog-quota-user=projects/hyper-75b53
+[debug] [2025-03-28T07:21:56.032Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/hyper-75b53:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-03-28T07:21:57.371Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/hyper-75b53:testIamPermissions 200
+[debug] [2025-03-28T07:21:57.371Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/hyper-75b53:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-03-28T07:21:57.371Z] Checked if tokens are valid: true, expires at: 1743150042245
+[debug] [2025-03-28T07:21:57.371Z] Checked if tokens are valid: true, expires at: 1743150042245
+[debug] [2025-03-28T07:21:57.371Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/hyper-75b53/serviceAccounts/hyper-75b53@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-03-28T07:21:57.371Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/hyper-75b53/serviceAccounts/hyper-75b53@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-03-28T07:21:58.993Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/hyper-75b53/serviceAccounts/hyper-75b53@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-03-28T07:21:58.993Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/hyper-75b53/serviceAccounts/hyper-75b53@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'hyper-75b53'...
+[info] 
+[info] i  deploying functions 
+[info] Running command: npm --prefix "$RESOURCE_DIR" run lint

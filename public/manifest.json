@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkAgent",
   "short_name": "LinkAgent",
-  "version": "1.5.9",
+  "version": "1.6.6",
   "description": "LinkedIn Profile Organizer & Communicator",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6Yn0Jgl1gLe4x5lfoj6/9Hmh7p3RxVMTLQNtTrzbwJ/aQ5B8RcjGv0twV2jhrhdpCJkWeBGo6Dov+lUMg0APQ301HsvGLLrgU9wL5Cc5uEUpLaJqhEyLeGg3IsCyNOn9a4bzYpUcPHXiHBlczSPa11CS1EVGCVGVyQ5J6Eao5BNmzK1Hv6lgjAy/O5hPWABkQmPOvWCFr9xkURDm1f7HNJwuRkVXlCzBKbirdwpdy9v0qFCVTTuQR2ZDWGwfavdlWQnb5RPckspf/4a1EAQ0EwIkHj5oI0s5/yj2XMkPXJtVRYfcnKuaSBkTK6MG0Jby/BR+4Fi7t/7jna07Px9yQIDAQAB",
   "icons": {
@@ -65,8 +65,7 @@
     "activeTab",
     "scripting",
     "sidePanel",
-    "identity",
-    "cookies"
+    "identity"
   ],
   "web_accessible_resources": [
     {
@@ -97,8 +96,8 @@
   },
   "host_permissions": [
     "https://www.linkedin.com/*",
-    "*://*.googleapis.com/*",
     "*://*.firebasestorage.googleapis.com/*",
+    "*://*.googleapis.com/*",
     "https://*.slack.com/*"
   ]
 }
