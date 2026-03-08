@@ -186,22 +186,33 @@ window.EventIQSidebar = class EventIQSidebar {
   }
 
   applyStyles(container) {
+    // Position in LinkedIn's right sidebar area, not fixed to viewport edge
     container.style.cssText = `
       position: fixed;
       top: 70px;
       right: 20px;
-      width: 320px;
+      width: 300px;
       max-height: calc(100vh - 100px);
       overflow-y: auto;
       background: #ffffff;
       border: 1px solid #e0e0e0;
       border-radius: 12px;
       box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-      z-index: 9999;
+      z-index: 100;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 13px;
       color: #333;
     `;
+
+    // If LinkedIn's aside/right-rail exists, position relative to it
+    const aside = document.querySelector('aside.scaffold-layout__aside');
+    if (aside) {
+      const rect = aside.getBoundingClientRect();
+      container.style.position = 'fixed';
+      container.style.left = rect.left + 'px';
+      container.style.right = 'auto';
+      container.style.width = rect.width + 'px';
+    }
 
     const style = document.createElement('style');
     style.textContent = `
