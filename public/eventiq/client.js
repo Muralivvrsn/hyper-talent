@@ -1,5 +1,5 @@
 // EventIQ API Client
-// Communicates with EventIQ backend to fetch leader/company intelligence
+// Routes API calls through the background service worker to avoid CORS issues
 
 window.EventIQClient = class EventIQClient {
   constructor() {
@@ -11,6 +11,7 @@ window.EventIQClient = class EventIQClient {
     return window.EVENTIQ_CONFIG.toolKey;
   }
 
+  // Route fetch through background script (service worker has no CORS restrictions)
   async request(path, options = {}) {
     const toolKey = this.getToolKey();
     if (!toolKey) {
@@ -18,21 +19,32 @@ window.EventIQClient = class EventIQClient {
     }
 
     const url = `${this.apiBase}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Tool-Key': toolKey,
-        ...(options.headers || {})
-      }
+
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({
+        type: 'EVENTIQ_FETCH',
+        url,
+        options: {
+          method: options.method || 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tool-Key': toolKey,
+            ...(options.headers || {})
+          },
+          body: options.body || null
+        }
+      }, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        if (response?.error) {
+          reject(new Error(response.error));
+          return;
+        }
+        resolve(response?.data);
+      });
     });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`EventIQ API error ${response.status}: ${text}`);
-    }
-
-    return response.json();
   }
 
   // Fast leader lookup — single call returns everything the sidebar needs

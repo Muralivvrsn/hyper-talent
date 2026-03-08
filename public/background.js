@@ -324,6 +324,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
   }
 
+  // EventIQ: proxy fetch from content scripts to avoid CORS
+  if (message.type === 'EVENTIQ_FETCH') {
+    (async () => {
+      try {
+        const fetchOptions = {
+          method: message.options.method || 'GET',
+          headers: message.options.headers || {}
+        };
+        if (message.options.body) {
+          fetchOptions.body = message.options.body;
+        }
+        const response = await fetch(message.url, fetchOptions);
+        const text = await response.text();
+        if (!response.ok) {
+          sendResponse({ error: `HTTP ${response.status}: ${text}` });
+          return;
+        }
+        try {
+          sendResponse({ data: JSON.parse(text) });
+        } catch {
+          sendResponse({ data: text });
+        }
+      } catch (err) {
+        sendResponse({ error: err.message });
+      }
+    })();
+    return true;
+  }
+
   if(message.type === 'HYPER_TALENT_LOGGIN'){
 
     chrome.sidePanel.open({
