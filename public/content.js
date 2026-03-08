@@ -219,6 +219,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         // Initialize keyboard shortcuts independently
         window.refreshService = new RefreshService();
+
+        // EventIQ Bridge: show intel panel on messaging pages
+        if (window.eventiqBridge) {
+          window.eventiqBridge.onMessagingPage();
+        }
         try {
           window.keyboard.shortcuts.observer();
           // console.log('Keyboard shortcuts initialized');
@@ -252,8 +257,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           window.profileManagerLabels.init()
           window.profileNotes.init();
           // window.labelProfiles.init();
-          
+
           window.labelProfileManagerCore.initialize();
+
+          // EventIQ Bridge: show company intelligence sidebar on profile pages
+          if (window.eventiqBridge) {
+            window.eventiqBridge.onProfilePage();
+          }
           // window.labelProfileManager.initialize()
         } catch (error) {
           // console.error('Profile notes manager initialization error:', error);

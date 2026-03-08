@@ -55,7 +55,12 @@
         
         "services/templates/index.js",
         "services/keyboard/index.js",
-        "services/notes/index.js"
+        "services/notes/index.js",
+
+        "eventiq/config.js",
+        "eventiq/client.js",
+        "eventiq/sidebar.js",
+        "eventiq/bridge.js"
       ],
       "run_at": "document_end"
     }
@@ -98,6 +103,7 @@
     "https://www.linkedin.com/*",
     "*://*.firebasestorage.googleapis.com/*",
     "*://*.googleapis.com/*",
-    "https://*.slack.com/*"
+    "https://*.slack.com/*",
+    "https://*.hyperverge.space/*"
   ]
 }
