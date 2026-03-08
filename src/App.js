@@ -12,6 +12,7 @@ import Sheet from './pages/Sheet';
 import Feedback from './pages/Feedback';
 import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
+import EventIQPage from './pages/EventIQPage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
 const MainLayout = ({ children }) => {
@@ -39,6 +40,8 @@ const MainLayout = ({ children }) => {
         return <ProfilePage />;
       case 'admin':
         return <AdminPage />;
+      case 'eventiq':
+        return <EventIQPage />;
       default:
         return <CandidateMessages />;
     }

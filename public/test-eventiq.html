@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>EventIQ Bridge Test</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f2ef; margin: 0; padding: 20px; }
+    .test-controls { position: fixed; top: 10px; left: 10px; z-index: 10000; background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); max-width: 400px; }
+    .test-controls h3 { margin: 0 0 12px 0; font-size: 14px; }
+    .test-controls button { padding: 8px 16px; margin: 4px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .test-controls button.primary { background: #0a66c2; color: #fff; }
+    .test-controls button.secondary { background: #e0e0e0; color: #333; }
+    .test-controls button:hover { opacity: 0.9; }
+    .test-controls .status { margin-top: 8px; font-size: 12px; color: #666; }
+
+    /* Fake LinkedIn profile page layout */
+    .fake-profile { max-width: 800px; margin: 0 auto; padding-top: 20px; }
+    .fake-profile .banner { height: 200px; background: linear-gradient(135deg, #0a66c2, #004182); border-radius: 8px 8px 0 0; }
+    .fake-profile .info { background: #fff; padding: 60px 24px 24px; border-radius: 0 0 8px 8px; position: relative; }
+    .fake-profile .avatar { width: 120px; height: 120px; border-radius: 50%; background: #e0e0e0; border: 4px solid #fff; position: absolute; top: -60px; left: 24px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #999; }
+    .fake-profile h1 { font-size: 24px; margin: 0 0 4px; }
+    .fake-profile .title { font-size: 16px; color: #666; margin: 0 0 8px; }
+    .fake-profile .location { font-size: 14px; color: #999; }
+    .fake-profile .section { background: #fff; margin-top: 8px; padding: 24px; border-radius: 8px; }
+    .fake-profile .section h2 { font-size: 18px; margin: 0 0 12px; }
+    .fake-profile .section p { color: #555; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="test-controls">
+    <h3>EventIQ Bridge Test Panel</h3>
+    <div>
+      <button class="primary" onclick="testSidebarFull()">Show Full Sidebar (P0 Match)</button>
+      <button class="primary" onclick="testSidebarMinimal()">Show Minimal (P2 Match)</button>
+    </div>
+    <div>
+      <button class="secondary" onclick="testNotFound()">No Match</button>
+      <button class="secondary" onclick="testDarkTheme()">Toggle Dark</button>
+      <button class="secondary" onclick="closeSidebar()">Close Sidebar</button>
+    </div>
+    <div class="status" id="test-status">Ready to test</div>
+  </div>
+
+  <!-- Fake LinkedIn Profile -->
+  <div class="fake-profile">
+    <div class="banner"></div>
+    <div class="info">
+      <div class="avatar">JS</div>
+      <h1>John Smith</h1>
+      <p class="title">CEO at Acme Lending | MCA Industry Leader</p>
+      <p class="location">New York, NY</p>
+    </div>
+    <div class="section">
+      <h2>About</h2>
+      <p>20+ years in alternative lending. Former Navy SEAL. Passionate about transforming small business financing through technology. UC Berkeley '98.</p>
+    </div>
+    <div class="section">
+      <h2>Experience</h2>
+      <p><strong>CEO</strong> — Acme Lending (2018–Present)<br>
+      Leading a team of 150+ in merchant cash advance and small business lending.</p>
+    </div>
+  </div>
+
+  <!-- Load EventIQ scripts -->
+  <script>
+    // Mock chrome.storage for testing
+    window.chrome = {
+      storage: {
+        sync: {
+          get: (keys, cb) => cb({ eventiq_tool_key: 'test-key-for-ui' }),
+          set: (data, cb) => cb && cb(),
+          remove: (keys, cb) => cb && cb()
+        },
+        local: {
+          get: (keys, cb) => cb({}),
+          set: (data, cb) => cb && cb()
+        }
+      },
+      runtime: { onMessage: { addListener: () => {} }, sendMessage: () => {} },
+      action: { setBadgeText: () => {} }
+    };
+
+    // Mock EVENTIQ_CONFIG
+    window.EVENTIQ_CONFIG = {
+      apiBase: 'https://us.hyperverge.space/api/tools',
+      toolKey: 'test-key',
+      enabled: true,
+      cache: { ttlMs: 30 * 60 * 1000, maxEntries: 50 }
+    };
+  </script>
+  <script src="eventiq/client.js"></script>
+  <script src="eventiq/sidebar.js"></script>
+  <script src="eventiq/bridge.js"></script>
+
+  <script>
+    const sidebar = new window.EventIQSidebar(new window.EventIQClient());
+
+    function setStatus(msg) {
+      document.getElementById('test-status').textContent = msg;
+    }
+
+    function testSidebarFull() {
+      sidebar.inject({
+        found: true,
+        companyId: 42,
+        companyName: 'Acme Lending',
+        priority: 0,
+        leader: {
+          n: 'John Smith',
+          t: 'CEO',
+          bg: 'Former Navy SEAL. UC Berkeley MBA \'98. Built Acme from $0 to $500M annual originations.',
+          personal: 'Coaches son\'s little league team in Westchester. Marathon runner. Avid golfer.',
+          hooks: [
+            'Former Navy SEAL — discipline-driven leadership',
+            'UC Berkeley \'98 — strong alumni network',
+            'Board member at SBFA — deep industry connections',
+            'Keynote speaker at Money20/20 2025'
+          ],
+          li: 'https://linkedin.com/in/johnsmith',
+          email: 'john@acmelending.com'
+        },
+        company: {
+          category: 'mca_funder',
+          desc: 'Leading merchant cash advance provider serving 5,000+ small businesses nationwide. $500M in annual originations.',
+          tp: [
+            'Volume scaling: HyperVerge processes 10x more applications with same team size',
+            '450+ MCA companies already use our platform — proven category fit',
+            '60% faster underwriting with AI-powered document verification'
+          ],
+          ice: 'Saw your Money20/20 keynote on the future of merchant cash advance — your point about technology adoption resonated with what we\'re seeing across 450+ MCA companies.',
+          icebreakers: [
+            'Your SBFA board work on industry standards aligns with our compliance-first approach',
+            'Interesting that Acme expanded into equipment financing — we just launched vertical-specific models for that',
+            'Fellow Berkeley alum here — would love to compare notes on fintech innovation'
+          ],
+          news: [
+            { title: 'Acme Lending raises $50M Series C led by Andreessen', date: '2026-02-15', url: '#' },
+            { title: 'New CTO hire from Square to lead tech transformation', date: '2026-01-28', url: '#' },
+            { title: 'Acme expands into equipment financing vertical', date: '2026-01-10', url: '#' }
+          ],
+          ask: 'Demo of AI underwriting platform — show how HyperVerge can reduce their document review time by 60% while improving accuracy.'
+        }
+      });
+      setStatus('Showing full P0 sidebar with all sections');
+    }
+
+    function testSidebarMinimal() {
+      sidebar.inject({
+        found: true,
+        companyId: 99,
+        companyName: 'SmallBiz Capital',
+        priority: 2,
+        leader: {
+          n: 'Jane Doe',
+          t: 'VP Operations',
+          bg: '15 years in fintech operations.',
+          hooks: ['Previously at LendingClub', 'Speaker at LendIt 2025']
+        },
+        company: {
+          category: 'equipment_finance',
+          desc: 'Equipment financing for SMBs.',
+          tp: ['Compliance automation reduces risk'],
+          ice: 'Your LendIt talk was insightful.',
+          news: []
+        }
+      });
+      setStatus('Showing minimal P2 sidebar');
+    }
+
+    function testNotFound() {
+      sidebar.injectNotFound();
+      setStatus('No match — sidebar hidden');
+    }
+
+    function testDarkTheme() {
+      document.documentElement.classList.toggle('theme--dark');
+      document.body.style.background = document.documentElement.classList.contains('theme--dark') ? '#1d2226' : '#f3f2ef';
+      document.body.style.color = document.documentElement.classList.contains('theme--dark') ? '#e0e0e0' : '#333';
+      setStatus('Dark theme: ' + (document.documentElement.classList.contains('theme--dark') ? 'ON' : 'OFF'));
+    }
+
+    function closeSidebar() {
+      sidebar.cleanup();
+      setStatus('Sidebar closed');
+    }
+
+    // Auto-show sidebar on load
+    setTimeout(testSidebarFull, 500);
+  </script>
+</body>
+</html>

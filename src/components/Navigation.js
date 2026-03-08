@@ -8,7 +8,8 @@ import {
   User,
   Sun,
   Moon,
-  Shield // Add Shield icon for admin
+  Shield,
+  Zap
 } from 'lucide-react';
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
@@ -57,6 +58,11 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage, isAdmin }) =>
       icon: <User className="h-4 w-4" />,
       label: 'Profile',
       page: 'profile'
+    },
+    {
+      icon: <Zap className="h-4 w-4" />,
+      label: 'EventIQ',
+      page: 'eventiq'
     }
   ];
 
