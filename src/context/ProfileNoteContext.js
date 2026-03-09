@@ -65,11 +65,20 @@ export function ProfileNoteProvider({ children }) {
       }
     };
 
+    // Listen for EventIQ intel updates — auto-switch to EventIQ tab
+    const storageListener = (changes, area) => {
+      if (area === 'local' && changes.eventiq_intel && changes.eventiq_intel.newValue) {
+        setCurrentPage('eventiq');
+      }
+    };
+
     chrome.runtime.onMessage.addListener(messageListener);
+    chrome.storage.onChanged.addListener(storageListener);
     checkStoredData();
 
     return () => {
       chrome.runtime.onMessage.removeListener(messageListener);
+      chrome.storage.onChanged.removeListener(storageListener);
     };
   }, [lastProfileData]);
 

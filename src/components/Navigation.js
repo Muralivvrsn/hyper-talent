@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import {
   MessageSquare,
-  Command,
-  FileSpreadsheet,
-  MessageCircle,
   LogOut,
   User,
   Sun,
   Moon,
   Shield,
-  Zap
+  Zap,
+  Bot,
+  Settings
 } from 'lucide-react';
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
@@ -32,27 +31,22 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage, isAdmin }) =>
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
-  // Base navigation items
+  // Primary navigation items
   const navItems = [
     {
       icon: <MessageSquare className="h-4 w-4" />,
-      label: 'Show messages',
+      label: 'Messages',
       page: 'messages'
     },
     {
-      icon: <Command className="h-4 w-4" />,
-      label: 'Show shortcuts',
-      page: 'shortcuts'
+      icon: <Zap className="h-4 w-4" />,
+      label: 'EventIQ',
+      page: 'eventiq'
     },
     {
-      icon: <FileSpreadsheet className="h-4 w-4" />,
-      label: 'Open sheet',
-      page: 'sheet'
-    },
-    {
-      icon: <MessageCircle className="h-4 w-4" />,
-      label: 'Give feedback',
-      page: 'feedback'
+      icon: <Bot className="h-4 w-4" />,
+      label: 'Kiket',
+      page: 'kiket'
     },
     {
       icon: <User className="h-4 w-4" />,
@@ -60,9 +54,9 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage, isAdmin }) =>
       page: 'profile'
     },
     {
-      icon: <Zap className="h-4 w-4" />,
-      label: 'EventIQ',
-      page: 'eventiq'
+      icon: <Settings className="h-4 w-4" />,
+      label: 'Settings',
+      page: 'settings'
     }
   ];
 
@@ -93,7 +87,7 @@ const Navigation = ({ setCurrentPage, onLogout, user, currentPage, isAdmin }) =>
                     className={cn(
                       "h-9 w-9 relative group",
                       isActive && "bg-primary text-primary-foreground hover:bg-primary/90",
-                      item.page === 'admin' && "text-amber-500" // Special styling for admin button
+                      item.page === 'admin' && "text-amber-500"
                     )}
                     onClick={() => setCurrentPage(item.page)}
                   >

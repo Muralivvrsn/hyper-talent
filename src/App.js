@@ -13,6 +13,8 @@ import Feedback from './pages/Feedback';
 import AdminPage from './pages/AdminPage';
 import ProfilePage from './pages/ProfilePage';
 import EventIQPage from './pages/EventIQPage';
+import KiketPage from './pages/KiketPage';
+import SettingsPage from './pages/SettingsPage';
 import UpdateModal from './components/UpdateModel';
 import { useProfileNote } from './context/ProfileNoteContext';
 const MainLayout = ({ children }) => {
@@ -42,6 +44,10 @@ const MainLayout = ({ children }) => {
         return <AdminPage />;
       case 'eventiq':
         return <EventIQPage />;
+      case 'kiket':
+        return <KiketPage />;
+      case 'settings':
+        return <SettingsPage setCurrentPage={setCurrentPage} />;
       default:
         return <CandidateMessages />;
     }
@@ -61,7 +67,7 @@ const MainLayout = ({ children }) => {
           />
         </div>
       </header>
-      <main className="mx-auto p-3 mt-[60px] relative overflow-hidden h-full">
+      <main className="mx-auto p-3 mt-[60px] relative overflow-y-auto h-[calc(100vh-60px)]">
         {renderPage()}
       </main>
     </div>

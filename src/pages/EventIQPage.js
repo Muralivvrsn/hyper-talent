@@ -9,20 +9,46 @@ import {
   RefreshCw,
   Building2,
   Users,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import EventIQIntel from '../components/EventIQIntel';
 
 const EventIQPage = () => {
   const [toolKey, setToolKey] = useState('');
   const [savedKey, setSavedKey] = useState('');
   const [showKey, setShowKey] = useState(false);
-  const [status, setStatus] = useState('loading'); // loading, connected, disconnected, error
+  const [status, setStatus] = useState('loading');
   const [statusMessage, setStatusMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [stats, setStats] = useState(null);
   const [enabled, setEnabled] = useState(true);
+  const [hasIntel, setHasIntel] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Check if we have intel data to show
+  useEffect(() => {
+    const chrome = window.chrome;
+    if (!chrome?.storage?.local) return;
+
+    const checkIntel = () => {
+      chrome.storage.local.get(['eventiq_intel'], (result) => {
+        setHasIntel(!!result.eventiq_intel);
+      });
+    };
+
+    checkIntel();
+
+    const listener = (changes, area) => {
+      if (area === 'local' && changes.eventiq_intel) {
+        setHasIntel(!!changes.eventiq_intel.newValue);
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  }, []);
 
   // Load saved key and enabled state
   useEffect(() => {
@@ -63,7 +89,6 @@ const EventIQPage = () => {
         setStatus('connected');
         setStatusMessage('Connected to EventIQ');
 
-        // Try to fetch stats
         try {
           const statsRes = await fetch('https://us.hyperverge.space/api/stats', {
             headers: { 'X-Tool-Key': key }
@@ -72,9 +97,7 @@ const EventIQPage = () => {
             const data = await statsRes.json();
             setStats(data);
           }
-        } catch (e) {
-          // Stats endpoint may not exist yet
-        }
+        } catch (e) {}
       } else if (response.status === 401 || response.status === 403) {
         setStatus('error');
         setStatusMessage('Invalid API key');
@@ -102,7 +125,6 @@ const EventIQPage = () => {
     }, () => {
       setSavedKey(toolKey);
 
-      // Update the global config so content scripts pick it up immediately
       if (window.EVENTIQ_CONFIG) {
         window.EVENTIQ_CONFIG.toolKey = toolKey;
         window.EVENTIQ_CONFIG.enabled = enabled;
@@ -142,17 +164,52 @@ const EventIQPage = () => {
   const StatusIcon = currentStatus.icon;
   const hasChanges = toolKey !== savedKey;
 
+  // If connected and we have intel, show the intel view with settings toggle
+  if (status === 'connected' && hasIntel && !showSettings) {
+    return (
+      <div className="space-y-3 max-w-md mx-auto">
+        {/* Compact header with settings toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-semibold">EventIQ</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setShowSettings(true)}
+          >
+            <Settings className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+
+        {/* Intel content */}
+        <EventIQIntel />
+      </div>
+    );
+  }
+
+  // Settings view
   return (
     <div className="space-y-6 max-w-md mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
-          <Zap className="h-5 w-5 text-white" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
+            <Zap className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold">EventIQ</h1>
+            <p className="text-xs text-muted-foreground">Company intelligence on LinkedIn</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-semibold">EventIQ</h1>
-          <p className="text-xs text-muted-foreground">Company intelligence on LinkedIn</p>
-        </div>
+        {hasIntel && (
+          <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowSettings(false)}>
+            Back to Intel
+          </Button>
+        )}
       </div>
 
       {/* Connection Status */}
@@ -179,17 +236,17 @@ const EventIQPage = () => {
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 rounded-lg border text-center">
             <Building2 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-            <p className="text-lg font-bold">{stats.totalCompanies || '—'}</p>
+            <p className="text-lg font-bold">{stats.totalCompanies || '\u2014'}</p>
             <p className="text-[10px] text-muted-foreground">Companies</p>
           </div>
           <div className="p-3 rounded-lg border text-center">
             <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-            <p className="text-lg font-bold">{stats.totalLeaders || '—'}</p>
+            <p className="text-lg font-bold">{stats.totalLeaders || '\u2014'}</p>
             <p className="text-[10px] text-muted-foreground">Leaders</p>
           </div>
           <div className="p-3 rounded-lg border text-center">
             <MessageSquare className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-            <p className="text-lg font-bold">{stats.recentEngagements || '—'}</p>
+            <p className="text-lg font-bold">{stats.recentEngagements || '\u2014'}</p>
             <p className="text-[10px] text-muted-foreground">Engagements</p>
           </div>
         </div>
@@ -222,7 +279,7 @@ const EventIQPage = () => {
       {/* Enable/Disable Toggle */}
       <div className="flex items-center justify-between p-3 rounded-lg border">
         <div>
-          <p className="text-sm font-medium">Show sidebar on LinkedIn</p>
+          <p className="text-sm font-medium">Show intel on LinkedIn</p>
           <p className="text-[11px] text-muted-foreground">Display company intel when viewing profiles</p>
         </div>
         <button
